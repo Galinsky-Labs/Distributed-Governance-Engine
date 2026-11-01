@@ -37,6 +37,51 @@ export function requestCookies(header = "") {
   }
   return result;
 }
+function rejectDuplicateJsonKeys(text) {
+  let i = 0;
+  const space = () => { while (/\s/.test(text[i] ?? "" ) && i < text.length) i++; };
+  const quoted = () => {
+    const start = i++;
+    while (i < text.length) {
+      if (text[i] === "\\") { i += 2; continue; }
+      if (text[i++] === '"') return JSON.parse(text.slice(start, i));
+    }
+    throw Error("Unterminated JSON string");
+  };
+  const value = (depth = 0) => {
+    if (depth > 64) throw Error("JSON nesting limit exceeded");
+    space();
+    if (text[i] === "{") {
+      i++; space();
+      const keys = new Set();
+      while (i < text.length && text[i] !== "}") {
+        if (text[i] !== '"') throw Error("Invalid JSON key");
+        const key = quoted();
+        if (keys.has(key)) throw Error("Duplicate JSON key");
+        keys.add(key); space();
+        if (text[i++] !== ":") throw Error("Invalid JSON member");
+        value(depth + 1); space();
+        if (text[i] === ",") { i++; space(); }
+        else if (text[i] !== "}") throw Error("Invalid JSON object");
+      }
+      if (text[i++] !== "}") throw Error("Invalid JSON object");
+    } else if (text[i] === "[") {
+      i++; space();
+      while (i < text.length && text[i] !== "]") {
+        value(depth + 1); space();
+        if (text[i] === ",") { i++; space(); }
+        else if (text[i] !== "]") throw Error("Invalid JSON array");
+      }
+      if (text[i++] !== "]") throw Error("Invalid JSON array");
+    } else if (text[i] === '"') quoted();
+    else {
+      const start = i;
+      while (i < text.length && !/[\s,}\]]/.test(text[i])) i++;
+      if (i === start) throw Error("Invalid JSON value");
+    }
+  };
+  value();
+}
 export async function boundedJson(
   request,
   allowed,
@@ -71,12 +116,15 @@ export async function boundedJson(
     }
   let body;
   try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
+    rejectDuplicateJsonKeys(text);
     body = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
+      text,
       (key, value) => {
         if (
           key.includes("\0") ||
-          (typeof value === "string" && value.includes("\0"))
+          (typeof value === "string" && value.includes("\0")) ||
+          (typeof value === "number" && !Number.isFinite(value))
         )
           throw Error("Unsupported JSON character");
         return value;
@@ -104,12 +152,21 @@ export function createRequestBudget({
   perPeer = 120,
   globalLimit = 2000,
 } = {}) {
+  if (typeof clock !== "function" ||
+      !Number.isSafeInteger(windowMs) || windowMs < 1000 || windowMs > 86400000 ||
+      !Number.isSafeInteger(maxKeys) || maxKeys < 1 || maxKeys > 100000 ||
+      !Number.isSafeInteger(perPeer) || perPeer < 1 || perPeer > 10000 ||
+      !Number.isSafeInteger(globalLimit) || globalLimit < 1 || globalLimit > 1000000)
+    throw Error("Invalid request budget policy");
   const buckets = new Map();
   let global = { at: 0, count: 0 };
   return (peer) => {
-    if (typeof peer !== "string" || peer.length > 128)
+    if (typeof peer !== "string" || !peer || peer.length > 128 ||
+        peer.trim() !== peer || /[\u0000-\u001f\u007f]/.test(peer))
       throw new HttpError(503, "PEER_CONTEXT_REQUIRED");
     const now = clock();
+    if (!Number.isSafeInteger(now) || now < 0)
+      throw new HttpError(503, "CLOCK_UNAVAILABLE");
     if (now - global.at >= windowMs) global = { at: now, count: 0 };
     if (++global.count > globalLimit) return false;
     for (const [key, bucket] of buckets)

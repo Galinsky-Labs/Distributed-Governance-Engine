@@ -1,4 +1,4 @@
-# Identity and organization access — partial DCE-002
+# Identity and organization access  partial DCE-002
 
 This server library adds OpenID Connect (OIDC) login, database-backed sessions, organization roles and invitations. OIDC is the standard protocol for authentication through an existing identity provider. No cloud resource, provider account, mail service or paid subscription is created. HTTP routes, a shared account/workspace UI and a direct-TLS application server are now implemented. They have not been deployed with a real provider. See ACCOUNT_HTTP.md for setup and route boundaries.
 
@@ -20,9 +20,13 @@ Passkey inventory exposes only the account's own credential metadata and recorde
 
 ## Storage and rollout
 
-Use one API service and the planned Postgres database. `pgTransactions(pool)` keeps each transaction on one connection. `applyIdentityMigrations(adminTransaction)` applies ordered migrations 001–003, records their checksums and refuses edited history. The migration credential must remain separate from request credentials. Preserve applied files after merge; later schema changes need new migrations. Roll back by disabling new routes while preserving identity/audit rows; no destructive down migration is supplied.
+Use one API service and the planned Postgres database. `pgTransactions(pool)` keeps each transaction on one connection. `applyIdentityMigrations(adminTransaction)` applies ordered migrations 001003, records their checksums and refuses edited history. The migration credential must remain separate from request credentials. Preserve applied files after merge; later schema changes need new migrations. Roll back by disabling new routes while preserving identity/audit rows; no destructive down migration is supplied.
 
 An administrator grants the `dge_identity_runtime` permission group to a dedicated service login. Never connect ordinary requests as the schema owner or a Neon/Postgres administrator. The group cannot log in or bypass row security. Organization tables use transaction-local row policies, with active membership/role checks in the service. These policies protect against query mistakes; they do not make the authorized identity service untrusted.
+
+## OIDC callback input containment
+
+The authorization-code callback now fails closed before consuming its single-use browser-bound login state if the callback URL exceeds 8192 characters, the login cookie is not a 43-character URL-safe token, the callback contains missing or duplicate authorization codes or contradictory OAuth error fields, or an optional authorization-response issuer (`iss`) is duplicated or differs from the configured OIDC issuer. A valid single issuer parameter is accepted. Synthetic-provider regression tests cover rejected inputs followed by a successful use of the original untouched login state. This protects callback parsing but is not a substitute for the openid-client token/signature/PKCE validation or a real-provider integration test.
 
 ## Login and sessions
 
@@ -48,7 +52,7 @@ Membership writes lock the organization row, protecting the last owner against s
 
 The identity service sees issuer/subject, internal IDs, membership, roles and authentication timing. This increment does not hide that metadata from the service/database administrator. Assess live transport, disk/backup encryption and operator access separately. No document plaintext, signature ink, device authorization secret, recovery key or application content key is accepted.
 
-Supply independent random 32-byte SESSION_KEY and OIDC_STATE_KEY Buffers through server secret configuration, never source or command arguments. The latter encrypts short-lived login state using Node AES-256-GCM; it is not an application E2EE key. State-key rotation restarts pending logins; session-key rotation invalidates outstanding tokens. `pruneExpiredLogins` removes at most 500 expired challenges per call; connect it to ordinary bounded worker maintenance without renting a scheduler. Production session/account retention policy remains to implement.
+Supply independent random 32-byte SESSION_KEY and OIDC_STATE_KEY Buffers through server secret configuration, never source or command arguments. The latter encrypts short-lived login state using Node AES-256-GCM; it is not an application E2EE key. State-key rotation restarts pending logins; session-key rotation invalidates outstanding tokens. `pruneExpiredLogins` removes at most 500 expired challenges per call; the server schedules a bounded pass every minute and cancels it during shutdown. Challenge expiry is checked at consumption independently of maintenance. Production session/account retention policy remains to implement.
 
 Migration 012 and the trusted `restoreProviderIdentity` adapter add a bounded provider-loss restoration boundary. The adapter accepts only fresh, already-verified OIDC claims after a restricted recovery session proves an existing passkey. It preserves the account ID and memberships, atomically replaces the issuer/subject binding, advances the authentication epoch, revokes every old session and records a minimal security event. It rejects a provider identity already bound to another account. The adapter is never an HTTP endpoint for caller-supplied claims; the production OIDC callback/UI integration and real-provider recovery exercise remain pending.
 
@@ -63,3 +67,4 @@ This contribution remains partial. Browser/authenticator interoperability, a con
 Primary references: [OIDC example](https://github.com/panva/openid-client/blob/main/examples/oidc.ts), [Postgres row policies](https://www.postgresql.org/docs/current/ddl-rowsecurity.html), [PGlite transactions](https://pglite.dev/docs/api).
 
 The browser fixture uses the actual HTTPS application, OIDC adapter, session store and UI with synthetic identities and an isolated test provider. `npm run test:browser` requires an explicitly installed Chrome executable in DGE_BROWSER_EXECUTABLE; it fails rather than silently skipping. CI pins Chrome Headless Shell 155.0.8059.84. Test-only local certificate acceptance and disabled browser sandbox never configure the production server.
+

@@ -5,6 +5,7 @@ import { InvitationControls } from "./invitations.jsx";
 const messages = {
   AUTHENTICATION_REQUIRED: "Sign in to continue.",
   REAUTHENTICATION_REQUIRED: "Sign in again before changing workspace access.",
+  STEP_UP_REQUIRED: "Sign in with multifactor authentication before issuing recovery codes.",
   SIGN_IN_AGAIN: "Sign in again to restore request protection.",
   ACCESS_DENIED:
     "This change is not permitted. A workspace must retain an owner.",
@@ -99,16 +100,23 @@ export function AccountPanel() {
         : "",
     ),
     [reload, setReload] = useState(0),
-    [joinCode, setJoinCode] = useState("");
+    [joinCode, setJoinCode] = useState(""),
+    [recoveryCodes, setRecoveryCodes] = useState([]);
   const heading = useRef(null),
     trigger = useRef(null),
-    alive = useRef(true);
+    alive = useRef(true),
+    codeEpoch = useRef(0);
+  const clearCodes = () => {
+    codeEpoch.current++;
+    setRecoveryCodes([]);
+  };
   const forget = () => {
     setSession(null);
     setWorkspaces([]);
     setSelected("");
     setMemberPage({ tenantId: "", items: [], nextCursor: null });
     setJoinCode("");
+    clearCodes();
   };
   function report(error) {
     if (error.status === 401) forget();
@@ -158,11 +166,15 @@ export function AccountPanel() {
     };
   }, []);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      clearCodes();
+      return;
+    }
     heading.current?.focus();
     const key = (e) => {
       if (e.key === "Escape") {
         setOpen(false);
+        clearCodes();
         trigger.current?.focus();
       }
     };
@@ -219,6 +231,7 @@ export function AccountPanel() {
             <button
               onClick={() => {
                 setOpen(false);
+                clearCodes();
                 trigger.current?.focus();
               }}
             >
@@ -246,7 +259,29 @@ export function AccountPanel() {
               <p>
                 <a href="/auth/start">Sign in again for access changes</a>
               </p>
+              <p className="small">
+                Issuing recovery codes invalidates any unused codes from an earlier set.
+                Save the new codes offline before closing this panel.
+              </p>
               <div className="account-actions">
+                <button
+                  disabled={busy || recoveryCodes.length > 0}
+                  onClick={() =>
+                    perform(async () => {
+                      const requestEpoch = codeEpoch.current;
+                      const result = await api("/api/recovery-codes", {
+                        method: "POST",
+                        body: {},
+                      });
+                      if (alive.current && codeEpoch.current === requestEpoch)
+                        setRecoveryCodes(result.recoveryCodes);
+                    }, "Recovery codes issued. Save them outside this application now.", {
+                      refresh: false,
+                    })
+                  }
+                >
+                  Issue recovery codes
+                </button>
                 <button
                   disabled={busy}
                   onClick={() =>
@@ -291,6 +326,20 @@ export function AccountPanel() {
                   Create workspace
                 </button>
               </div>
+              {recoveryCodes.length > 0 && (
+                <section aria-label="One-time recovery codes">
+                  <p>
+                    Save these one-time codes offline. They will disappear when you
+                    close this panel, and they cannot authorize an encrypted device.
+                  </p>
+                  <ol className="recovery-codes">
+                    {recoveryCodes.map((code) => (
+                      <li key={code}><code>{code}</code></li>
+                    ))}
+                  </ol>
+                  <button onClick={clearCodes}>Clear recovery codes</button>
+                </section>
+              )}
               <label>
                 Your workspace
                 <select

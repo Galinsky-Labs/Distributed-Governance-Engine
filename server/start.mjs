@@ -56,6 +56,14 @@ try {
     stateKey: decode("OIDC_STATE_KEY"),
     origin,
   });
+  // Each pass deletes at most 500 expired challenges; the timer is not a
+  // credential or session validity boundary, and it must not keep shutdown alive.
+  const loginPruneTimer = setInterval(() => {
+    store.pruneExpiredLogins().catch(() =>
+      console.error("Expired login challenge cleanup failed."),
+    );
+  }, 60000);
+  loginPruneTimer.unref();
   const configuration = await discoverIdentityProvider({
     issuer: required("OIDC_ISSUER"),
     clientId: required("OIDC_CLIENT_ID"),
@@ -116,6 +124,7 @@ try {
     ),
   );
   const stop = () => {
+    clearInterval(loginPruneTimer);
     collaboration.close();
     server.close(() => {
       pool.end().finally(() => process.exit());
@@ -131,3 +140,4 @@ try {
   );
   process.exit(1);
 }
+

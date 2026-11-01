@@ -276,6 +276,27 @@ function provider(scenario={}) {
   const login=createOIDCLogin({store,configuration:config,redirectUri:origin+'/auth/callback'});
   return {login,async start(){const result=await login.start();authorization=new URL(result.authorizationUrl);return {state:authorization.searchParams.get('state'),browser:result.cookie.match(/^__Host-dge_login=([^;]+)/)[1],authorization};}};
 }
+test('OIDC rejects ambiguous callbacks before consuming browser-bound login state',async()=>{
+  const {login,start}=provider(),pending=await start();
+  const base=origin+'/auth/callback?code=test-code&state='+pending.state;
+  for(const invalid of [
+    base+'&code=second-code',
+    base+'&error=access_denied',
+    base+'&error_description=injected',
+    base+'&iss='+encodeURIComponent('https://impostor.example'),
+    base+'&iss='+encodeURIComponent('https://provider.example')+'&iss='+encodeURIComponent('https://provider.example'),
+    base+'&unused='+ 'x'.repeat(9000),
+    origin+'/auth/callback?state='+pending.state
+  ])await denied(login.complete(invalid,pending.browser));
+  const good=await login.complete(base,pending.browser);
+  assert.ok(await store.account(good.sessionToken));
+});
+test('OIDC accepts an exact configured authorization response issuer',async()=>{
+  const {login,start}=provider(),pending=await start();
+  const callback=origin+'/auth/callback?code=test-code&state='+pending.state+'&iss='+encodeURIComponent('https://provider.example');
+  const authenticated=await login.complete(callback,pending.browser);
+  assert.ok(await store.account(authenticated.sessionToken));
+});
 test('OIDC code flow validates signature, issuer, audience, nonce, state and PKCE before session creation',async()=>{
   const {login,start}=provider(),pending=await start();assert.equal(pending.authorization.searchParams.get('code_challenge_method'),'S256');
   const callback=origin+'/auth/callback?code=test-code&state='+pending.state;
@@ -291,5 +312,5 @@ for(const [name,scenario] of Object.entries({nonce:{claims:{nonce:'wrong'}},issu
 }
 test('OIDC callback cannot change configured origin/path or repeat state parameters',async()=>{
   const {login,start}=provider(),p=await start();
-  for(const callback of ['https://attacker.example/auth/callback?state='+p.state,origin+'/elsewhere?state='+p.state,origin+'/auth/callback?state='+p.state+'&state='+p.state])await denied(login.complete(callback,p.browser));
+  for(const callback of ['not-a-url','https://attacker.example/auth/callback?state='+p.state,origin+'/elsewhere?state='+p.state,origin+'/auth/callback?state='+p.state+'&state='+p.state])await denied(login.complete(callback,p.browser));
 });

@@ -312,5 +312,5 @@ for(const [name,scenario] of Object.entries({nonce:{claims:{nonce:'wrong'}},issu
 }
 test('OIDC callback cannot change configured origin/path or repeat state parameters',async()=>{
   const {login,start}=provider(),p=await start();
-  for(const callback of ['https://attacker.example/auth/callback?state='+p.state,origin+'/elsewhere?state='+p.state,origin+'/auth/callback?state='+p.state+'&state='+p.state])await denied(login.complete(callback,p.browser));
+  for(const callback of ['not-a-url','https://attacker.example/auth/callback?state='+p.state,origin+'/elsewhere?state='+p.state,origin+'/auth/callback?state='+p.state+'&state='+p.state])await denied(login.complete(callback,p.browser));
 });

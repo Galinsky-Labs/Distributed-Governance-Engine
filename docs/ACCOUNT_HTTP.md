@@ -43,4 +43,6 @@ Passkey verification payloads have an explicit 64 KiB ceiling and exact top-leve
 
 Account JSON requests reject duplicate keys at every nesting level, including escaped-equivalent names, before schema checks or identity writes. Malformed, excessively nested or nonfinite numeric input returns `INVALID_JSON`; this parser guard is not provider or device verification.
 
+The local request budget rejects zero, nonfinite or out-of-range configuration and fails closed if its clock is invalid. It remains a per-process availability guard; fleet-wide abuse protection requires a separately reviewed deployment control.
+
 Source-bound evidence is in security/e2eesa-evidence/DCE-002-account-http-local.json. The engine now has a server-only dual-proof provider-restoration transaction, but no browser route accepts replacement identity claims: only the configured OIDC adapter may supply them. Real callback/UI integration, browser/authenticator interoperability, production verifier/attestation policy, private-content key recovery/rekeying, account discovery, retention, fleet-wide abuse protection and production deployment remain incomplete. Login and recovery never enroll an encryption device or prove private-content authorization. No production security conformance or independent-review claim is made.

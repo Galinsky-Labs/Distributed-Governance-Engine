@@ -152,12 +152,20 @@ export function createRequestBudget({
   perPeer = 120,
   globalLimit = 2000,
 } = {}) {
+  if (typeof clock !== "function" ||
+      !Number.isSafeInteger(windowMs) || windowMs < 1000 || windowMs > 86400000 ||
+      !Number.isSafeInteger(maxKeys) || maxKeys < 1 || maxKeys > 100000 ||
+      !Number.isSafeInteger(perPeer) || perPeer < 1 || perPeer > 10000 ||
+      !Number.isSafeInteger(globalLimit) || globalLimit < 1 || globalLimit > 1000000)
+    throw Error("Invalid request budget policy");
   const buckets = new Map();
   let global = { at: 0, count: 0 };
   return (peer) => {
     if (typeof peer !== "string" || peer.length > 128)
       throw new HttpError(503, "PEER_CONTEXT_REQUIRED");
     const now = clock();
+    if (!Number.isSafeInteger(now) || now < 0)
+      throw new HttpError(503, "CLOCK_UNAVAILABLE");
     if (now - global.at >= windowMs) global = { at: now, count: 0 };
     if (++global.count > globalLimit) return false;
     for (const [key, bucket] of buckets)

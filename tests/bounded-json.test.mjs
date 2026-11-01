@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boundedJson, HttpError } from "../server/account-http.mjs";
+import { boundedJson, createRequestBudget, HttpError } from "../server/account-http.mjs";
 
 const request = (body) => new Request("https://quill.example/api/recovery-session", {
   method: "POST", headers: { "content-type": "application/json" }, body,
@@ -29,4 +29,13 @@ test("account JSON retains valid nested responses and rejects malformed input", 
     (error) => error instanceof HttpError && error.code === "INVALID_JSON");
   await assert.rejects(boundedJson(request("[".repeat(80) + "0" + "]".repeat(80)),
     ["response"]), (error) => error instanceof HttpError && error.code === "INVALID_JSON");
+});
+
+test("identity request budget cannot be disabled by invalid policy or clock", () => {
+  for (const policy of [{ perPeer: 0 }, { globalLimit: Infinity },
+                        { maxKeys: -1 }, { windowMs: 0 }, { clock: null }])
+    assert.throws(() => createRequestBudget(policy));
+  const budget = createRequestBudget({ clock: () => NaN });
+  assert.throws(() => budget("peer"),
+    (error) => error instanceof HttpError && error.code === "CLOCK_UNAVAILABLE");
 });

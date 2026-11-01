@@ -161,7 +161,8 @@ export function createRequestBudget({
   const buckets = new Map();
   let global = { at: 0, count: 0 };
   return (peer) => {
-    if (typeof peer !== "string" || peer.length > 128)
+    if (typeof peer !== "string" || !peer || peer.length > 128 ||
+        peer.trim() !== peer || /[\u0000-\u001f\u007f]/.test(peer))
       throw new HttpError(503, "PEER_CONTEXT_REQUIRED");
     const now = clock();
     if (!Number.isSafeInteger(now) || now < 0)

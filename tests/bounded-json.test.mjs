@@ -38,4 +38,9 @@ test("identity request budget cannot be disabled by invalid policy or clock", ()
   const budget = createRequestBudget({ clock: () => NaN });
   assert.throws(() => budget("peer"),
     (error) => error instanceof HttpError && error.code === "CLOCK_UNAVAILABLE");
+  const healthy = createRequestBudget();
+  for (const peer of ["", " ", " peer", "peer\n", "peer\0", "x".repeat(129)])
+    assert.throws(() => healthy(peer),
+      (error) => error instanceof HttpError && error.code === "PEER_CONTEXT_REQUIRED");
+  assert.equal(healthy("127.0.0.1"), true);
 });

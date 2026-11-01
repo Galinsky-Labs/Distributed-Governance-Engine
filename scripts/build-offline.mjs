@@ -20,7 +20,7 @@ if (
 if (!javascript.includes("CivicQuill") || !javascript.includes("CharterQuill"))
   throw Error("Shared Quill bundle is incomplete");
 
-const csp = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'";
+const csp = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'";
 const output = new URL("offline/", root);
 await mkdir(output, { recursive: true });
 for (const product of ["civic", "charter"]) {
@@ -28,9 +28,9 @@ for (const product of ["civic", "charter"]) {
   const html = template
     .replace('data-quill-product="civic"', 'data-quill-product="' + product + '"')
     .replace("<head>", '<head><meta http-equiv="Content-Security-Policy" content="' + csp + '"><meta name="referrer" content="no-referrer">')
-    .replace('<link rel="stylesheet" href="/app.css">', "<style>" + stylesheet.replace(/<\/style/gi, "<\\/style") + "</style>")
+    .replace('<link rel="stylesheet" href="/app.css">', () => "<style>" + stylesheet.replace(/<\/style/gi, "<\\/style") + "</style>")
     .replace('<script type="module" src="/app.js"></script>',
-      "<script type=\"module\">" + javascript.replace(/<\/script/gi, "<\\/script").replace(/\/\/# sourceMappingURL=.*$/gm, "") + "</script>")
+      () => "<script type=\"module\">" + javascript.replace(/<\/script/gi, "<\\/script").replace(/\/\/# sourceMappingURL=.*$/gm, "") + "</script>")
     .replace("The shared Quill legal editor development preview.", "Offline public drafting preview. No accounts, network sync or private-storage security.");
   // The source bundle itself may contain literal asset-tag snippets, so only
   // verify that both template slots were replaced. Chrome's offline test

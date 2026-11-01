@@ -165,6 +165,7 @@ export async function accountFixture({
         iat: now,
         exp: now + 300,
         auth_time: now,
+        amr: ["pwd", "mfa"],
         nonce: record.nonce,
       };
     const unsigned =

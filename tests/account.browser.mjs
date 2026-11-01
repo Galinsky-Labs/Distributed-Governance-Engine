@@ -88,6 +88,18 @@ test(
         originalCookies.find((c) => c.name === "__Host-dge_session").httpOnly,
         true,
       );
+      await click(owner, "Issue recovery codes");
+      await owner.waitForFunction(
+        () => document.querySelectorAll(".recovery-codes li").length === 8,
+      );
+      const issuedCodes = await owner.$$eval(
+        ".recovery-codes li",
+        (items) => items.map((item) => item.textContent),
+      );
+      assert.equal(new Set(issuedCodes).size, 8);
+      await click(owner, "Close account panel");
+      await click(owner, "Account & workspaces");
+      assert.equal(await owner.$(".recovery-codes"), null);
       await click(owner, "Create workspace");
       await owner.waitForSelector('input[maxlength="36"]');
       await fillLabel(owner, "Invitee account ID", memberId);

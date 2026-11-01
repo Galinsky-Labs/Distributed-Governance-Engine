@@ -34,6 +34,15 @@ jobs:
           path: .browser-cache
           key: chrome-headless-shell-linux-155.0.8059.84
       - name: Verify runtime
-        run: npm ci --ignore-scripts --no-audit --no-fund && npm run check && npm run test:postgres && npm run build
+        run: npm ci --ignore-scripts --no-audit --no-fund && npm run check && npm run test:postgres && npm run build && npm run build:offline
       - name: Verify browser account journey
         run: node_modules/.bin/browsers install chrome-headless-shell@155.0.8059.84 --path .browser-cache && chmod u+x "$DGE_BROWSER_EXECUTABLE" && npm run test:browser
+      - name: Publish standalone editor previews
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: civicquill-charterquill-offline
+          path: |
+            dist/offline/CivicQuill.html
+            dist/offline/CharterQuill.html
+          if-no-files-found: error
+          retention-days: 7

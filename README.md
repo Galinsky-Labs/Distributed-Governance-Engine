@@ -20,8 +20,12 @@ Requires Node 24.19.0 (tested). Install the exact lockfile before running the ed
 npm ci --ignore-scripts
 npm run check
 npm run build
+npm run build:offline
 npm run preview
 ```
+
+
+For **standalone, no-account drafting**, `npm run build:offline` creates `dist/offline/CivicQuill.html` and `dist/offline/CharterQuill.html`. Open either file directly in a current browser. The repository's GitHub Actions `verify` job also publishes both files as a downloadable `civicquill-charterquill-offline` artifact after browser tests pass. In that limited offline editor you can create a new draft, format, import an exported local working-copy JSON file, export JSON/plain text and print. **Do not enter confidential information**: this is an explicitly public preview with optional unencrypted device recovery, no cross-device synchronization, and no production voting, signing, private workspace or blockchain features. Download a JSON copy before closing the file.
 
 The shared React/ProseMirror editor preview serves http://127.0.0.1:4173 and demonstrates the CivicQuill/CharterQuill family, real drafting/formatting, legal sections, tables, outline, working-copy exports and anchored walkthroughs. Changes stay in memory unless you opt into public-sample device recovery. The account-enabled HTTPS service additionally implements OIDC, workspace membership, explicit public publication, durable public save/reopen/history and fixed public-input sources. It requires configured provider/database/TLS secrets; see operations. Exact-version replacement suggestions and rationales have a saved slide-out interface. Structured pro/con points, typed replies and independent argument ratings are connected. An opt-in, fail-closed private ciphertext persistence layer, authenticated encrypted Yjs frame codec, durable update ledger and dedicated private WebSocket relay have passing local/CI integration tests, including a real TLS-to-database two-user simulated-device journey. They are **not enabled by the production bootstrap**, and no reviewed group MLS key management or verified physical device authorization is provided yet. Binding governance decision voting/adoption and production acceptance remain unfinished. The earlier conceptual walkthrough remains available through npm run demo.
 

@@ -26,4 +26,6 @@ test("account JSON retains valid nested responses and rejects malformed input", 
   });
   await assert.rejects(boundedJson(request('{"response":1,}'), ["response"]),
     (error) => error instanceof HttpError && error.code === "INVALID_JSON");
+  await assert.rejects(boundedJson(request("[".repeat(80) + "0" + "]".repeat(80)),
+    ["response"]), (error) => error instanceof HttpError && error.code === "INVALID_JSON");
 });

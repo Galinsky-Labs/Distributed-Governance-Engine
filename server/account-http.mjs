@@ -48,7 +48,8 @@ function rejectDuplicateJsonKeys(text) {
     }
     throw Error("Unterminated JSON string");
   };
-  const value = () => {
+  const value = (depth = 0) => {
+    if (depth > 64) throw Error("JSON nesting limit exceeded");
     space();
     if (text[i] === "{") {
       i++; space();
@@ -59,7 +60,7 @@ function rejectDuplicateJsonKeys(text) {
         if (keys.has(key)) throw Error("Duplicate JSON key");
         keys.add(key); space();
         if (text[i++] !== ":") throw Error("Invalid JSON member");
-        value(); space();
+        value(depth + 1); space();
         if (text[i] === ",") { i++; space(); }
         else if (text[i] !== "}") throw Error("Invalid JSON object");
       }
@@ -67,7 +68,7 @@ function rejectDuplicateJsonKeys(text) {
     } else if (text[i] === "[") {
       i++; space();
       while (i < text.length && text[i] !== "]") {
-        value(); space();
+        value(depth + 1); space();
         if (text[i] === ",") { i++; space(); }
         else if (text[i] !== "]") throw Error("Invalid JSON array");
       }

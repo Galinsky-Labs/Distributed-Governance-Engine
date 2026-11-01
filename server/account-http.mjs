@@ -37,6 +37,50 @@ export function requestCookies(header = "") {
   }
   return result;
 }
+function rejectDuplicateJsonKeys(text) {
+  let i = 0;
+  const space = () => { while (/\s/.test(text[i] ?? "" ) && i < text.length) i++; };
+  const quoted = () => {
+    const start = i++;
+    while (i < text.length) {
+      if (text[i] === "\\") { i += 2; continue; }
+      if (text[i++] === '"') return JSON.parse(text.slice(start, i));
+    }
+    throw Error("Unterminated JSON string");
+  };
+  const value = () => {
+    space();
+    if (text[i] === "{") {
+      i++; space();
+      const keys = new Set();
+      while (i < text.length && text[i] !== "}") {
+        if (text[i] !== '"') throw Error("Invalid JSON key");
+        const key = quoted();
+        if (keys.has(key)) throw Error("Duplicate JSON key");
+        keys.add(key); space();
+        if (text[i++] !== ":") throw Error("Invalid JSON member");
+        value(); space();
+        if (text[i] === ",") { i++; space(); }
+        else if (text[i] !== "}") throw Error("Invalid JSON object");
+      }
+      if (text[i++] !== "}") throw Error("Invalid JSON object");
+    } else if (text[i] === "[") {
+      i++; space();
+      while (i < text.length && text[i] !== "]") {
+        value(); space();
+        if (text[i] === ",") { i++; space(); }
+        else if (text[i] !== "]") throw Error("Invalid JSON array");
+      }
+      if (text[i++] !== "]") throw Error("Invalid JSON array");
+    } else if (text[i] === '"') quoted();
+    else {
+      const start = i;
+      while (i < text.length && !/[\s,}\]]/.test(text[i])) i++;
+      if (i === start) throw Error("Invalid JSON value");
+    }
+  };
+  value();
+}
 export async function boundedJson(
   request,
   allowed,
@@ -71,8 +115,10 @@ export async function boundedJson(
     }
   let body;
   try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
+    rejectDuplicateJsonKeys(text);
     body = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
+      text,
       (key, value) => {
         if (
           key.includes("\0") ||

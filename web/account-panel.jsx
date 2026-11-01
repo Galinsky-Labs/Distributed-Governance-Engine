@@ -259,6 +259,10 @@ export function AccountPanel() {
               <p>
                 <a href="/auth/start">Sign in again for access changes</a>
               </p>
+              <p className="small">
+                Issuing recovery codes invalidates any unused codes from an earlier set.
+                Save the new codes offline before closing this panel.
+              </p>
               <div className="account-actions">
                 <button
                   disabled={busy || recoveryCodes.length > 0}

@@ -100,6 +100,14 @@ test(
       await click(owner, "Close account panel");
       await click(owner, "Account & workspaces");
       assert.equal(await owner.$(".recovery-codes"), null);
+      const primaryContext = await browser.createBrowserContext(),
+        primary = await login(primaryContext, fixture.origin, "primary-only");
+      await click(primary, "Issue recovery codes");
+      await primary.waitForFunction(
+        () => document.querySelector('.account-panel [role="status"]')
+          ?.textContent === "Sign in with multifactor authentication before issuing recovery codes.",
+      );
+      assert.equal(await primary.$(".recovery-codes"), null);
       await click(owner, "Create workspace");
       await owner.waitForSelector('input[maxlength="36"]');
       await fillLabel(owner, "Invitee account ID", memberId);

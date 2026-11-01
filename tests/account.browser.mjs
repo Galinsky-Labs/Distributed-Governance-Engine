@@ -101,7 +101,7 @@ test(
       await click(owner, "Account & workspaces");
       assert.equal(await owner.$(".recovery-codes"), null);
       const primaryContext = await browser.createBrowserContext(),
-        primary = await login(primaryContext, fixture.origin, "primary-only");
+        primary = await login(primaryContext, fixture.origin, "primaryonly");
       await click(primary, "Issue recovery codes");
       await primary.waitForFunction(
         () => document.querySelector('.account-panel [role="status"]')

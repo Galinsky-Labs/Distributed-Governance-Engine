@@ -165,7 +165,7 @@ export async function accountFixture({
         iat: now,
         exp: now + 300,
         auth_time: now,
-        amr: record.subject === "primary-only" ? ["pwd"] : ["pwd", "mfa"],
+        amr: record.subject === "primaryonly" ? ["pwd"] : ["pwd", "mfa"],
         nonce: record.nonce,
       };
     const unsigned =

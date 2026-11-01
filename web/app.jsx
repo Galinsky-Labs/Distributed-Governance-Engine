@@ -27,6 +27,7 @@ import { DocumentLibrary } from "./document-library.jsx";
 import { ProposalPanel } from "./proposal-panel.jsx";
 import { createAccountAPI } from "./account-api.mjs";
 import { createDocumentSession } from "../editor/document-session.mjs";
+import { createLocalWorkingCopy, importLocalWorkingCopy } from "./local-drafts.mjs";
 import { mountPublicRealtimeEditor } from "../editor/realtime-editor.mjs";
 
 const brands = {
@@ -283,7 +284,8 @@ function App() {
     cache = useRef(null),
     session = useRef(null),
     saveTimer = useRef(null),
-    freezeCommand = useRef(null);
+    freezeCommand = useRef(null),
+    importFile = useRef(null);
   const brand = brands[product],
     editable =
       canDirectlyEdit(doc) && mayEdit(record) && !freezing && !freezeUncertain && (!live || liveReady);
@@ -485,6 +487,30 @@ function App() {
     } catch {
       setStatus("Live collaboration requires a current authenticated saved document. Local unsaved text was preserved.");
     }
+  }
+  function newLocalDraft() {
+    if (accountEnabled || !canLeave()) return;
+    const name = window.prompt("Title for a new public local draft", "Untitled draft");
+    if (name === null) return;
+    try {
+      setDoc(createLocalWorkingCopy(product, name));
+      setRecord(null);
+      setGeneration((x) => x + 1);
+      setStatus("New public local draft. Export JSON to preserve your work; this is not a private or server-saved document.");
+    } catch { setStatus("Enter a valid title, up to 200 characters."); }
+  }
+  async function importLocalDraft(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || accountEnabled || !canLeave()) return;
+    if (file.size > 3000000) { setStatus("Working copy exceeds the import limit."); return; }
+    try {
+      const document = importLocalWorkingCopy(await file.text(), product);
+      setDoc(document);
+      setRecord(null);
+      setGeneration((x) => x + 1);
+      setStatus("Public local working copy imported. Export JSON to preserve later changes.");
+    } catch { setStatus("Import rejected. Use a valid public working-copy JSON export from this Quill product."); }
   }
   function run(command) {
     if (!controller.current?.command(command))
@@ -858,6 +884,15 @@ function App() {
               ? "Saved versions preserve the exact wording. Public-input mode fixes the source permanently. Public-input source text stays fixed while people suggest changes."
               : "Edit this public sample, or use Documents to publish and save your own working copy."}
           </p>
+          {!record && !accountEnabled && (
+            <section>
+              <h3>Local drafting</h3>
+              <p>For public, nonconfidential drafts only. Nothing is saved to a server. Download JSON before leaving; no automatic recovery guarantee.</p>
+              <button onClick={newLocalDraft}>New document</button>
+              <button onClick={() => importFile.current?.click()}>Import working-copy JSON</button>
+              <input ref={importFile} type="file" accept=".json,application/json" onChange={importLocalDraft} aria-label="Import public working-copy JSON" style={{display:"none"}} />
+            </section>
+          )}
           {!record && (
             <button onClick={previewInput} disabled={!editable}>
               Preview a fixed public-input edition

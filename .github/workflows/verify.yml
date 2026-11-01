@@ -46,3 +46,31 @@ jobs:
             dist/offline/CharterQuill.html
           if-no-files-found: error
           retention-days: 7
+
+  publish-offline:
+    name: Publish verified standalone editors
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: quill-offline-preview-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - name: Build verified public drafting previews
+        run: npm ci --ignore-scripts --no-audit --no-fund && npm run build && npm run build:offline
+      - name: Publish permanent preview downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view quill-offline-preview >/dev/null 2>&1; then
+            gh release create quill-offline-preview --target "$GITHUB_SHA" --prerelease --title "Quill offline editor preview" --notes "CivicQuill and CharterQuill public-document drafting previews. These files are not the hosted SaaS, do not store private data securely, and do not provide authenticated governance voting, binding adoption, e-signing, or blockchain commitments. Export JSON to preserve drafts."
+          fi
+          gh release upload quill-offline-preview dist/offline/CivicQuill.html dist/offline/CharterQuill.html --clobber

@@ -18,12 +18,23 @@ test("standalone CivicQuill and CharterQuill draft and import without HTTP", { t
     for (const brand of ["CivicQuill", "CharterQuill"]) {
       const product = brand === "CivicQuill" ? "civic" : "charter";
       const page = await browser.newPage();
-      const external = [];
+      const external = [], errors = [];
+      page.on("pageerror", error => errors.push(error.message));
+      page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
       page.on("request", request => {
         if (/^https?:/.test(request.url())) external.push(request.url());
       });
       await page.goto(pathToFileURL(resolve("dist/offline/" + brand + ".html")).href, {waitUntil:"load"});
-      await page.waitForSelector(".ProseMirror");
+      try {
+        await page.waitForSelector(".ProseMirror", {timeout: 7000});
+      } catch {
+        const state = await page.evaluate(() => ({
+          root: document.getElementById("root")?.innerHTML.slice(0, 250),
+          scriptTypes: [...document.scripts].map(x => [x.type, x.src, x.textContent.length]),
+          readyState: document.readyState,
+        }));
+        throw Error("Offline editor did not mount: " + JSON.stringify({brand, errors, state}));
+      }
       assert.match(await page.$eval(".brand", el => el.textContent), new RegExp(brand));
       assert.equal(await page.evaluate(() => document.documentElement.dataset.accountEnabled === "true"), false);
       assert.equal(await page.$eval(".ProseMirror", el => el.getAttribute("contenteditable")), "true");

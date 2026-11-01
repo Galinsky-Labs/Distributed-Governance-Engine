@@ -123,7 +123,8 @@ export async function boundedJson(
       (key, value) => {
         if (
           key.includes("\0") ||
-          (typeof value === "string" && value.includes("\0"))
+          (typeof value === "string" && value.includes("\0")) ||
+          (typeof value === "number" && !Number.isFinite(value))
         )
           throw Error("Unsupported JSON character");
         return value;

@@ -11,6 +11,7 @@ test("account JSON rejects duplicate root, nested and escaped-equivalent keys", 
     '{"accountId":"first","accountId":"second","recoveryCode":"code"}',
     '{"response":{"accepted":true,"accepted":false}}',
     '{"accountId":"first","\\u0061ccountId":"second","recoveryCode":"code"}',
+    '{"response":{"counter":1e9999}}',
   ]) {
     await assert.rejects(
       boundedJson(request(body), ["accountId", "recoveryCode", "response"], []),

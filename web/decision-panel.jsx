@@ -67,6 +67,17 @@ export function DecisionPanel({tenantId,documentId,proposalId,role}){
       setError(statusText(reason)+(pending.current?" Retry sends the same command ID.":""));
     }finally{setBusy(false);}
   }
+  async function downloadReceipt(){
+    setError("");
+    try{
+      const receipt=await api("/api/public/documents/"+documentId+"/proposals/"+proposalId+"/decision/receipt");
+      const blob=new Blob([JSON.stringify(receipt,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob),link=document.createElement("a");
+      link.href=url;link.download="Quill-decision-"+proposalId+".json";
+      link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setNotice("Decision receipt downloaded. Its checksum can be verified independently, but it is not a signature or blockchain proof.");
+    }catch(error){setError(statusText(error));}
+  }
   if(!tenantId||!proposalId)return null;
   return <section className="decision-panel" aria-label="Proposal decision">
     <div className="decision-heading"><div><p className="eyebrow">GOVERNANCE / VOTING</p><h3>Decision record</h3></div><button onClick={()=>{pending.current=null;setRevision(r=>r+1)}} disabled={loading||busy}>Refresh</button></div>
@@ -109,7 +120,7 @@ export function DecisionPanel({tenantId,documentId,proposalId,role}){
         </div>}
       {canManage&&decision.state==="open"&&
         <button disabled={busy} onClick={()=>run("close",()=>({}))}>Close vote after deadline</button>}
-      {decision.certificateDigest&&<p className="decision-certificate">Recorded closure digest: <code>{decision.certificateDigest}</code></p>}
+      {decision.certificateDigest&&<div className="decision-certificate"><p>Recorded closure digest: <code>{decision.certificateDigest}</code></p><button onClick={downloadReceipt} disabled={busy}>Download publicly verifiable checksum receipt</button></div>}
       <p className="decision-legal-note">These tallies and receipts document an internal governance choice. They are not signed, externally anchored or legally executed; no document language is automatically adopted.</p>
     </div>}
   </section>;

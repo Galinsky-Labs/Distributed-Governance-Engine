@@ -6,6 +6,7 @@ import {createIdentityStore,applyIdentityMigrations} from "../server/identity-st
 import {createDocumentStore} from "../server/document-store.mjs";
 import {createProposalStore} from "../server/proposal-store.mjs";
 import {createDecisionStore} from "../server/decision-store.mjs";
+import {digest} from "../src/integrity.mjs";
 import {createLegalDocument} from "../src/legal-structure.mjs";
 
 let db,identity,documents,proposals,decisions,owner,member,tenantId,source,proposal,clock;
@@ -57,6 +58,22 @@ test("passed frozen vote atomically applies exact proposal as new public working
   assert.equal(certificate.executed,false);
   assert.equal(certificate.canAdopt,false);
   assert.match(certificateDigest,/^[a-f0-9]{64}$/);
+  assert.equal(certificate.ballotsDigestVersion,2);
+  assert.match(certificate.ballotsDigest,/^[a-f0-9]{64}$/);
+  const rawBallots=(await db.query("SELECT account_id,choice,version,cast_at FROM dge_decisions.ballots ORDER BY account_id")).rows;
+  const canonicalBallots=rawBallots.map(r=>({
+    accountId:r.account_id,choice:r.choice,version:r.version,castAt:new Date(r.cast_at).toISOString()
+  }));
+  const unsalted=digest("frozen-decision-ballots-v1",canonicalBallots);
+  assert.notEqual(certificate.ballotsDigest,unsalted,
+    "The public certificate must not reveal an easily enumerated ballot commitment");
+  const privateEvents=(await db.query("SELECT result FROM dge_decisions.events")).rows;
+  const audit=privateEvents.find(e=>typeof e.result?.ballotSalt==="string")?.result;
+  assert.match(audit?.ballotSalt??"",/^[a-f0-9]{64}$/);
+  assert.ok(!JSON.stringify(certificate).includes(audit.ballotSalt));
+  assert.equal(certificate.ballotsDigest,digest("frozen-decision-ballots-v2",{
+    salt:audit.ballotSalt,ballots:canonicalBallots
+  }));
   const version=await documents.read(owner,tenantId,source.id);
   assert.equal(version.version,2);
   assert.equal(version.previousDigest,(await documents.history(source.id)).items[1].digest);

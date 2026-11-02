@@ -51,6 +51,22 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
       position:"support",text:"Quarterly reporting exposes problems sooner.",
       commandId:randomUUID(),disclosure:"publish-point-v1"
     });
+    // An unrelated, cookie-free browser can discover public laws and read the
+    // exact amendment and pro/con evidence without workspace membership.
+    const guestContext=await browser.createBrowserContext();
+    const guest=await guestContext.newPage();
+    guest.setDefaultTimeout(20000);
+    await guest.goto(fixture.origin+"/governance");
+    await guest.waitForSelector(".governance-guest-bar");
+    await guest.waitForFunction(()=>
+      document.querySelector(".governance-list")?.textContent.includes("Public oversight charter")
+    );
+    await guest.waitForFunction(()=>
+      document.querySelector(".governance-column-debate")?.textContent.includes("Quarterly reporting exposes problems sooner.")
+    );
+    assert.match(await guest.$eval(".governance-guest-voting",node=>node.textContent),/membership/);
+    assert.equal(await guest.$(".decision-ballot"),null,"Anonymous readers must not cast member ballots");
+    await guest.close();await guestContext.close();
     // A separately signed-in account joins before the vote is opened. The
     // electorate is frozen from real memberships, not browser-local personas.
     const otherContext=await browser.createBrowserContext();

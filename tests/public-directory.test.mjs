@@ -46,10 +46,9 @@ test("anonymous pagination exposes only deliberately public document metadata",a
     assert.ok(!JSON.stringify(json).includes("Document text deliberately excluded"));
     assert.ok(!JSON.stringify(json).includes(session.accountId));
     cursor=json.nextCursor;
+    if(i===2)assert.equal(cursor,null,"Final page must not advertise more records");
   }
   assert.deepEqual(observed,new Set(ids));
-  const final=await get(base+"?after="+cursor);
-  assert.equal((await final.json()).items.length,0);
   assert.equal((await get(base+"?limit=0")).status,400);
   assert.equal((await get(base+"?limit=1000")).status,400);
   assert.equal((await get(base+"?limit=1&limit=2")).status,400);

@@ -36,9 +36,13 @@ export function GovernanceHome() {
   const [refresh, setRefresh] = useState(0);
   const [documentRefresh, setDocumentRefresh] = useState(0);
   const [proposalRefresh, setProposalRefresh] = useState(0);
+  const [guestCursor, setGuestCursor] = useState(null);
+  const [guestPrevious, setGuestPrevious] = useState([]);
+  const [guestNextCursor, setGuestNextCursor] = useState(null);
   const activeWorkspace = workspaces.find(w => w.tenantId === workspaceId);
   const activeDocument = documents.find(d => d.id === documentId);
   const activeProposal = proposals.find(p => p.proposal.id === proposalId);
+  const effectiveTenantId = activeDocument?.tenantId ?? workspaceId;
   const visibleDocuments = useMemo(
     () => documents.filter(d => String(d.title).toLocaleLowerCase().includes(search.toLocaleLowerCase())),
     [documents, search]
@@ -61,6 +65,19 @@ export function GovernanceHome() {
     return () => abort.abort();
   }, [product, refresh]);
   useEffect(() => {
+    if(accountEnabled) return;
+    const abort=new AbortController();
+    setLoading(true);setDocuments([]);setDocumentId("");setProposals([]);setProposalId("");
+    const path="/api/public/documents?limit=40"+(guestCursor?"&after="+encodeURIComponent(guestCursor):"");
+    api(path,{signal:abort.signal}).then(result=>{
+      setDocuments(result.items);
+      setGuestNextCursor(result.nextCursor);
+      setDocumentId(result.items[0]?.id ?? "");
+    }).catch(error=>{if(error.name!=="AbortError")setMessage("Public document directory is currently unavailable.");})
+    .finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+    return()=>abort.abort();
+  },[accountEnabled,guestCursor,documentRefresh]);
+  useEffect(() => {
     const abort = new AbortController();
     setDocuments([]);
     setDocumentId("");
@@ -82,7 +99,7 @@ export function GovernanceHome() {
     const abort = new AbortController();
     setProposals([]);
     setProposalId("");
-    if (!documentId || !accountEnabled) return () => abort.abort();
+    if (!documentId) return () => abort.abort();
     api("/api/public/documents/" + documentId + "/proposals?limit=100", {signal:abort.signal})
       .then(result => {
         setProposals(result.items);
@@ -91,7 +108,7 @@ export function GovernanceHome() {
       })
       .catch(error => {if(error.name !== "AbortError") setMessage(messageFor(error));});
     return () => abort.abort();
-  }, [documentId, proposalRefresh, accountEnabled]);
+  }, [documentId, proposalRefresh]);
   async function createWorkspace() {
     if (creating || loading) return;
     setCreating(true);
@@ -115,10 +132,9 @@ export function GovernanceHome() {
       <p>{brand.description}</p>
       <div className="governance-capabilities"><span>Versioned public documents</span><span>Exact text amendments</span><span>Evidence-led arguments</span><span>Member permissions</span></div>
     </section>
-    <div className="governance-disclosure" role="note"><strong>Public collaboration release.</strong> All saved content is public. Legally binding decisions, verified electorate votes, signatures, private organization storage and blockchain anchoring have not been activated. No result here signifies enacted law or an executed corporate resolution.</div>
-    {!accountEnabled ? <section className="governance-empty"><h2>A hosted account service is required</h2><p>The standalone editor has no shared workspaces. Open this view on the authenticated Quill service to use real collaboration.</p></section> :
+    <div className="governance-disclosure" role="note"><strong>Public collaboration release.</strong> All published source documents and proposals are public. Workspace-member voting and draft amendment application are recorded, but independently verified voter identity, legally executed resolutions, signatures, private organization storage, and blockchain finality have not been activated.</div>
     <div className="governance-body">
-      <div className="governance-controls">
+      {accountEnabled ? <div className="governance-controls">
         <label htmlFor="governance-workspace">Your workspace
           <select id="governance-workspace" value={workspaceId} onChange={event => setWorkspaceId(event.target.value)} disabled={creating || loading}>
             {!workspaceId && <option value="">No workspaces yet</option>}
@@ -127,9 +143,9 @@ export function GovernanceHome() {
         </label>
         <button disabled={creating || loading} onClick={createWorkspace}>Create workspace</button>
         <button disabled={creating || loading} onClick={() => {setMessage("");setRefresh(x=>x+1);setDocumentRefresh(x=>x+1);setProposalRefresh(x=>x+1);}}>Refresh records</button>
-      </div>
+      </div> : <div className="governance-guest-bar"><strong>Browse public documents and amendments</strong><a href="/auth/start">Sign in to collaborate</a><button onClick={()=>setDocumentRefresh(n=>n+1)} disabled={loading}>Refresh public directory</button></div>}
       <p className="governance-message" aria-live="polite" role="status">{loading ? "Loading workspace records… " : ""}{message}</p>
-      {!workspaceId ? <div className="governance-empty"><h2>Build a governance workspace</h2><p>Create a workspace, publish a public document through the editor, and invite contributors through Accounts & membership.</p><a href="/account">Manage membership</a></div> :
+      {!workspaceId && accountEnabled ? <div className="governance-empty"><h2>Build a governance workspace</h2><p>Create a workspace, publish a public document through the editor, and invite contributors through Accounts & membership.</p><a href="/account">Manage membership</a></div> :
       <div className="governance-columns">
         <section className="governance-column" aria-label="Workspace documents">
           <div className="governance-column-heading"><p className="eyebrow">01 / DOCUMENTS</p><h2>Working texts <span>{documents.length}</span></h2></div>
@@ -140,7 +156,8 @@ export function GovernanceHome() {
             </button>)}
             {!visibleDocuments.length && <p className="governance-placeholder">No matching documents yet. Publish one from the editor.</p>}
           </div>
-          {activeDocument && <a className="governance-action" href={"/?document="+encodeURIComponent(activeDocument.id)}>Read document and propose changes</a>}
+          {activeDocument && <a className="governance-action" href={"/?document="+encodeURIComponent(activeDocument.id)}>{accountEnabled ? "Read document and propose changes" : "Read public document"}</a>}
+          {!accountEnabled && <div className="governance-pagination"><button disabled={!guestPrevious.length || loading} onClick={()=>{const prev=guestPrevious.at(-1);setGuestPrevious(items=>items.slice(0,-1));setGuestCursor(prev);}}>Previous page</button><button disabled={!guestNextCursor || loading} onClick={()=>{setGuestPrevious(items=>[...items,guestCursor]);setGuestCursor(guestNextCursor);}}>Next page</button></div>}
           <a className="governance-secondary" href="/">Open document editor</a>
         </section>
         <section className="governance-column" aria-label="Proposed amendments">
@@ -163,16 +180,16 @@ export function GovernanceHome() {
               <h3>Reason for the change</h3><p>{activeProposal.proposal.rationale}</p>
               <p className="governance-integrity">Integrity digest: <code>{activeProposal.digest}</code></p>
             </div>
-            <DecisionPanel key={"vote-"+activeProposal.proposal.id} tenantId={workspaceId}
+            {accountEnabled ? <DecisionPanel key={"vote-"+activeProposal.proposal.id} tenantId={workspaceId}
               documentId={activeDocument.id} proposalId={activeProposal.proposal.id}
-              role={activeWorkspace?.role} />
+              role={activeWorkspace?.role} /> : <p className="governance-guest-voting">Voting requires membership in the proposal workspace. <a href="/auth/start">Sign in</a> to participate.</p>}
             <DiscussionPanel key={activeProposal.proposal.id}
-              document={{id:activeDocument.id,tenantId:workspaceId,mode:activeDocument.mode}}
+              document={{id:activeDocument.id,tenantId:effectiveTenantId,mode:activeDocument.mode}}
               proposal={activeProposal.proposal}/>
           </> : <p className="governance-placeholder">Select an amendment to view its supporting arguments, objections, evidence, and threaded replies. Workspace contributors can participate using their signed-in accounts.</p>}
         </section>
       </div>}
       {activeWorkspace && <p className="governance-footer">Workspace role: {activeWorkspace.role}. This is an evidence-backed public collaboration surface, not an execution or adoption certificate.</p>}
-    </div>}
+    </div>
   </div>;
 }

@@ -20,7 +20,9 @@ const heading = (product) => product === "charter"
  * It never generates pretend organizations, votes, signatures, or source material.
  */
 export function GovernanceHome() {
-  const accountEnabled = document.documentElement.dataset.accountEnabled === "true";
+  const serviceEnabled = document.documentElement.dataset.accountEnabled === "true";
+  const [authenticated,setAuthenticated] = useState(serviceEnabled ? null : false);
+  const accountEnabled = authenticated === true;
   const product = document.documentElement.dataset.quillProduct === "charter" ? "charter" : "civic";
   const brand = heading(product);
   const [workspaces, setWorkspaces] = useState([]);
@@ -47,6 +49,18 @@ export function GovernanceHome() {
     () => documents.filter(d => String(d.title).toLocaleLowerCase().includes(search.toLocaleLowerCase())),
     [documents, search]
   );
+  useEffect(()=>{
+    if(!serviceEnabled)return;
+    const abort=new AbortController();
+    api("/api/session",{signal:abort.signal})
+      .then(()=>{if(!abort.signal.aborted)setAuthenticated(true);})
+      .catch(error=>{
+        if(abort.signal.aborted)return;
+        setAuthenticated(false);
+        if(error.status!==401)setMessage("Account status could not be verified. Public reading may still be available.");
+      });
+    return()=>abort.abort();
+  },[serviceEnabled]);
   useEffect(() => {
     document.title = brand.name + " — Governance workspaces";
     document.documentElement.style.setProperty("--accent", product === "charter" ? "#334a72" : "#275c49");
@@ -63,9 +77,9 @@ export function GovernanceHome() {
       .catch(error => {if(error.name !== "AbortError") setMessage(messageFor(error));})
       .finally(() => {if(!abort.signal.aborted) setLoading(false);});
     return () => abort.abort();
-  }, [product, refresh]);
+  }, [product, refresh, accountEnabled]);
   useEffect(() => {
-    if(accountEnabled) return;
+    if(authenticated!==false||!serviceEnabled) return;
     const abort=new AbortController();
     setLoading(true);setDocuments([]);setDocumentId("");setProposals([]);setProposalId("");
     const path="/api/public/documents?limit=40"+(guestCursor?"&after="+encodeURIComponent(guestCursor):"");
@@ -76,7 +90,7 @@ export function GovernanceHome() {
     }).catch(error=>{if(error.name!=="AbortError")setMessage("Public document directory is currently unavailable.");})
     .finally(()=>{if(!abort.signal.aborted)setLoading(false);});
     return()=>abort.abort();
-  },[accountEnabled,guestCursor,documentRefresh]);
+  },[authenticated,serviceEnabled,guestCursor,documentRefresh]);
   useEffect(() => {
     const abort = new AbortController();
     setDocuments([]);
@@ -121,6 +135,7 @@ export function GovernanceHome() {
     } catch (error) {setMessage(messageFor(error));}
     finally {setCreating(false);}
   }
+  if(authenticated===null)return <main className="governance-empty" role="status">Checking your session and public directory…</main>;
   return <div className="governance-page">
     <header className="governance-navigation">
       <a className="governance-brand" href="/governance"><span aria-hidden="true">Q</span>{brand.name}</a>
@@ -134,6 +149,7 @@ export function GovernanceHome() {
     </section>
     <div className="governance-disclosure" role="note"><strong>Public collaboration release.</strong> All published source documents and proposals are public. Workspace-member voting and draft amendment application are recorded, but independently verified voter identity, legally executed resolutions, signatures, private organization storage, and blockchain finality have not been activated.</div>
     <div className="governance-body">
+      {!serviceEnabled && <p className="governance-disclosure">The standalone file has no public database or account service. Use a configured hosted Quill service for collaboration.</p>}
       {accountEnabled ? <div className="governance-controls">
         <label htmlFor="governance-workspace">Your workspace
           <select id="governance-workspace" value={workspaceId} onChange={event => setWorkspaceId(event.target.value)} disabled={creating || loading}>

@@ -82,7 +82,7 @@ try {
       login,
       origin,
       extensions: [
-        createDecisionRoutes({decisions:createDecisionStore({identity:store})}),
+        createDecisionRoutes({decisions:createDecisionStore({identity:store,transaction:pgTransactions(pool)})}),
         createDiscussionRoutes({
           discussion: createDiscussionStore({
             identity: store,

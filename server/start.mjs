@@ -14,6 +14,8 @@ import {
   discussionBodyLimit,
 } from "./discussion-http.mjs";
 import { createProposalStore } from "./proposal-store.mjs";
+import { createDecisionStore } from "./decision-store.mjs";
+import { createDecisionRoutes, decisionBodyLimit } from "./decision-http.mjs";
 import { createProposalRoutes, proposalBodyLimit } from "./proposal-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication, createEngineServer } from "./application.mjs";
@@ -80,6 +82,7 @@ try {
       login,
       origin,
       extensions: [
+        createDecisionRoutes({decisions:createDecisionStore({identity:store})}),
         createDiscussionRoutes({
           discussion: createDiscussionStore({
             identity: store,
@@ -112,6 +115,7 @@ try {
         documentBodyLimit(path),
         proposalBodyLimit(path),
         discussionBodyLimit(path),
+        decisionBodyLimit(path),
       ),
   });
   const collaboration = attachPublicCollaborationHub({server, origin, documents});

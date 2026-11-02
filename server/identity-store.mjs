@@ -14,7 +14,7 @@ const policyId=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9._-]{0,63}$/.tes
 const attestationFormat=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9._-]{0,63}$/.test(value);
 const aaguid=value=>typeof value==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(value);
 export const identityMigration=()=>readFile(new URL('../migrations/001-identity.sql',import.meta.url),'utf8');
-const migrationRecords=()=>Promise.all(['001-identity.sql','002-session-authentication-time.sql','003-account-directory.sql','004-public-documents.sql','005-text-proposals.sql','006-structured-points.sql','007-account-recovery.sql','008-session-assurance.sql','009-passkey-device-assurance.sql','010-passkey-attestation-policy.sql','011-passkey-revocation.sql','012-provider-restoration.sql','013-public-crdt-snapshots.sql','014-private-encrypted-documents.sql','015-private-update-frames.sql'].map(async(name,index)=>{
+const migrationRecords=()=>Promise.all(['001-identity.sql','002-session-authentication-time.sql','003-account-directory.sql','004-public-documents.sql','005-text-proposals.sql','006-structured-points.sql','007-account-recovery.sql','008-session-assurance.sql','009-passkey-device-assurance.sql','010-passkey-attestation-policy.sql','011-passkey-revocation.sql','012-provider-restoration.sql','013-public-crdt-snapshots.sql','014-private-encrypted-documents.sql','015-private-update-frames.sql','016-governance-ballots.sql'].map(async(name,index)=>{
     const sql=await readFile(new URL('../migrations/'+name,import.meta.url),'utf8');
     return {version:index+1,sql,checksum:createHash('sha256').update(sql).digest('hex')};
   }));
@@ -24,7 +24,7 @@ export async function verifyIdentityRuntime(db){
     UNION SELECT r.oid,r.rolsuper,r.rolbypassrls,r.rolcreaterole,r.rolcreatedb,r.rolreplication FROM pg_roles r
     JOIN pg_auth_members m ON m.roleid=r.oid JOIN granted g ON m.member=g.oid)
     SELECT bool_or(rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication) AS elevated FROM granted`)).rows[0];
-  const ownership=(await db.query("SELECT bool_or(pg_has_role(current_user,tableowner,'MEMBER') OR has_schema_privilege(current_user,schemaname,'CREATE')) AS owns_schema FROM pg_tables WHERE schemaname IN ('dge_identity','dge_documents','dge_proposals','dge_discussion','dge_private')")).rows[0];
+  const ownership=(await db.query("SELECT bool_or(pg_has_role(current_user,tableowner,'MEMBER') OR has_schema_privilege(current_user,schemaname,'CREATE')) AS owns_schema FROM pg_tables WHERE schemaname IN ('dge_identity','dge_documents','dge_proposals','dge_discussion','dge_private','dge_decisions')")).rows[0];
   if(!elevated||elevated.elevated!==false||!ownership||ownership.owns_schema)throw Error('Unprivileged request credential required');
   const expected=await migrationRecords(),observed=(await db.query('SELECT version,checksum FROM dge_identity.migrations ORDER BY version')).rows;
   if(observed.length!==expected.length||expected.some((item,index)=>item.version!==observed[index]?.version||item.checksum!==observed[index]?.checksum))throw Error('Expected identity schema required');

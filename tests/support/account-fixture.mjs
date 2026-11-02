@@ -18,6 +18,8 @@ import {
 } from "../../server/identity-store.mjs";
 import { createOIDCLogin } from "../../server/oidc-login.mjs";
 import { createDiscussionStore } from "../../server/discussion-store.mjs";
+import { createDecisionStore } from "../../server/decision-store.mjs";
+import { createDecisionRoutes, decisionBodyLimit } from "../../server/decision-http.mjs";
 import {
   createDiscussionRoutes,
   discussionBodyLimit,
@@ -197,6 +199,7 @@ export async function accountFixture({
       login,
       origin,
       extensions: [
+        createDecisionRoutes({decisions:createDecisionStore({identity:store})}),
         createDiscussionRoutes({
           discussion: createDiscussionStore({
             identity: store,
@@ -222,6 +225,7 @@ export async function accountFixture({
         documentBodyLimit(path),
         proposalBodyLimit(path),
         discussionBodyLimit(path),
+        decisionBodyLimit(path),
       ),
     application: async (request, context) => {
       const url = new URL(request.url);

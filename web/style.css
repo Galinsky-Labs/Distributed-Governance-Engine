@@ -85,3 +85,12 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 .decision-certificate{font-size:11px;overflow-wrap:anywhere}
 .decision-error{border-left:3px solid #ba695e;background:#fff4ef;padding:10px;color:#873b2e;font-size:12px}
 .decision-success{border-left:3px solid #618e70;background:#f3fff6;padding:10px;color:#315a3b;font-size:12px;overflow-wrap:anywhere}
+
+
+.governance-guest-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff;padding:15px;border:1px solid #cad9ce;border-radius:10px;margin-bottom:12px;font-size:13px}
+.governance-guest-bar a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.governance-guest-bar button{font-size:12px}
+.governance-guest-voting{border:1px solid #b7ccbb;padding:15px;background:#ecf5ee;border-radius:8px;line-height:1.55;font-size:13px}
+.governance-guest-voting a{color:var(--accent);font-weight:700}
+.governance-pagination{display:flex;gap:10px;flex-wrap:wrap}
+.governance-pagination button{flex:1;font-size:12px}

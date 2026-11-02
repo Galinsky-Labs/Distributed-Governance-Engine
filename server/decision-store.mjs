@@ -4,7 +4,8 @@ import {
   createGovernanceSnapshot, validateGovernanceSnapshot,
   ballotForGovernanceSnapshot, evaluateGovernanceSnapshot,
 } from "../src/governance-snapshots.mjs";
-import {textProposalDigest} from "../src/legal-proposals.mjs";
+import {textProposalDigest,applyTextProposal} from "../src/legal-proposals.mjs";
+import {legalDocumentDigest} from "../src/legal-schema.mjs";
 import {DocumentError} from "./document-store.mjs";
 
 const uuid = value => typeof value === "string" &&
@@ -209,20 +210,73 @@ export function createDecisionStore({
         check(at.getTime()>=snapshot.policy.closesAt,"VOTE_STILL_OPEN",409);
         const records=await rowsFor(db,tenantId,row.id);
         const outcome=evaluateGovernanceSnapshot(snapshot,ballotsFor(snapshot,records),at.getTime());
-        const version=(await db.query(
-          "SELECT version FROM dge_documents.documents WHERE tenant_id=$1 AND id=$2",
+        // This lock serializes two passed amendments against the exact
+        // same source. The decision lock above fences late ballot writers.
+        const source=(await db.query(
+          "SELECT version,current,digest FROM dge_documents.documents WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
           [tenantId,documentId])).rows[0];
-        check(version,"DOCUMENT_NOT_FOUND",404);
+        check(source,"DOCUMENT_NOT_FOUND",404);
+        check(legalDocumentDigest(source.current)===source.digest,"DOCUMENT_INTEGRITY_ERROR",503);
+        const sourceIsCurrent=row.base_version===source.version;
         const ballotsDigest=digest("frozen-decision-ballots-v1",records.map(r=>({
           accountId:r.account_id,choice:r.choice,version:r.version,castAt:new Date(r.cast_at).toISOString()
         })));
+        let application="not-passed",appliedVersion=null,appliedDigest=null;
+        if(snapshot.mode==="public-input")application="advisory";
+        else if(outcome.status==="passed"){
+          if(!sourceIsCurrent||source.current.mode!=="collaboration"||source.current.lifecycle!=="draft"){
+            application="stale-source";
+          }else{
+            check(source.version<1000000,"VERSION_LIMIT_REACHED",429);
+            const proposal=(await db.query(
+              "SELECT proposal,digest FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
+              [tenantId,documentId,proposalId])).rows[0];
+            check(proposal&&proposal.digest===snapshot.proposalDigest &&
+              textProposalDigest(proposal.proposal)===proposal.digest,
+              "PROPOSAL_INTEGRITY_ERROR",503);
+            // The pure transformer checks the exact source digest, selected
+            // text, quote and surrounding context. Never silently rebase.
+            let amended;
+            try{amended=applyTextProposal(source.current,proposal.proposal);}
+            catch{throw new DocumentError("ADOPTION_CONFLICT",409);}
+            const newDigest=legalDocumentDigest(amended),nextVersion=source.version+1;
+            const bytes=Buffer.byteLength(JSON.stringify(amended));
+            check((await db.query(
+              "UPDATE dge_documents.usage SET stored_bytes=stored_bytes+$2 WHERE tenant_id=$1 AND stored_bytes+$2<=$3 RETURNING stored_bytes",
+              [tenantId,bytes,30000000]
+            )).rows.length,"STORAGE_LIMIT_REACHED",429);
+            const eventDigest=digest("public-document-version-v1",{
+              tenantId,documentId,version:nextVersion,digest:newDigest,
+              previousDigest:source.digest,createdAt:at.toISOString()
+            });
+            const requestDigest=digest("public-document-command-v1",{
+              action:"auto-adopt-frozen-decision",decisionId:row.id,
+              sourceVersion:source.version,proposalDigest:snapshot.proposalDigest
+            });
+            await db.query(
+              "UPDATE dge_documents.documents SET current=$3,version=$4,digest=$5 WHERE tenant_id=$1 AND id=$2",
+              [tenantId,documentId,amended,nextVersion,newDigest]
+            );
+            await db.query(
+              "INSERT INTO dge_documents.versions(tenant_id,document_id,version,document,digest,previous_digest,event_digest,command_id,request_digest,actor_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+              [tenantId,documentId,nextVersion,amended,newDigest,source.digest,eventDigest,row.id,requestDigest,actor.accountId,at]
+            );
+            await db.query(
+              "INSERT INTO dge_documents.anchor_outbox(tenant_id,document_id,version,event_digest,created_at) VALUES($1,$2,$3,$4,$5)",
+              [tenantId,documentId,nextVersion,eventDigest,at]
+            );
+            application="applied-to-public-draft";
+            appliedVersion=nextVersion;
+            appliedDigest=newDigest;
+          }
+        }
         const certificate={
           schemaVersion:1,decisionId:row.id,snapshotDigest:snapshot.snapshotDigest,
           proposalDigest:snapshot.proposalDigest,ballotsDigest,
           outcome:{status:outcome.status,quorumMet:outcome.quorumMet,approvalMet:outcome.approvalMet,
             counts:outcome.counts,weights:outcome.weights},
-          sourceVersionAtOpen:row.base_version,sourceVersionAtClose:version.version,
-          sourceIsCurrent:row.base_version===version.version,
+          sourceVersionAtOpen:row.base_version,sourceVersionAtClose:source.version,
+          sourceIsCurrent,application,appliedVersion,appliedDigest,
           closedAt:at.toISOString(),executed:false,canAdopt:false,
           kind:"governance-decision-record-not-execution"
         };

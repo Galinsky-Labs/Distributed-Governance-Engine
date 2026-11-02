@@ -53,7 +53,8 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
     });
     // A separately signed-in account joins before the vote is opened. The
     // electorate is frozen from real memberships, not browser-local personas.
-    const other=await browser.newPage();
+    const otherContext=await browser.createBrowserContext();
+    const other=await otherContext.newPage();
     other.setDefaultTimeout(20000);
     await other.goto(fixture.origin+"/account");
     await other.click('a[href="/auth/start"]');
@@ -103,6 +104,7 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
     });
     assert.match(await page.$eval(".decision-legal-note",el=>el.textContent),/not signed/);
     await other.close();
+    await otherContext.close();
     await page.close();
   } finally {await browser?.close();await fixture.close();}
 });

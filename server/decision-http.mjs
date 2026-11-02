@@ -11,22 +11,22 @@ export function createDecisionRoutes({decisions}){
     try{
       if(!operation){
         method(["GET","POST"]);
-        if(request.method==="GET")return decisions.read(credentials,tenantId,documentId,proposalId);
+        if(request.method==="GET")return await decisions.read(credentials,tenantId,documentId,proposalId);
         write();
         const body=await boundedJson(request,["hours","commandId"]);
-        return decisions.open(credentials,tenantId,documentId,proposalId,body);
+        return await decisions.open(credentials,tenantId,documentId,proposalId,body);
       }
       if(operation==="ballots"){
         method(["POST"]);
         write();
         const body=await boundedJson(request,["choice","expectedVersion","commandId"]);
-        return decisions.cast(credentials,tenantId,documentId,proposalId,body);
+        return await decisions.cast(credentials,tenantId,documentId,proposalId,body);
       }
       if(operation==="close"){
         method(["POST"]);
         write();
         await boundedJson(request,[]);
-        return decisions.close(credentials,tenantId,documentId,proposalId);
+        return await decisions.close(credentials,tenantId,documentId,proposalId);
       }
       throw new HttpError(404,"NOT_FOUND");
     }catch(error){

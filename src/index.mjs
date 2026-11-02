@@ -1,6 +1,7 @@
 export * from './integrity.mjs';
 export * from './governance.mjs';
 export * from './governance-snapshots.mjs';
+export * from './decision-verification.mjs';
 export * from './documents.mjs';
 export * from './numbering.mjs';
 export * from './legal-schema.mjs';

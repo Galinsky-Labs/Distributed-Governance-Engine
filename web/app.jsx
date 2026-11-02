@@ -23,6 +23,7 @@ import { createPublicDraftCache } from "../editor/draft-cache.mjs";
 import "./style.css";
 import { SearchTools } from "./search-tools.jsx";
 import { AccountPanel } from "./account-panel.jsx";
+import { GovernanceHome } from "./governance-home.jsx";
 import { DocumentLibrary } from "./document-library.jsx";
 import { ProposalPanel } from "./proposal-panel.jsx";
 import { createAccountAPI } from "./account-api.mjs";
@@ -677,6 +678,7 @@ function App() {
             CharterQuill
           </button>
         </div>
+        <a className="governance-header-link" href="/governance">Governance workspaces</a>
         <button onClick={() => setTour(true)}>Take a tour</button>
         {accountEnabled && (
           <>
@@ -1060,4 +1062,4 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(window.location.pathname === "/governance" ? <GovernanceHome /> : <App />);

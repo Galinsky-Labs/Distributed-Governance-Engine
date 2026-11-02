@@ -1,4 +1,4 @@
-import {randomUUID} from "node:crypto";
+import {randomUUID,randomBytes} from "node:crypto";
 import {digest} from "../src/integrity.mjs";
 import {
   createGovernanceSnapshot, validateGovernanceSnapshot,
@@ -241,9 +241,18 @@ export function createDecisionStore({
         check(source,"DOCUMENT_NOT_FOUND",404);
         check(legalDocumentDigest(source.current)===source.digest,"DOCUMENT_INTEGRITY_ERROR",503);
         const sourceIsCurrent=row.base_version===source.version;
-        const ballotsDigest=digest("frozen-decision-ballots-v1",records.map(r=>({
-          accountId:r.account_id,choice:r.choice,version:r.version,castAt:new Date(r.cast_at).toISOString()
-        })));
+        // Do not publish an unsalted hash of a small electorate: known
+        // member IDs and a handful of possible votes make brute-force recovery
+        // feasible. The 256-bit audit salt remains only in a tenant-private
+        // immutable closure event, never inside the public certificate.
+        const ballotSalt=randomBytes(32).toString("hex");
+        const ballotsDigest=digest("frozen-decision-ballots-v2",{
+          salt:ballotSalt,
+          ballots:records.map(r=>({
+            accountId:r.account_id,choice:r.choice,version:r.version,
+            castAt:new Date(r.cast_at).toISOString()
+          }))
+        });
         let application="not-passed",appliedVersion=null,appliedDigest=null;
         if(snapshot.mode==="public-input")application="advisory";
         else if(outcome.status==="passed"){
@@ -295,7 +304,7 @@ export function createDecisionStore({
         }
         const certificate={
           schemaVersion:1,tenantId,documentId,proposalId,decisionId:row.id,snapshotDigest:snapshot.snapshotDigest,
-          proposalDigest:snapshot.proposalDigest,ballotsDigest,
+          proposalDigest:snapshot.proposalDigest,ballotsDigest,ballotsDigestVersion:2,
           outcome:{status:outcome.status,quorumMet:outcome.quorumMet,approvalMet:outcome.approvalMet,
             counts:outcome.counts,weights:outcome.weights},
           sourceVersionAtOpen:row.base_version,sourceVersionAtClose:source.version,
@@ -310,7 +319,7 @@ export function createDecisionStore({
         );
         const requestDigest=digest("decision-closure-v1",{decisionId:row.id,certificateDigest});
         await activity(db,tenantId,row,actor.accountId,randomUUID(),requestDigest,
-          {certificateDigest},"closed",at);
+          {certificateDigest,ballotSalt},"closed",at);
         return {certificate,certificateDigest};
       });
     },

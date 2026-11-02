@@ -65,7 +65,7 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
       document.querySelector(".governance-column-debate")?.textContent.includes("Quarterly reporting exposes problems sooner.")
     );
     assert.match(await guest.$eval(".governance-guest-voting",node=>node.textContent),/membership/);
-    assert.equal((await guest.$(".decision-ballot")).length,0,"Anonymous readers must not cast member ballots");
+    assert.equal(await guest.$(".decision-ballot"),null,"Anonymous readers must not cast member ballots");
     await guest.close();await guestContext.close();
     // A separately signed-in account joins before the vote is opened. The
     // electorate is frozen from real memberships, not browser-local personas.

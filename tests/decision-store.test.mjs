@@ -140,6 +140,7 @@ test("out-of-window ballots and stale source versions cannot authorize edits",as
   assert.equal(first.outcome.executed,false);
   assert.equal(final.certificate.canAdopt,false);
   const second=structuredClone(document);
+  second.revision=document.revision+1;
   second.content[0].inlines=[{kind:"text",text:"Another version of the reporting rule."}];
   await documents.save(owner,tenantId,document.id,{document:second,expectedVersion:1,commandId:randomUUID()});
   const result=await decisions.read(owner,tenantId,document.id,proposal.proposal.id);

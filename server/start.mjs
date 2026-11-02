@@ -102,6 +102,10 @@ try {
     accounts,
     origin,
     product: process.env.QUILL_PRODUCT ?? "civic",
+    readiness: async()=>{
+      const result=await pool.query("SELECT 1 AS ready");
+      if(result.rows[0]?.ready!==1)throw Error("Not ready");
+    },
   });
   const key = await readFile(required("TLS_KEY_FILE")),
     cert = await readFile(required("TLS_CERT_FILE"));

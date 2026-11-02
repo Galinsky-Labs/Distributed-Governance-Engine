@@ -15,6 +15,7 @@ export function createEngineApplication({
   origin,
   product = "civic",
   assetDirectory = new URL("../dist/", import.meta.url),
+  readiness = null,
 }) {
   if (
     !["civic", "charter"].includes(product) ||
@@ -43,6 +44,13 @@ export function createEngineApplication({
       });
     if (url.pathname === "/healthz")
       return Response.json({ status: "ok" }, { headers: security });
+    if(url.pathname === "/readyz") {
+      try {
+        if(typeof readiness!=="function")throw Error("Readiness unavailable");
+        await readiness();
+        return Response.json({status:"ready"},{headers:security});
+      }catch{return Response.json({status:"unavailable"},{status:503,headers:security});}
+    }
     const entry = assets.get(url.pathname);
     if (!entry)
       return new Response("Not found", { status: 404, headers: security });

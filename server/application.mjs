@@ -25,6 +25,7 @@ export function createEngineApplication({
   const assets = new Map([
       ["/", ["index.html", "text/html; charset=utf-8"]],
       ["/account", ["index.html", "text/html; charset=utf-8"]],
+      ["/governance", ["index.html", "text/html; charset=utf-8"]],
       ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
       ["/app.css", ["app.css", "text/css; charset=utf-8"]],
     ]),

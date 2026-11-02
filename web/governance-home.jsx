@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {createAccountAPI} from "./account-api.mjs";
 import {DiscussionPanel} from "./discussion-panel.jsx";
+import {DecisionPanel} from "./decision-panel.jsx";
 
 const api = createAccountAPI();
 const messageFor = (error) => {
@@ -162,6 +163,9 @@ export function GovernanceHome() {
               <h3>Reason for the change</h3><p>{activeProposal.proposal.rationale}</p>
               <p className="governance-integrity">Integrity digest: <code>{activeProposal.digest}</code></p>
             </div>
+            <DecisionPanel key={"vote-"+activeProposal.proposal.id} tenantId={workspaceId}
+              documentId={activeDocument.id} proposalId={activeProposal.proposal.id}
+              role={activeWorkspace?.role} />
             <DiscussionPanel key={activeProposal.proposal.id}
               document={{id:activeDocument.id,tenantId:workspaceId,mode:activeDocument.mode}}
               proposal={activeProposal.proposal}/>

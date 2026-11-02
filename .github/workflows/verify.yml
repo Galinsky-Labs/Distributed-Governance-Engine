@@ -74,3 +74,63 @@ jobs:
             gh release create quill-offline-preview --target "$GITHUB_SHA" --prerelease --title "Quill offline editor preview" --notes "CivicQuill and CharterQuill public-document drafting previews. These files are not the hosted SaaS, do not store private data securely, and do not provide authenticated governance voting, binding adoption, e-signing, or blockchain commitments. Export JSON to preserve drafts."
           fi
           gh release upload quill-offline-preview dist/offline/CivicQuill.html dist/offline/CharterQuill.html --clobber
+
+
+  image:
+    name: Build actual governance runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Build the actual application container
+        run: docker build --progress=plain --tag quill-governance:verify .
+      - name: Refuse startup without identity, database and TLS configuration
+        run: |
+          set +e
+          docker run --rm --network none quill-governance:verify > "$RUNNER_TEMP/startup.log" 2>&1
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "Runtime booted without production credentials" >&2
+            exit 1
+          fi
+          grep -Fq 'Account service startup failed' "$RUNNER_TEMP/startup.log"
+      - name: Verify unprivileged image contains compiled governance frontend
+        run: |
+          docker run --rm --entrypoint /bin/sh quill-governance:verify -c 'test "$(id -u)" != "0" && test -s dist/app.js && test -s dist/app.css && test -s server/decision-store.mjs && test -s server/decision-http.mjs && test -s migrations/017-public-decision-receipts.sql'
+
+  publish-governance:
+    name: Publish tested governance app source bundle
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: quill-governance-candidate-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - name: Assemble tested integrated application
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          mkdir -p "$RUNNER_TEMP/quill-governance"
+          cp -R dist server src editor web migrations scripts "$RUNNER_TEMP/quill-governance/"
+          cp package.json package-lock.json Dockerfile .dockerignore "$RUNNER_TEMP/quill-governance/"
+          tar -czf Quill-Governance-Engine.tgz -C "$RUNNER_TEMP/quill-governance" .
+      - name: Publish permanent integrated-app prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view quill-governance-candidate >/dev/null 2>&1; then
+            gh release create quill-governance-candidate --target "$GITHUB_SHA" --prerelease --title "Quill governance application candidate" --notes "Tested authenticated Quill governance application: workspaces, public documents, amendment proposals, structured arguments, member votes, recorded closure, and public verification receipts. Requires configured PostgreSQL, OIDC, application TLS and migration setup. Not hosted or certified for legally binding execution, private-data storage, signatures or independent blockchain finality."
+          fi
+          gh release upload quill-governance-candidate Quill-Governance-Engine.tgz --clobber

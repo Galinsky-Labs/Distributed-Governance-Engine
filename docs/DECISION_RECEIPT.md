@@ -34,3 +34,7 @@ The SQL migration `017-public-decision-receipts.sql` adds narrowly scoped
 RLS reads for **closed** decisions. It must be applied by the privileged
 migration operator with the existing migrator and independently verified
 before the runtime role is granted production access.
+
+## Ballot privacy boundary
+
+A public receipt includes a random-salted SHA-256 commitment to the individual ballot ledger (`ballotsDigestVersion:2`), not an unsalted hash that can be enumerated by guessing a few voters and yes/no choices. The 256-bit salt is stored only in a tenant-private immutable closure event, never in the anonymous public receipt. Audit operators with authorized access to the underlying ballot records and salt can recompute the digest. **Public visitors cannot independently prove individual-ballot totals from this commitment**, and the public tally must not be represented as a zero-knowledge proof, anonymous election, or externally certified election audit. Access to member votes and audit salts remains subject to identity and tenant RLS.

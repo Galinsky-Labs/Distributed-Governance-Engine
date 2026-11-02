@@ -19,7 +19,7 @@ const write = async (page, path, body) => page.evaluate(async ({path,body}) => {
   return value;
 },{path,body});
 
-test("real browser: authenticated workspace, public legal text, exact amendment, argument deliberation", {timeout:90000}, async()=>{
+test("real browser: two authenticated members publish, deliberate and vote on a frozen proposal", {timeout:90000}, async()=>{
   const fixture=await accountFixture();
   let browser;
   try {
@@ -51,6 +51,26 @@ test("real browser: authenticated workspace, public legal text, exact amendment,
       position:"support",text:"Quarterly reporting exposes problems sooner.",
       commandId:randomUUID(),disclosure:"publish-point-v1"
     });
+    // A separately signed-in account joins before the vote is opened. The
+    // electorate is frozen from real memberships, not browser-local personas.
+    const otherContext=await browser.createBrowserContext();
+    const other=await otherContext.newPage();
+    other.setDefaultTimeout(20000);
+    await other.goto(fixture.origin+"/account");
+    await other.click('a[href="/auth/start"]');
+    await other.waitForSelector('input[name="subject"]');
+    await other.type('input[name="subject"]',"bob");
+    await other.evaluate(() => [...document.querySelectorAll("button")].find(b => b.textContent === "Continue fixture login").click());
+    await other.waitForSelector(".account-id");
+    const who=await other.evaluate(async()=>{
+      const response=await fetch("/api/session");return response.json();
+    });
+    const invitation=await write(page,"/api/workspaces/"+tenantId+"/invitations",{
+      accountId:who.accountId,role:"participant"
+    });
+    await write(other,"/api/workspaces/"+tenantId+"/join",{
+      invitationToken:invitation.invitationToken
+    });
     await page.goto(fixture.origin+"/governance");
     await page.waitForSelector(".governance-columns");
     await page.waitForFunction(()=>document.querySelector(".governance-list")?.textContent.includes("Public oversight charter"));
@@ -65,6 +85,26 @@ test("real browser: authenticated workspace, public legal text, exact amendment,
     const links=await page.$$eval(".governance-page a",nodes=>nodes.map(x=>new URL(x.href).pathname));
     assert(links.includes("/account"));
     assert(links.includes("/"));
+    await page.waitForSelector(".decision-open");
+    const opening=await page.$(".decision-ack input");
+    await opening.click();
+    await page.click(".decision-open>button");
+    await page.waitForSelector(".decision-tally");
+    assert.match(await page.$eval(".decision-window",el=>el.textContent),/2 eligible members/);
+    await page.evaluate(()=>[...document.querySelectorAll(".decision-ballot button")].find(x=>x.textContent==="Vote yes").click());
+    await page.waitForFunction(()=>document.querySelector(".decision-state")?.textContent.includes("Your ballot: yes"));
+    await other.goto(fixture.origin+"/governance");
+    await other.waitForFunction(()=>document.querySelector(".decision-ballot button"));
+    await other.evaluate(()=>[...document.querySelectorAll(".decision-ballot button")].find(x=>x.textContent==="Vote no").click());
+    await other.waitForFunction(()=>document.querySelector(".decision-state")?.textContent.includes("Your ballot: no"));
+    await page.click(".decision-heading button");
+    await page.waitForFunction(()=>{
+      const cells=[...document.querySelectorAll(".decision-tally strong")].map(x=>x.textContent);
+      return cells[0]==="1"&&cells[1]==="1";
+    });
+    assert.match(await page.$eval(".decision-legal-note",el=>el.textContent),/not signed/);
+    await other.close();
+    await otherContext.close();
     await page.close();
   } finally {await browser?.close();await fixture.close();}
 });

@@ -31,7 +31,7 @@ test("real browser: authenticated workspace, public legal text, exact amendment,
     await page.click('a[href="/auth/start"]');
     await page.waitForSelector('input[name="subject"]');
     await page.type('input[name="subject"]',"alice");
-    await page.click('button[type="submit"]');
+    await page.evaluate(() => [...document.querySelectorAll("button")].find(b => b.textContent === "Continue fixture login").click());
     await page.waitForSelector(".account-id");
     const created=await write(page,"/api/workspaces",{});
     const tenantId=created.tenantId;

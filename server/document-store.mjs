@@ -421,6 +421,22 @@ export function createDocumentStore({
         },
       );
     },
+    async publicDirectory({after=null,limit=30}={}){
+      requireValue((after===null||uuid(after))&&
+        Number.isSafeInteger(limit)&&limit>=1&&limit<=100,
+        "INVALID_PAGE");
+      return transaction(async db=>{
+        await db.query("SELECT set_config('dge.public_document_directory','enabled',true)");
+        const rows=(await db.query(
+          "SELECT id,tenant_id AS \"tenantId\",version,current->'metadata'->>'title' AS title,current->>'mode' AS mode,created_at AS \"createdAt\" FROM dge_documents.documents WHERE visibility='public' AND ($1::uuid IS NULL OR id>$1::uuid) ORDER BY id LIMIT $2",
+          [after,limit+1])).rows;
+        return {
+          items:rows.slice(0,limit),
+          nextCursor:rows.length>limit?rows[limit-1].id:null,
+          disclosure:"public-document-directory-v1"
+        };
+      });
+    },
     async publicRead(documentId, { version: edition = null } = {}) {
       requireValue(
         uuid(documentId) && (edition === null || version(edition)),

@@ -18,6 +18,14 @@ const integer = (url, key, fallback) =>
 export function createDocumentRoutes({ documents }) {
   return async ({ request, url, credentials, write, method }) => {
     try {
+      if(url.pathname==="/api/public/documents"){
+        method(["GET"]);
+        query(url,["after","limit"]);
+        return await documents.publicDirectory({
+          after:url.searchParams.get("after"),
+          limit:integer(url,"limit",30)
+        });
+      }
       const publicRoute = url.pathname.match(
         /^\/api\/public\/documents\/([a-f0-9-]{36})(?:\/(history))?$/,
       );

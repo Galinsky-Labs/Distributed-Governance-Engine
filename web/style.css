@@ -60,3 +60,28 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 @media(max-width:1150px){.governance-columns{grid-template-columns:1fr 1fr}.governance-column-debate{grid-column:1/-1}}
 @media(max-width:740px){.governance-navigation{padding:16px;flex-wrap:wrap}.governance-navigation nav{gap:12px}.governance-hero{padding:28px 18px}.governance-disclosure{padding:12px 18px}.governance-body{padding:18px}.governance-columns{display:block}.governance-column{margin:12px 0;min-height:0}.governance-controls label,.governance-controls select{width:100%}}
 @media print{.governance-navigation,.governance-controls,.governance-column button{display:none!important}}
+
+
+.decision-panel{border:1px solid #cddbd2;background:#edf5ef;border-radius:10px;padding:16px;margin:20px 0 26px}
+.decision-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #d0dfd4;padding-bottom:10px;margin-bottom:14px}
+.decision-heading h3{margin:6px 0;font-size:17px}
+.decision-heading button{font-size:11px}
+.decision-panel label{display:grid;gap:5px;font-size:12px}
+.decision-panel select{padding:9px;border:1px solid #a3b8aa;border-radius:6px;background:#fff;width:100%}
+.decision-open{display:grid;gap:12px}
+.decision-open>button{background:var(--accent);color:#fff}
+.decision-ack{display:flex!important;flex-direction:row;align-items:flex-start;line-height:1.5}
+.decision-ack input{flex-shrink:0;margin-top:5px}
+.decision-rule,.decision-window,.decision-legal-note{font-size:12px;color:#4a6652;line-height:1.55}
+.decision-legal-note{border-top:1px solid #d0ddcf;padding-top:12px;margin-top:20px}
+.decision-tally{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:16px 0}
+.decision-tally div{padding:12px 5px;border:1px solid #bed3c3;background:white;border-radius:8px;text-align:center}
+.decision-tally strong{display:block;font-size:25px;font-variant-numeric:tabular-nums}
+.decision-tally span{font-size:11px;color:#4b6354}
+.decision-ballot{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.decision-ballot button{flex:1;min-width:90px}
+.decision-ballot button[aria-pressed=true]{background:var(--accent);color:white}
+.decision-state{font-size:12px}
+.decision-certificate{font-size:11px;overflow-wrap:anywhere}
+.decision-error{border-left:3px solid #ba695e;background:#fff4ef;padding:10px;color:#873b2e;font-size:12px}
+.decision-success{border-left:3px solid #618e70;background:#f3fff6;padding:10px;color:#315a3b;font-size:12px;overflow-wrap:anywhere}

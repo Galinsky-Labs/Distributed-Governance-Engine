@@ -199,7 +199,7 @@ export async function accountFixture({
       login,
       origin,
       extensions: [
-        createDecisionRoutes({decisions:createDecisionStore({identity:store})}),
+        createDecisionRoutes({decisions:createDecisionStore({identity:store,transaction})}),
         createDiscussionRoutes({
           discussion: createDiscussionStore({
             identity: store,

@@ -53,7 +53,7 @@ const publicState = (row,ballots,clock,own) => {
  * This is not a statutory signature, an enacted law or an executed resolution.
  */
 export function createDecisionStore({
-  identity,clock=Date.now,maxElectors=1000,maxVoteVersions=50,
+  identity,transaction,clock=Date.now,maxElectors=1000,maxVoteVersions=50,
 }={}) {
   check(identity && typeof identity.withTenant==="function" && typeof clock==="function",
     "DECISION_STORE_CONFIG");
@@ -155,6 +155,29 @@ export function createDecisionStore({
         const row=await decision(db,tenantId,documentId,proposalId);
         const ballots=await rowsFor(db,tenantId,row.id);
         return publicState(row,ballots,now(),actor.accountId);
+      });
+    },
+    async publicReceipt(documentId,proposalId){
+      check(uuid(documentId)&&uuid(proposalId),"INVALID_DECISION_CONTEXT");
+      check(typeof transaction==="function","DECISION_SERVICE_UNAVAILABLE",503);
+      return transaction(async db=>{
+        await db.query("SELECT set_config('dge.public_document_id',$1,true)",[documentId]);
+        // Public RLS policy grants closed decisions only; no roster or ballots
+        // are serialized. No session token or tenant membership required.
+        const row=(await db.query(
+          "SELECT certificate,certificate_digest FROM dge_decisions.decisions WHERE document_id=$1 AND proposal_id=$2 AND state='closed'",
+          [documentId,proposalId])).rows[0];
+        check(row,"DECISION_RECEIPT_NOT_FOUND",404);
+        check(row.certificate?.documentId===documentId&&row.certificate?.proposalId===proposalId &&
+          digest("governance-decision-certificate-v1",row.certificate)===row.certificate_digest,
+          "DECISION_RECEIPT_CORRUPT",503);
+        return {
+          schemaVersion:1,documentId,proposalId,certificate:row.certificate,
+          certificateDigest:row.certificate_digest,
+          verification:"content-digest-only",
+          externalAnchorVerified:false,
+          legallyExecuted:false
+        };
       });
     },
     async cast(credentials,tenantId,documentId,proposalId,{choice,expectedVersion,commandId}){
@@ -271,7 +294,7 @@ export function createDecisionStore({
           }
         }
         const certificate={
-          schemaVersion:1,decisionId:row.id,snapshotDigest:snapshot.snapshotDigest,
+          schemaVersion:1,tenantId,documentId,proposalId,decisionId:row.id,snapshotDigest:snapshot.snapshotDigest,
           proposalDigest:snapshot.proposalDigest,ballotsDigest,
           outcome:{status:outcome.status,quorumMet:outcome.quorumMet,approvalMet:outcome.approvalMet,
             counts:outcome.counts,weights:outcome.weights},

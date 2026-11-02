@@ -4,6 +4,16 @@ const pathPattern=/^\/api\/workspaces\/([a-f0-9-]{36})\/documents\/([a-f0-9-]{36
 export const decisionBodyLimit=path=>pathPattern.test(path)?8192:8192;
 export function createDecisionRoutes({decisions}){
   return async({request,url,credentials,write,method})=>{
+    const publicReceipt=url.pathname.match(/^\/api\/public\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/decision\/receipt$/);
+    if(publicReceipt){
+      method(["GET"]);
+      if(url.search)throw new HttpError(400,"INVALID_QUERY");
+      try{return await decisions.publicReceipt(publicReceipt[1],publicReceipt[2]);}
+      catch(error){
+        if(error instanceof DocumentError)throw new HttpError(error.status,error.code);
+        throw error;
+      }
+    }
     const parts=url.pathname.match(pathPattern);
     if(!parts)return null;
     if(url.search)throw new HttpError(400,"INVALID_QUERY");

@@ -51,7 +51,13 @@ const escape = (value) =>
 export async function accountFixture({
   proposalListDelayMs = 0,
   documentListDelayMs = 0,
+  dataDirectory = null,
+  product = "civic",
 } = {}) {
+  if(dataDirectory !== null && (typeof dataDirectory !== "string" ||
+      !dataDirectory.startsWith("/") || dataDirectory.includes("\\0")))
+    throw Error("Local data directory must be an absolute filesystem path");
+  if(!["civic","charter"].includes(product))throw Error("Unknown local Quill product");
   for (const delay of [proposalListDelayMs, documentListDelayMs])
     if (!Number.isSafeInteger(delay) || delay < 0 || delay > 1000)
       throw Error("Invalid fixture delay");
@@ -90,7 +96,7 @@ export async function accountFixture({
   }
   const signing = generateKeyPairSync("rsa", { modulusLength: 2048 }),
     codes = new Map();
-  const db = await PGlite.create();
+  const db = dataDirectory ? await PGlite.create(dataDirectory) : await PGlite.create();
   await applyIdentityMigrations((fn) => db.transaction(fn));
   let listener;
   const server = createServer(
@@ -217,7 +223,7 @@ export async function accountFixture({
         }),
       ],
     }),
-    application = createEngineApplication({ accounts, origin });
+    application = createEngineApplication({ accounts, origin, product });
   listener = nodeListener({
     origin,
     bodyLimit: (path) =>

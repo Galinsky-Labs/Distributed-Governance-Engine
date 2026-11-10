@@ -96,11 +96,11 @@ export function createDocumentStore({
     db,
     actor,
     document,
-    { commandId, requestDigest, nextVersion, previousDigest },
+    { commandId, requestDigest, nextVersion, previousDigest, restoration },
   ) {
     const value = legalDocumentDigest(document),
       at = now(),
-      bytes = Buffer.byteLength(JSON.stringify(document));
+      bytes = Buffer.byteLength(JSON.stringify(document))+(restoration?Buffer.byteLength(JSON.stringify(restoration)):0);
     await db.query(
       "INSERT INTO dge_documents.usage(tenant_id,stored_bytes) VALUES($1,0) ON CONFLICT DO NOTHING",
       [actor.tenantId],
@@ -115,13 +115,14 @@ export function createDocumentStore({
       "STORAGE_LIMIT_REACHED",
       429,
     );
-    const eventDigest = digest("public-document-version-v1", {
+    const eventDigest = digest(restoration?"public-document-restoration-v1":"public-document-version-v1", {
       tenantId: actor.tenantId,
       documentId: document.id,
       version: nextVersion,
       digest: value,
       previousDigest,
       createdAt: at.toISOString(),
+      ...(restoration?{restoration}:{}),
     });
     await db.query(
       `INSERT INTO dge_documents.versions(tenant_id,document_id,version,document,digest,previous_digest,event_digest,command_id,request_digest,actor_id,created_at)
@@ -360,6 +361,48 @@ export function createDocumentStore({
         return saved;
       });
     },
+    async restore(credentials,tenantId,documentId,{commandId,expectedVersion,sourceVersion,sourceDigest,disclosure}){
+      command(commandId);
+      requireValue(uuid(documentId)&&version(expectedVersion)&&version(sourceVersion)&&
+        typeof sourceDigest==='string'&&/^[a-f0-9]{64}$/.test(sourceDigest),'INVALID_RESTORATION');
+      requireValue(disclosure==='restore-public-revision-v1','PUBLIC_DISCLOSURE_REQUIRED');
+      const restoration={sourceVersion,sourceDigest};
+      return identity.withTenant(credentials,tenantId,{write:true,recent:true,roles:['owner','admin']},async(db,actor)=>{
+        const requestDigest=digest('public-document-command-v1',{
+          action:'restore',documentId,actorId:actor.accountId,expectedVersion,sourceVersion,sourceDigest,disclosure,
+        });
+        const replay=await prior(db,tenantId,commandId,requestDigest);
+        if(replay){
+          const receipt=(await db.query('SELECT source_version,source_digest FROM dge_documents.restorations WHERE tenant_id=$1 AND document_id=$2 AND version=$3',[tenantId,documentId,replay.version])).rows[0];
+          requireValue(receipt?.source_version===sourceVersion&&receipt.source_digest===sourceDigest,'RESTORATION_INTEGRITY_ERROR',503);
+          return {...replay,restoration};
+        }
+        const row=(await db.query('SELECT * FROM dge_documents.documents WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[tenantId,documentId])).rows[0];
+        requireValue(row,'DOCUMENT_NOT_FOUND',404);
+        const current=snapshot(row).document;
+        requireValue(current.id===documentId&&current.tenantId===tenantId,'DOCUMENT_INTEGRITY_ERROR',503);
+        requireValue(current.mode==='collaboration'&&current.lifecycle==='draft','SOURCE_FROZEN',409);
+        requireValue(row.version===expectedVersion,'VERSION_CONFLICT',409);
+        requireValue(sourceVersion<row.version,'RESTORE_REQUIRES_OLDER_VERSION',409);
+        requireValue(row.version<maxVersions,'VERSION_LIMIT_REACHED',429);
+        const sourceRow=(await db.query('SELECT * FROM dge_documents.versions WHERE tenant_id=$1 AND document_id=$2 AND version=$3',[tenantId,documentId,sourceVersion])).rows[0];
+        requireValue(sourceRow,'SOURCE_VERSION_NOT_FOUND',404);
+        const source=snapshot(sourceRow).document;
+        requireValue(source.id===documentId&&source.tenantId===tenantId,'DOCUMENT_INTEGRITY_ERROR',503);
+        requireValue(sourceRow.digest===sourceDigest,'SOURCE_DIGEST_MISMATCH',409);
+        requireValue(source.schemaVersion===current.schemaVersion,'RESTORE_SCHEMA_MISMATCH',409);
+        // Restore only content/metadata. Current identity, mode, lifecycle and
+        // schema/provenance remain authoritative; a new revision is mandatory.
+        const document=legal({...structuredClone(current),revision:current.revision+1,
+          metadata:structuredClone(source.metadata),content:structuredClone(source.content)});
+        await db.query('UPDATE dge_documents.documents SET current=$3,version=version+1,digest=$4 WHERE tenant_id=$1 AND id=$2',[tenantId,documentId,document,legalDocumentDigest(document)]);
+        const saved=await append(db,actor,document,{commandId,requestDigest,nextVersion:row.version+1,previousDigest:row.digest,restoration});
+        await db.query('INSERT INTO dge_documents.restorations(tenant_id,document_id,version,source_version,source_digest) VALUES($1,$2,$3,$4,$5)',[tenantId,documentId,saved.version,sourceVersion,sourceDigest]);
+        // No historical CRDT state is attached to the new version. Realtime
+        // admission checks its fresh head and starts a new public Yjs snapshot.
+        return {...saved,restoration};
+      });
+    },
     async freezeForInput(
       credentials,
       tenantId,
@@ -489,15 +532,17 @@ export function createDocumentStore({
         );
         const rows = (
           await db.query(
-            `SELECT version,digest,previous_digest AS "previousDigest",event_digest AS "eventDigest",created_at AS "createdAt" FROM dge_documents.versions
-          WHERE document_id=$1 AND ($2::int IS NULL OR version<$2::int) ORDER BY version DESC LIMIT $3`,
+            `SELECT v.version,v.digest,v.previous_digest AS "previousDigest",v.event_digest AS "eventDigest",v.created_at AS "createdAt",
+          CASE WHEN r.version IS NOT NULL THEN jsonb_build_object('sourceVersion',r.source_version,'sourceDigest',r.source_digest) END AS restoration
+          FROM dge_documents.versions v LEFT JOIN dge_documents.restorations r ON r.tenant_id=v.tenant_id AND r.document_id=v.document_id AND r.version=v.version
+          WHERE v.document_id=$1 AND ($2::int IS NULL OR v.version<$2::int) ORDER BY v.version DESC LIMIT $3`,
             [documentId, before, limit + 1],
           )
         ).rows;
         return {
           items: rows
             .slice(0, limit)
-            .map((row) => ({ ...row, anchorStatus: "pending" })),
+            .map(({restoration,...row}) => ({ ...row, ...(restoration?{restoration}:{}),anchorStatus: "pending" })),
           nextCursor: rows.length > limit ? rows[limit - 1].version : null,
         };
       });

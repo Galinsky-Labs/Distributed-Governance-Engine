@@ -115,6 +115,25 @@ test('PostgreSQL enforces row permissions and serializes competing membership an
     const duplicate=await Promise.all([documents.save(remainingOwner,tenantId,document.id,payload),documents.save(remainingOwner,tenantId,document.id,payload)]);
     assert.deepEqual(duplicate[0],duplicate[1]);assert.equal((await documents.history(document.id)).items.length,3);
   });
+  await t.test('restoration races and retries on separate PostgreSQL connections preserve one new head',async()=>{
+    const documents=createDocumentStore({identity:store,transaction:pgTransactions(runtime)}),document=createLegalDocument({id:randomUUID(),tenantId,title:'Restoration race'});
+    const initial=await documents.create(remainingOwner,tenantId,{document,commandId:randomUUID(),disclosure:'publish-all-revisions-v1'});
+    const current={...structuredClone(document),revision:1,metadata:{...document.metadata,title:'Changed title'}};
+    await documents.save(remainingOwner,tenantId,document.id,{document:current,expectedVersion:1,commandId:randomUUID()});
+    const restore={commandId:randomUUID(),expectedVersion:2,sourceVersion:1,sourceDigest:initial.digest,disclosure:'restore-public-revision-v1'};
+    const results=await Promise.all([documents.restore(remainingOwner,tenantId,document.id,restore),documents.restore(remainingOwner,tenantId,document.id,restore)]);
+    assert.deepEqual(results[0],results[1]);assert.equal(results[0].version,3);
+    const source=(await documents.history(document.id)).items[1];
+    const competing=await Promise.allSettled([
+      documents.restore(remainingOwner,tenantId,document.id,{...restore,commandId:randomUUID(),expectedVersion:3,sourceVersion:2,sourceDigest:source.digest}),
+      documents.save(remainingOwner,tenantId,document.id,{document:{...structuredClone(results[0].document),revision:3},commandId:randomUUID(),expectedVersion:3})
+    ]);
+    assert.equal(competing.filter(result=>result.status==='fulfilled').length,1);
+    assert.equal(competing.find(result=>result.status==='rejected').reason.code,'VERSION_CONFLICT');
+    assert.equal((await documents.read(remainingOwner,tenantId,document.id)).version,4);
+    assert.equal((await documents.history(document.id)).items.length,4);
+    assert.equal((await owner.query('SELECT count(*)::int n FROM dge_documents.anchor_outbox WHERE document_id=$1',[document.id])).rows[0].n,4);
+  });
   await t.test('parallel proposal retries commit once and member removal fences later submissions',async()=>{
     const documents=createDocumentStore({identity:store,transaction:pgTransactions(runtime)}),proposals=createProposalStore({identity:store,transaction:pgTransactions(runtime)});
     const document=structuredClone(createLegalDocument({id:randomUUID(),tenantId,title:'Proposal race'}));document.content[0].inlines=[{kind:'text',text:'Report annually.'}];

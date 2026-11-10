@@ -53,3 +53,5 @@ state format is pinned to its upstream revision; upgrades require a validated
 client migration or verified rejoin. No new server migration is introduced.
 
 Configurable account voting policies require an owner/admin with actual provider authentication within five minutes when the snapshot is opened. See VOTE_POLICY_SETTINGS.md for bounded rules, delayed openings, historical readers and rollback. No new credential or migration is required; active snapshots cannot be edited.
+
+Public draft restoration requires migration 019 and a compatible runtime, plus a current owner/admin with recent primary OIDC authentication. Existing credentials suffice. New provenance and pending commitment records append atomically; disable this operation to roll back, retain migration/readers, and do not restore an old 18-migration binary. See DRAFT_RESTORATION.md.

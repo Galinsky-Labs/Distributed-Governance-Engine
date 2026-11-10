@@ -4,7 +4,7 @@ import { LEGAL_LIMITS } from "../src/legal-structure.mjs";
 
 export const DOCUMENT_BODY_LIMIT = LEGAL_LIMITS.bytes + 16384;
 const route =
-  /^\/api\/workspaces\/([a-f0-9-]{36})\/documents(?:\/([a-f0-9-]{36})(?:\/(freeze-input))?)?$/;
+  /^\/api\/workspaces\/([a-f0-9-]{36})\/documents(?:\/([a-f0-9-]{36})(?:\/(freeze-input|restore))?)?$/;
 export const documentBodyLimit = (path) =>
   route.test(path) ? DOCUMENT_BODY_LIMIT : 8192;
 const query = (url, allowed) => {
@@ -48,7 +48,12 @@ export function createDocumentRoutes({ documents }) {
       const [, tenantId, documentId, action] = match;
       if (action) {
         method(["POST"]);
+        query(url,[]);
         write();
+        if(action==='restore'){
+          const body=await boundedJson(request,['commandId','expectedVersion','sourceVersion','sourceDigest','disclosure']);
+          return await documents.restore(credentials,tenantId,documentId,body);
+        }
         const body = await boundedJson(request, [
           "commandId",
           "expectedVersion",

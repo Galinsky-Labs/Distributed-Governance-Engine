@@ -5,13 +5,13 @@
     "DCE-008"
   ],
   "scope": "previewed ordinary-draft numbering profiles, scoped starts/reservations and undoable metadata",
-  "observedAt": "2026-11-10T05:04:38.283599+00:00",
+  "observedAt": "2026-11-10T05:05:53.784514+00:00",
   "sourceFiles": {
     "editor/model.mjs": "d233b6664cba305d0afa9a1e64f8127fda6d90e0c383c3acaabe1d4163d38a78",
     "editor/numbering.mjs": "02ae975c1df312ced89fab24f47857566bda081735723e5b8498d80366f500aa",
     "editor/realtime-editor.mjs": "0d04bb926ce8c0ddacd9004759b67c7f2b2931d59808a685ab2e3cde49d71578",
     "src/legal-structure.mjs": "11daba88e4e5c8d61533357c781f6cdc048f6dd25a48a574c706b74347aa8827",
-    "web/numbering-tools.jsx": "93c9097c9e5e7c539d13386e84edb7542bb9adcc386ce711dd3e3c7cb73b255c",
+    "web/numbering-tools.jsx": "386b59ba1953c6bf75415a1b4bd60efa2a750873e190868bdc300485458b4d96",
     "web/app.jsx": "a916e9f292bb9908faaa25efd06c1e7b97f76a2685713a3e5b0a4834c2546e59",
     "web/style.css": "53fb135ec6b6f38dc60e4bf85aaef176bf4fc7d6961e66ddb6508cc8596d2e16",
     "tests/editor-numbering.test.mjs": "c59297806c09b36132f7154ddf092ca0eb841456ca7fd78276720c8c119895aa",

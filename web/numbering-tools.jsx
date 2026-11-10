@@ -15,6 +15,7 @@ export function NumberingTools({document:doc,editable,live,prepare,apply}){
   event.preventDefault();if(disabled)return;
   try{
    if(!/^[1-9]\d{0,6}$/.test(start)||Number(start)>1000000)throw Error('Enter a starting number between 1 and 1,000,000.');
+   if(reserved.length>20000)throw Error('Reserved-number input is too long. Use at most 2,000 ordinals.');
    const omitted=reserved.trim()?reserved.split(',').map(value=>{if(!/^\s*[1-9]\d{0,6}\s*$/.test(value)||Number(value)>1000000)throw Error('Enter reserved numbers as increasing, unique integers separated by commas.');return Number(value);}):[];
    const rules=(doc.metadata.numberingRules??[]).filter(rule=>rule.parentId!==parent);
    if(Number(start)!==1||omitted.length)rules.push({parentId:parent,startAt:Number(start),reserved:omitted});
@@ -29,7 +30,7 @@ export function NumberingTools({document:doc,editable,live,prepare,apply}){
    <label>Numbering profile<select value={profile} disabled={disabled} onChange={event=>change(setProfile,event.target.value)}>{profiles.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
    <label>Numbering scope<select value={parent} disabled={disabled} onChange={event=>change(setParent,event.target.value)}>{scopes.map(scope=><option key={scope.id} value={scope.id}>{scope.title}</option>)}</select></label>
    <label>Starting number<input type="number" min="1" max="1000000" step="1" value={start} disabled={disabled} onChange={event=>change(setStart,event.target.value)} required /></label>
-   <label>Reserved numbers<input value={reserved} disabled={disabled} placeholder="For example: 3, 5" onChange={event=>change(setReserved,event.target.value)} /></label>
+   <label>Reserved numbers<input maxLength={20000} value={reserved} disabled={disabled} placeholder="For example: 3, 5" onChange={event=>change(setReserved,event.target.value)} /></label>
    <button disabled={disabled}>Preview numbering</button>
   </form>
   <p role="status">{message}</p>

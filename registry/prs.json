@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 26,
+  "roadmapVersion": 27,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T04:55:08Z",
+  "observedAt": "2026-11-10T05:05:53Z",
   "units": [
     {
       "id": "DCE-001",
@@ -148,7 +148,8 @@
         41,
         42,
         44,
-        58
+        58,
+        60
       ]
     },
     {
@@ -172,7 +173,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        22
+        22,
+        60
       ]
     },
     {
@@ -233,7 +235,8 @@
         56,
         57,
         58,
-        59
+        59,
+        60
       ]
     },
     {
@@ -1831,16 +1834,31 @@
       "id": 5236034097,
       "number": 59,
       "title": "DCE-008: Serialize public room admission and bound initialization",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/59",
       "createdAt": "2026-11-10T04:54:58Z",
-      "updatedAt": "2026-11-10T04:54:58Z",
+      "updatedAt": "2026-11-10T04:58:19Z",
+      "mergedAt": "2026-11-10T04:58:19Z",
+      "closedAt": "2026-11-10T04:58:19Z",
+      "draft": false,
+      "headSha": "c5fa568b8aa276a679f2d2017f1cbbcab3805ead",
+      "baseRef": "main",
+      "mergeCommitSha": "9f658ad721c54eb00a7e08a674f48495fe602cad"
+    },
+    {
+      "id": 5236133497,
+      "number": 60,
+      "title": "DCE-006: Preview and undo numbering settings in the editor",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/60",
+      "createdAt": "2026-11-10T05:05:16Z",
+      "updatedAt": "2026-11-10T05:05:16Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "13f4ebbb01d4a467cb6692ea13e38b577acc9895",
+      "headSha": "c5e140fc5d71a51604f7fea8dca97fe77c21888c",
       "baseRef": "main",
-      "mergeCommitSha": "af2ca590c88c6923348f601520a13733c27cf7b7"
+      "mergeCommitSha": "61cbb80b2e9da2d6c266db220a836b95ae63b8b2"
     }
   ]
 }

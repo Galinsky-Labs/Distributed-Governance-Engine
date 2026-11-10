@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 30,
+  "roadmapVersion": 31,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T06:04:39Z",
+  "observedAt": "2026-11-10T06:26:50Z",
   "units": [
     {
       "id": "DCE-001",
@@ -152,7 +152,8 @@
         60,
         61,
         62,
-        63
+        63,
+        64
       ]
     },
     {
@@ -1899,16 +1900,31 @@
       "id": 5236672709,
       "number": 63,
       "title": "DCE-005: Verify document reopen before interacting with its editor",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/63",
       "createdAt": "2026-11-10T06:04:09Z",
-      "updatedAt": "2026-11-10T06:04:09Z",
+      "updatedAt": "2026-11-10T06:08:01Z",
+      "mergedAt": "2026-11-10T06:08:01Z",
+      "closedAt": "2026-11-10T06:08:01Z",
+      "draft": false,
+      "headSha": "cd3c819925002d4a223112b810159329b9f803d2",
+      "baseRef": "main",
+      "mergeCommitSha": "8bd7f1dbcd56ac427e66899cd18e4963f73a0998"
+    },
+    {
+      "id": 5236875815,
+      "number": 64,
+      "title": "DCE-005: Distinguish pending safety locks from completed editor transitions",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/64",
+      "createdAt": "2026-11-10T06:25:40Z",
+      "updatedAt": "2026-11-10T06:25:40Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "65245524b52d97febb364e8b1a5f77ab748c7a1c",
+      "headSha": "16164c6b0d944907cac6041348157ea99eee7e59",
       "baseRef": "main",
-      "mergeCommitSha": "37bdf9f3750ad80a2767fa24569ba1362d437a24"
+      "mergeCommitSha": "3a9e3cc291e91e5969a8e8cb1f9ebd77e1aee870"
     }
   ]
 }

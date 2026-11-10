@@ -50,7 +50,8 @@ IDs, checksums and source fields.
 
 No dependency, credential, schema migration, digest-format or authorization
 change is required. Existing history and exact-edition APIs remain unchanged.
-The full engine and both hosted applications remain unfinished: explicit
-restoration as a new revision, authorship/proposal attribution, branches,
+The full engine and both hosted applications remain unfinished: authorship/proposal attribution, branches,
 minimal semantic/text redlines, private history verification, immutable signed
 execution workflows and deployment acceptance are separate work.
+
+A separate explicit manager operation now restores content as a new public draft revision; see [DRAFT_RESTORATION.md](DRAFT_RESTORATION.md). The comparison dialog itself remains read-only.

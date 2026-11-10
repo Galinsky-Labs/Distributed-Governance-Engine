@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "unit": "DCE-019",
+  "kind": "partial local source evidence",
+  "observedAt": "2026-11-10",
+  "sourceDigests": {
+    "migrations/019-public-draft-restorations.sql": "d2ab6f6b4952f9fa533d964e1130c5c3b90df22b6116d5e31b1710ea22d8a0c0",
+    "server/document-store.mjs": "65c0aa884b25565d4555e7d93e04258799eeb5d13362ca232bd9888fef2c72d9",
+    "server/document-http.mjs": "f25e5322baf67a5fb113c7386266441b6c09a29423e51bf7ac64fa8ad85f7032",
+    "server/identity-store.mjs": "832df046aaf532da92151c723c11c42ff48a38800edb6ddae88509a5eaa35594",
+    "web/app.jsx": "91c4c26851ade4112d60503987a836f58b47723c88fd785bd6e405a3ce3cee69",
+    "tests/document-store.test.mjs": "345bf0cfb60383626d1debddaae3a4221dcc4840e4933df75b022d81bc290c9d",
+    "tests/identity-postgres.integration.mjs": "e6c41ceee659bba09bf235fcaf346379b47483b1bb379b48dd25d3561a8be1ac",
+    "tests/restoration.browser.mjs": "9239dc1183f6256055796063c138a96b7ccb75bb1f4cf227c14d177475a5da2e"
+  },
+  "localChecks": {
+    "engineUnitTests": 354,
+    "engineGeneratedCases": 2000,
+    "documentStoreTests": 15,
+    "networkedPostgresTests": 12,
+    "postgres": "17.6-alpine disposable loopback fixture; not a production transport claim",
+    "serialBrowserRegressionJourneys": 3,
+    "browser": "Chromium 156.0.8078.79",
+    "pendingRealSaveAcknowledgmentPrecedesRestoration": true,
+    "lostCommittedResponseUsesSameCommand": true,
+    "deniedRetryCannotDisprovePriorCommit": true,
+    "newerOwnerEditSurvivesReceiptRecovery": true,
+    "failedHeadReloadRetriesOnlyRead": true,
+    "currentRoleAndCurrentHeadReopened": true,
+    "separateConnectionRestoreEditRace": true,
+    "atomicBudgetRollback": true,
+    "schemaModeTenantCsrfFreshnessFences": true,
+    "historicalYjsStateNotAttachedToRestoredHead": true,
+    "liveWebSocketContinuation": true,
+    "frozenSourceHasNoRestoreAction": true,
+    "viewportCssPixels": 320
+  },
+  "databaseMigration": "019-public-draft-restorations.sql",
+  "authorityChanged": "A named owner/admin operation requires actual primary OIDC authentication within five minutes; ordinary editing and frozen-source guards remain",
+  "eventContractAdded": "public-document-restoration-v1",
+  "existingCanonicalDocumentDomainsChanged": false,
+  "dependenciesChanged": false,
+  "newCredentialsRequired": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Local concurrent browser run timed out existing publication; repository serial configuration passed all three unchanged regression journeys",
+    "Source is public working-copy content, not immutable legal execution or an external anchor",
+    "Branches, richer attribution/redlines, private/signed history and hosted acceptance remain outstanding",
+    "Old binaries expecting only 18 migrations cannot restart against migration 019; keep compatible readers and disable writer/UI for rollback"
+  ]
+}

@@ -286,6 +286,8 @@ function App() {
     [freezing, setFreezing] = useState(false),
     [freezeUncertain, setFreezeUncertain] = useState(false),
     [freezeConfirmed, setFreezeConfirmed] = useState(false),
+    [restoring,setRestoring]=useState(false),
+    [restorationUncertain,setRestorationUncertain]=useState(false),
     [history, setHistory] = useState(null),
     [historyCursor, setHistoryCursor] = useState(null),
     [historyBusy, setHistoryBusy] = useState(false),
@@ -299,10 +301,13 @@ function App() {
     session = useRef(null),
     saveTimer = useRef(null),
     freezeCommand = useRef(null),
+    restoreCommand=useRef(null),
+    restoreReceipt=useRef(null),
+    restoringNow=useRef(false),
     importFile = useRef(null);
   const brand = brands[product],
     editable =
-      canDirectlyEdit(doc) && mayEdit(record) && !freezing && !freezeUncertain && (!live || liveReady);
+      canDirectlyEdit(doc) && mayEdit(record) && !freezing && !freezeUncertain && !restoring && !restorationUncertain && (!live || liveReady);
   function selectionChanged(state) {
     const next = selectedTable(state);
     setTableSelection(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
@@ -421,7 +426,7 @@ function App() {
   }, [generation, product, live]);
   useEffect(() => {
     const warn = (event) => {
-      if (session.current?.getState().dirty) {
+      if (session.current?.getState().dirty||restoreCommand.current||restoringNow.current) {
         event.preventDefault();
         event.returnValue = "";
       }
@@ -460,6 +465,8 @@ function App() {
     return () => abort.abort();
   }, []);
   function canLeave() {
+    if(restoringNow.current){setStatus("Wait for the restoration request to finish before changing documents.");return false;}
+    if(restoreCommand.current&&!window.confirm("A restoration may have committed. Leaving will not cancel it. Check saved history after reopening. Leave this working copy?"))return false;
     if (live) return window.confirm(
       "Live updates without a save acknowledgment may be lost when leaving. Download a local copy if necessary. Leave the live editor?",
     );
@@ -477,6 +484,7 @@ function App() {
     setDoc(snapshot.document);
     setRecord(snapshot);
     setGeneration((x) => x + 1);
+    restoreCommand.current=null;restoreReceipt.current=null;setRestorationUncertain(false);
     setHistory(null);
     setHistoryCursor(null);
     setStatus(
@@ -493,6 +501,7 @@ function App() {
     setProduct(nextProduct);
     setDoc(sample(nextProduct));
     setRecord(null);
+    restoreCommand.current=null;restoreReceipt.current=null;setRestorationUncertain(false);
     setHistory(null);
     setGeneration((x) => x + 1);
     setStatus("A new sample working copy is open.");
@@ -614,7 +623,7 @@ function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function freeze() {
-    if (!session.current || !freezeConfirmed) return;
+    if (!session.current || !freezeConfirmed||restoringNow.current||restorationUncertain) return;
     setFreezing(true);
     controller.current.view.setProps({ editable: () => false });
     clearTimeout(saveTimer.current);
@@ -652,6 +661,36 @@ function App() {
     } finally {
       setFreezing(false);
     }
+  }
+  async function restoreVersion(item){
+    if(!session.current||live||restoringNow.current||freezing||freezeUncertain)return;
+    if(restoreCommand.current&&restoreCommand.current.sourceVersion!==item.version)return;
+    if(!restoreCommand.current&&!window.confirm("Save the current working copy, then restore version "+item.version+" as a new public draft revision? Saved history remains available."))return;
+    restoringNow.current=true;setRestoring(true);controller.current.view.setProps({editable:()=>false});clearTimeout(saveTimer.current);
+    try{
+      if(!restoreCommand.current){
+        await session.current.save();
+        restoreCommand.current={commandId:crypto.randomUUID(),expectedVersion:session.current.getState().version,sourceVersion:item.version,sourceDigest:item.digest,disclosure:'restore-public-revision-v1'};
+      }
+      if(!restoreReceipt.current){
+        const snapshot=await api(`/api/workspaces/${doc.tenantId}/documents/${doc.id}/restore`,{method:'POST',body:restoreCommand.current});
+        restoreReceipt.current={version:snapshot.version};
+      }
+      const restoredVersion=restoreReceipt.current.version;
+      const fresh=await api(`/api/workspaces/${doc.tenantId}/documents/${doc.id}`);
+      restoreCommand.current=null;restoreReceipt.current=null;setRestorationUncertain(false);restoringNow.current=false;
+      openSaved(fresh);
+      setStatus('Restored content from version '+item.version+' as new saved version '+restoredVersion+'.'+(fresh.version!==restoredVersion?' The current document has since advanced to version '+fresh.version+'.':''));
+    }catch(cause){
+      const uncertain=!!restoreCommand.current&&(restorationUncertain||!!restoreReceipt.current||!cause.status||cause.status>=500);
+      if(uncertain)setRestorationUncertain(true);
+      else{restoreCommand.current=null;restoreReceipt.current=null;setRestorationUncertain(false);controller.current?.view.setProps({editable:()=>true});}
+      setStatus(uncertain?(restoreReceipt.current?'Restoration was recorded, but the current version could not be reopened. Editing is paused; retry reopening.':'The restoration response was lost. Editing is paused; retry the same restoration to recover its result.'):
+        cause.code==='REAUTHENTICATION_REQUIRED'?'Sign in again before restoring an earlier version.':
+        cause.code==='VERSION_CONFLICT'?'A newer version exists. Your working copy is preserved; reopen the current version.':
+        cause.code==='RESTORE_SCHEMA_MISMATCH'?'This earlier edition requires a schema migration before restoration.':
+        'Restoration could not complete. Your working copy and saved history are preserved.');
+    }finally{restoringNow.current=false;setRestoring(false);}
   }
   async function loadHistory(more = false) {
     if (historyBusy) return;
@@ -777,14 +816,14 @@ function App() {
               {accountEnabled && !record.historicalVersion &&
                 record.document.mode === "collaboration" &&
                 record.document.lifecycle === "draft" && (
-                <button aria-pressed={live} onClick={toggleLive}>
+                <button aria-pressed={live} disabled={restoring||restorationUncertain} onClick={toggleLive}>
                   {live ? "Exit live editing" : "Join live editing"}
                 </button>
               )}
               {!live && persistence && (
                 <button
                   disabled={
-                    freezing ||
+                    freezing ||restoring||restorationUncertain||
                     persistence.state === "saving" ||
                     persistence.state === "conflict"
                   }
@@ -956,7 +995,7 @@ function App() {
                 </label>
                 <button
                   disabled={
-                    !freezeConfirmed ||
+                    !freezeConfirmed ||restoring||restorationUncertain||
                     freezing ||
                     persistence?.state === "conflict"
                   }
@@ -979,7 +1018,7 @@ function App() {
                   {history.map((item) => (
                     <li key={item.version}>
                       <button
-                        disabled={historyBusy}
+                        disabled={historyBusy||restoring}
                         onClick={async () => {
                           try {
                             const snapshot = await api(
@@ -997,6 +1036,11 @@ function App() {
                       >
                         Version {item.version}
                       </button>
+                      {item.restoration&&<p className="history-restoration">Content restored from version {item.restoration.sourceVersion} as this new revision.</p>}
+                      {!record.historicalVersion&&!live&&canDirectlyEdit(doc)&&['owner','admin'].includes(record.viewerRole)&&item.version<storedVersion&&
+                        <button className="restore-version" disabled={restoring||freezing||freezeUncertain||!!restoreCommand.current&&restoreCommand.current.sourceVersion!==item.version} onClick={()=>restoreVersion(item)}>
+                          {restoreCommand.current?.sourceVersion===item.version?'Retry restoration of version '+item.version:'Restore version '+item.version+' as new draft'}
+                        </button>}
                       <span className="small">
                         {new Date(item.createdAt).toLocaleString()} · Anchoring
                         pending

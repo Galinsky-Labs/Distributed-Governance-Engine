@@ -414,3 +414,105 @@ test("Yjs snapshots persist atomically with public document version and are reco
  }),/INVALID_CRDT_STATE/);
  assert.equal((await documents.read(owner,tenantId,changed.id)).version,2);
 });
+
+const restorationRequest=(initial,expectedVersion=2)=>({commandId:randomUUID(),expectedVersion,sourceVersion:initial.version,sourceDigest:initial.digest,disclosure:'restore-public-revision-v1'});
+async function twoVersions(){
+ const initial=await documents.create(owner,tenantId,command(doc()));
+ const current=edit(initial.document,'The new public wording.');current.metadata.title='New title';
+ const second=await documents.save(owner,tenantId,current.id,{document:current,expectedVersion:1,commandId:randomUUID()});
+ return {initial,second};
+}
+test('restoration appends content and provenance atomically, preserves history and replays exactly once',async()=>{
+ const {initial,second}=await twoVersions(),input=restorationRequest(initial);
+ const results=await Promise.all([documents.restore(owner,tenantId,initial.document.id,input),documents.restore(owner,tenantId,initial.document.id,input)]);
+ assert.deepEqual(results[0],results[1]);const restored=results[0];
+ assert.equal(restored.version,3);assert.equal(restored.document.revision,second.document.revision+1);
+ assert.deepEqual(restored.document.content,initial.document.content);assert.deepEqual(restored.document.metadata,initial.document.metadata);
+ assert.equal(restored.previousDigest,second.digest);assert.equal(restored.document.mode,'collaboration');assert.equal(restored.document.lifecycle,'draft');
+ assert.deepEqual((await documents.publicRead(initial.document.id,{version:2})).document,second.document);
+ assert.deepEqual((await documents.publicRead(initial.document.id,{version:1})).document,initial.document);
+ const history=await documents.history(initial.document.id);assert.equal(history.items.length,3);
+ assert.deepEqual(history.items[0].restoration,{sourceVersion:1,sourceDigest:initial.digest});
+ assert.equal(Object.hasOwn(history.items[1],'restoration'),false);
+ const {digest}=await import('../src/integrity.mjs');
+ assert.equal(history.items[0].eventDigest,digest('public-document-restoration-v1',{
+  tenantId,documentId:initial.document.id,version:3,digest:restored.digest,previousDigest:second.digest,
+  createdAt:new Date(history.items[0].createdAt).toISOString(),restoration:restored.restoration
+ }));
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.restorations')).rows[0].n,1);
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.anchor_outbox')).rows[0].n,3);
+ await assert.rejects(documents.restore(owner,tenantId,initial.document.id,{...input,sourceDigest:'0'.repeat(64)}),{code:'COMMAND_REUSED'});
+ await assert.rejects(documents.restore(owner,tenantId,initial.document.id,{...input,expectedVersion:3}),{code:'COMMAND_REUSED'});
+ assert.ok(!JSON.stringify(history).includes(owner.accountId));
+});
+test('restoration and a concurrent edit serialize against the exact current version',async()=>{
+ const {initial,second}=await twoVersions(),input=restorationRequest(initial);
+ const results=await Promise.allSettled([
+  documents.restore(owner,tenantId,initial.document.id,input),
+  documents.save(owner,tenantId,initial.document.id,{document:edit(second.document,'Concurrent edit.'),expectedVersion:2,commandId:randomUUID()})
+ ]);
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+ assert.equal(results.find(result=>result.status==='rejected').reason.code,'VERSION_CONFLICT');
+ const current=await documents.read(owner,tenantId,initial.document.id);assert.equal(current.version,3);
+ assert.equal((await documents.history(initial.document.id)).items.length,3);
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.anchor_outbox')).rows[0].n,3);
+});
+test('restoration HTTP requires manager, actual recent OIDC authentication, exact-origin CSRF and strict inputs',async()=>{
+ const {initial}=await twoVersions(),path='/api/workspaces/'+tenantId+'/documents/'+initial.document.id+'/restore',input=restorationRequest(initial);
+ for(const who of [reader,outsider])assert.equal((await call(path,{who,method:'POST',body:input})).status,403);
+ assert.equal((await call(path,{method:'POST',headers:{'x-dge-csrf':''},body:input})).status,403);
+ assert.equal((await call(path+'?override=true',{method:'POST',body:input})).status,400);
+ assert.equal((await call(path,{method:'POST',body:{...input,mode:'collaboration'}})).status,400);
+ assert.equal((await call(path,{method:'POST',body:{...input,sourceDigest:'0'.repeat(64)}})).status,409);
+ assert.equal((await call(path,{method:'POST',body:{...input,disclosure:'no'}})).status,400);
+ await db.query("UPDATE dge_identity.sessions SET created_at=created_at-interval '6 minutes',authenticated_at=authenticated_at-interval '6 minutes' WHERE account_id=$1",[owner.accountId]);
+ const stale=await call(path,{method:'POST',body:input});assert.equal(stale.status,403);assert.equal((await stale.json()).error,'REAUTHENTICATION_REQUIRED');
+ assert.equal((await documents.publicRead(initial.document.id)).version,2);
+});
+test('restoration rejects frozen source, another document or tenant, current versions and schema rollback',async()=>{
+ const {initial}=await twoVersions(),input=restorationRequest(initial),other=await documents.create(owner,tenantId,command(doc()));
+ await assert.rejects(documents.restore(owner,tenantId,other.document.id,{...input,expectedVersion:1}),{code:'RESTORE_REQUIRES_OLDER_VERSION'});
+ await documents.save(owner,tenantId,other.document.id,{document:edit(other.document,'Other document.'),expectedVersion:1,commandId:randomUUID()});
+ await assert.rejects(documents.restore(owner,tenantId,other.document.id,input),{code:'SOURCE_DIGEST_MISMATCH'});
+ await assert.rejects(documents.restore(owner,tenantId,initial.document.id,{...input,sourceVersion:2}),{code:'RESTORE_REQUIRES_OLDER_VERSION'});
+ const external=await identity.createTenant(owner);await assert.rejects(documents.restore(owner,external.tenantId,initial.document.id,input),{code:'DOCUMENT_NOT_FOUND'});
+ await documents.freezeForInput(owner,tenantId,initial.document.id,{commandId:randomUUID(),expectedVersion:2});
+ await assert.rejects(documents.restore(owner,tenantId,initial.document.id,{...input,expectedVersion:3}),{code:'SOURCE_FROZEN'});
+ const v1={...structuredClone(doc()),schemaVersion:1};const old=await documents.create(owner,tenantId,command(v1));
+ const upgraded=edit(v1,'Migrated wording.');upgraded.schemaVersion=2;
+ await documents.save(owner,tenantId,v1.id,{document:upgraded,expectedVersion:1,commandId:randomUUID()});
+ await assert.rejects(documents.restore(owner,tenantId,v1.id,restorationRequest(old)),{code:'RESTORE_SCHEMA_MISMATCH'});
+});
+test('restoration failure rolls back source, provenance, byte charge and commitment together',async()=>{
+ const {initial}=await twoVersions(),input=restorationRequest(initial),before=(await db.query('SELECT stored_bytes FROM dge_documents.usage WHERE tenant_id=$1',[tenantId])).rows[0].stored_bytes;
+ const limited=createDocumentStore({identity,transaction,maxStoredBytes:1});
+ await assert.rejects(limited.restore(owner,tenantId,initial.document.id,input),{code:'STORAGE_LIMIT_REACHED'});
+ assert.equal((await documents.read(owner,tenantId,initial.document.id)).version,2);
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.restorations')).rows[0].n,0);
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.anchor_outbox')).rows[0].n,2);
+ assert.equal((await db.query('SELECT stored_bytes FROM dge_documents.usage WHERE tenant_id=$1',[tenantId])).rows[0].stored_bytes,before);
+ await db.query('UPDATE dge_documents.versions SET digest=$1 WHERE document_id=$2 AND version=1',['0'.repeat(64),initial.document.id]);
+ await assert.rejects(documents.restore(owner,tenantId,initial.document.id,input),{code:'DOCUMENT_INTEGRITY_ERROR'});
+ assert.equal((await documents.read(owner,tenantId,initial.document.id)).version,2);
+});
+test('restoration provenance is append-only and tenant-fenced; old Yjs state cannot attach to the new head',async()=>{
+ const initial=await documents.create(owner,tenantId,command(doc())),changed=edit(initial.document,'Live wording.');
+ const shared=createPublicSharedDraft({classification:'public',document:changed});const crdtState=Buffer.from(shared.encodeState()).toString('base64url');shared.close();
+ await documents.save(owner,tenantId,changed.id,{document:changed,commandId:randomUUID(),expectedVersion:1,crdtState});
+ assert.equal((await documents.collaborationState(owner,tenantId,changed.id)).version,2);
+ await documents.restore(owner,tenantId,changed.id,restorationRequest(initial));
+ assert.equal(await documents.collaborationState(owner,tenantId,changed.id),null);
+ await transaction(async tx=>assert.equal((await tx.query('SELECT * FROM dge_documents.restorations')).rows.length,0));
+ for(const sql of ['UPDATE dge_documents.restorations SET source_version=2','DELETE FROM dge_documents.restorations','TRUNCATE dge_documents.restorations'])await assert.rejects(transaction(tx=>tx.query(sql)),/permission denied/);
+ assert.equal((await db.query('SELECT count(*)::int n FROM dge_documents.crdt_states')).rows[0].n,1,'Historical Yjs state stays append-only');
+});
+
+test('restoration preserves current schema and provenance instead of reinstating historical authority',async()=>{
+ const {initial,second}=await twoVersions(),current=structuredClone(second.document);current.revision++;
+ current.provenance={fromSchema:'foundation-blocks-v0',sourceDigest:'a'.repeat(64)};
+ await documents.save(owner,tenantId,current.id,{document:current,expectedVersion:2,commandId:randomUUID()});
+ const restored=await documents.restore(owner,tenantId,current.id,restorationRequest(initial,3));
+ assert.equal(restored.version,4);assert.deepEqual(restored.document.provenance,current.provenance);
+ assert.equal(restored.document.schemaVersion,current.schemaVersion);assert.equal(restored.document.id,current.id);assert.equal(restored.document.tenantId,tenantId);
+ assert.deepEqual(restored.document.content,initial.document.content);
+});

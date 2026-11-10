@@ -28,7 +28,9 @@
     "delayedPeerDeliveryWithAcknowledgedText": true,
     "fullBrowserSuite": "Managed local Chrome blocks file:// standalone test with net::ERR_BLOCKED_BY_ADMINISTRATOR; no policy bypass. CI pinned browser must pass all tests.",
     "documentRegressionWithForegroundTabs": "passed",
-    "liveExitAndStoredReopen": "passed"
+    "liveExitAndStoredReopen": "passed",
+    "fullBrowserSuitePasses": 8,
+    "fullBrowserSuiteBlocked": 1
   },
   "dependenciesChanged": false,
   "databaseMigration": false,

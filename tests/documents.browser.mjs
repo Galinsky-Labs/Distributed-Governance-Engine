@@ -6,12 +6,13 @@ import { accountFixture } from "./support/account-fixture.mjs";
 const binary = process.env.DGE_BROWSER_EXECUTABLE;
 if (!binary) throw Error("DGE_BROWSER_EXECUTABLE is required");
 async function click(page, label) {
+  await page.bringToFront();
   await page.waitForFunction(
     (label) =>
       [...document.querySelectorAll("button")].some(
         (button) => button.textContent === label && !button.disabled,
       ),
-    {},
+    { polling: 100 },
     label,
   );
   const handle = await page.evaluateHandle(
@@ -31,18 +32,20 @@ async function openCurrent(page) {
   await page.waitForSelector(".save-controls");
 }
 async function prepend(page, text) {
+  await page.bringToFront();
   await page.click(".ProseMirror p");
   await page.keyboard.press("Home");
   await page.keyboard.type(text);
 }
 async function saved(page, version) {
+  await page.bringToFront();
   try {
     await page.waitForFunction(
       (version) =>
         document
           .querySelector(".save-controls")
           ?.textContent.includes("Saved version " + version),
-      {},
+      { polling: 100 },
       version,
     );
   } catch (cause) {
@@ -216,6 +219,7 @@ test(
       );
       const publicContext = await browser.createBrowserContext(),
         reader = await publicContext.newPage();
+      await reader.bringToFront();
       await reader.goto(link);
       await reader.waitForFunction(() =>
         document
@@ -264,6 +268,7 @@ test(
         ),
       );
       await mkdir("artifacts", { recursive: true });
+      await owner.bringToFront();
       await owner.screenshot({
         path: "artifacts/document-desktop.png",
         fullPage: true,
@@ -394,6 +399,7 @@ test(
         path: "artifacts/proposal-source.png",
         fullPage: true,
       });
+      await reader.bringToFront();
       await reader.goto(link);
       await reader.waitForFunction(() =>
         document

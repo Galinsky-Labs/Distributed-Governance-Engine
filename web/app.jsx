@@ -444,7 +444,7 @@ function App() {
   }, []);
   function canLeave() {
     if (live) return window.confirm(
-      "This live session has no durable WebSocket acknowledgement. Download a local copy if necessary before leaving. Leave the live editor?",
+      "Live updates without a save acknowledgment may be lost when leaving. Download a local copy if necessary. Leave the live editor?",
     );
     return (
       !session.current?.getState().dirty ||
@@ -484,7 +484,6 @@ function App() {
     if (!record || record.historicalVersion || doc.mode !== "collaboration" ||
         doc.lifecycle !== "draft") return;
     if (live) {
-      if (!canLeave()) return;
       try {
         const fresh = await api("/api/workspaces/" + doc.tenantId + "/documents/" + doc.id);
         openSaved(fresh);

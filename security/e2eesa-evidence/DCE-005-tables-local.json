@@ -2,19 +2,20 @@
   "unit": "DCE-005",
   "additionalUnit": "DCE-008",
   "scope": "bounded structural table editing and authenticated public WSS concurrent text preservation",
-  "observedAt": "2026-11-10T04:43:37.558618+00:00",
+  "observedAt": "2026-11-10T04:46:59.273126+00:00",
   "sourceFiles": {
     "editor/tables.mjs": "edad2f98fb550f6e9f1f91a134fc859fbcaa1a2045d1ea8b0c8500343ad34421",
     "editor/model.mjs": "9221c986e1969d60cbdf465bd7e7ed96fd5d2018c4c907fb441acff536762c87",
     "editor/realtime-editor.mjs": "3dc8c42ed92c15cd498489e608415ab4a26313aace98b63fd1ae8a3b384232a5",
     "web/table-tools.jsx": "722bc2aec67514a79e1a4de525f2f3b471720db0f1fe50704ba8d96ee9b8ae1c",
-    "web/app.jsx": "361d85cb2b3af845e6a264d96aba61546790fc4fed31868ab2a188081ba767c6",
+    "web/app.jsx": "afedb6f4f6cea46245db3b54f4a7cace0b4af2e1971cd81ef77b688f157eb12f",
     "web/style.css": "af509889e1973b05b321cf884197dcbcaf8aa3ca7a2f0508aea3fa6a33ecb290",
     "server/public-collaboration-hub.mjs": "99a621ee5d6aad0bc0d654d185e96b07539c58952bd72d3253d1de16b6efb4f4",
     "tests/editor-tables.test.mjs": "8939d34886c7a28046d8492170ce889efa245bd70d4060550731f6f9b39b8246",
-    "tests/tables.browser.mjs": "81606eaa058ea5908b945db457bb20071f24c3d5b8badd9bf311556ce5221821",
+    "tests/tables.browser.mjs": "5a8958437501dd217a19caf6577758d46c38bb3ebee8e5a8be578e5134c499cb",
     "tests/public-collaboration-hub.test.mjs": "cd78739c97ac3db1953e38a4a9a6d2b1e44d67df1908bfd5d60fcad080580f77",
-    "tests/support/account-fixture.mjs": "0489d5ac72f6442eba1886d558b79c385b893b5510a0308462cf48ecafb35d46"
+    "tests/support/account-fixture.mjs": "0489d5ac72f6442eba1886d558b79c385b893b5510a0308462cf48ecafb35d46",
+    "tests/documents.browser.mjs": "fc2dfdf4a667e63c6129eb914fedc57f8baa2687c8841dfea6178fb35dd990a3"
   },
   "localChecks": {
     "engineUnitTests": 273,
@@ -25,7 +26,9 @@
     "browser": "Chromium 156.0.8078.79",
     "authenticatedActualWssAndDocumentStore": true,
     "delayedPeerDeliveryWithAcknowledgedText": true,
-    "fullBrowserSuite": "pending"
+    "fullBrowserSuite": "Managed local Chrome blocks file:// standalone test with net::ERR_BLOCKED_BY_ADMINISTRATOR; no policy bypass. CI pinned browser must pass all tests.",
+    "documentRegressionWithForegroundTabs": "passed",
+    "liveExitAndStoredReopen": "passed"
   },
   "dependenciesChanged": false,
   "databaseMigration": false,

@@ -55,10 +55,11 @@ export async function accountFixture({
   passkeyConfiguration = {},
   hostname = '127.0.0.1',
   publicCollaboration = false,
+  collaborationSaveDelayMs = 0,
 } = {}) {
   if (typeof publicCollaboration !== 'boolean') throw Error('Invalid public collaboration fixture setting');
   if (!['127.0.0.1', 'localhost'].includes(hostname)) throw Error('Loopback fixture hostname required');
-  for (const delay of [proposalListDelayMs, documentListDelayMs])
+  for (const delay of [proposalListDelayMs, documentListDelayMs, collaborationSaveDelayMs])
     if (!Number.isSafeInteger(delay) || delay < 0 || delay > 1000)
       throw Error("Invalid fixture delay");
   const temporary = await mkdtemp(join(tmpdir(), "dge-fixture-tls-"));
@@ -305,7 +306,9 @@ export async function accountFixture({
       });
     },
   });
-  const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:createDocumentStore({identity:store,transaction})}):null;
+  const sharedDocuments=createDocumentStore({identity:store,transaction});
+  const collaborationDocuments=collaborationSaveDelayMs?{...sharedDocuments,async save(...args){await new Promise(resolve=>setTimeout(resolve,collaborationSaveDelayMs));return sharedDocuments.save(...args);}}:sharedDocuments;
+  const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:collaborationDocuments}):null;
   return {
     origin,
     db,

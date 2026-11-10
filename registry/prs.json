@@ -4,7 +4,7 @@
   "roadmapVersion": 21,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T01:33:10.723Z",
+  "observedAt": "2026-11-10T02:13:08Z",
   "units": [
     {
       "id": "DCE-001",
@@ -58,7 +58,8 @@
         20,
         21,
         39,
-        53
+        53,
+        54
       ]
     },
     {
@@ -1732,16 +1733,31 @@
       "id": 5234151879,
       "number": 53,
       "title": "DCE-002/036: verify passkeys and preserve exact-head publication gates",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/53",
       "createdAt": "2026-11-10T01:31:27Z",
-      "updatedAt": "2026-11-10T01:31:27Z",
+      "updatedAt": "2026-11-10T01:43:13Z",
+      "mergedAt": "2026-11-10T01:43:13Z",
+      "closedAt": "2026-11-10T01:43:13Z",
+      "draft": false,
+      "headSha": "0a0ace980f5b50f98bd202c560d3dcbc89cd9296",
+      "baseRef": "main",
+      "mergeCommitSha": "1b89fd51b41ace70919979c57f5c2dc504aae1b5"
+    },
+    {
+      "id": 5234576598,
+      "number": 54,
+      "title": "DCE-002: prepare a real TLS-only identity provider and verify MFA through the engine",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/54",
+      "createdAt": "2026-11-10T02:11:53Z",
+      "updatedAt": "2026-11-10T02:11:53Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "05a524a3dd01f29e4d897c000082abd61989bbac",
+      "headSha": "d1e8de168f92fc34be49a3feff0e33100e0941ec",
       "baseRef": "main",
-      "mergeCommitSha": "255eed1a999766932f8a52d4b681d92a816f50e0"
+      "mergeCommitSha": "9b8071a7de4357c1ab4cac30eb8d9f94bf026fa4"
     }
   ]
 }

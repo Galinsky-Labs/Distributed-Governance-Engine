@@ -1,0 +1,56 @@
+{
+  "unit": "DCE-002",
+  "scope": "new upstream Keycloak provider candidate and real TLS/MFA engine integration",
+  "observedAt": "2026-11-10T02:29:09.421Z",
+  "sourceFiles": {
+    "deploy/identity/Dockerfile": "d4e7979e886040cdb33798d6f96708d179e5703b9827eeca18abdfc922d585ea",
+    "deploy/identity/realm.mjs": "315fefbb3cdf99b5865ae824ded5984885e399c775c7f95284bfc363da766459",
+    "deploy/identity/provider.env.example": "404e2367d6a909a333f1934dbe8f673510bb6db7b82e2e8ab99c60499fd0570d",
+    "scripts/identity-provider-fixture.py": "5b8515698c5238bf30db052d32a3801a8a608bdbbabaff430cbea348fda687e3",
+    "scripts/run-identity-provider-test.mjs": "15226415b5f3cb0b1df3525b29264a81190ac26d0f59d6d322eb45f393750a4a",
+    "tests/identity-provider.test.mjs": "f4a00cd2e6364554774557007ba2685508088b807084b0bf41362c303fa0cda6",
+    "tests/identity-provider.integration.mjs": "7d237541cc3ef7a2ed5747ab60508e3620f79583fe9ea4698d5a5b00662cb1fc",
+    ".github/workflows/verify.yml": "c7249c713ea66580de07a3be4084001b38a170237a14772b7f95f1b75fc1b954",
+    ".github/workflows/publish-candidates.yml": "15fffc294296bc8e0c60e605b330ae259fa43e5c5dcc61c39e199fcecc7de693"
+  },
+  "localChecks": {
+    "engineTests": 248,
+    "generatedCases": 2000,
+    "realProviderBrowserJourneys": 1,
+    "fixtureStopRestart": true,
+    "providerTLS": "TLSv1.3, trusted local CA verified",
+    "databaseTLS": "TLSv1.3, verify-full JDBC",
+    "TLS12Rejected": true,
+    "untrustedCARejected": true,
+    "browser": "Chromium 156.0.8078.79",
+    "strictX509FixtureCertificates": true
+  },
+  "provider": {
+    "implementation": "Keycloak 26.8.2",
+    "imageDigest": "sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41",
+    "initialOTPEnrollmentAssurance": "primary",
+    "freshPasswordOTPAssurance": "multifactor"
+  },
+  "securityReview": {
+    "type": "author source review",
+    "boundaries": [
+      "private non-overwriting realm imports outside checkout, including symlink paths",
+      "distinct confidential clients, exact callback/origin scope and S256 PKCE",
+      "completed authenticator AMR rather than static MFA assertion",
+      "TLS-only endpoints and verified TLS database sessions",
+      "labeled loopback-only disposable fixtures; no test users in production image",
+      "MFA gate on recovery-code issuance after fresh real provider login"
+    ],
+    "blockingFindings": []
+  },
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Local integration accounts only; no public host/certificate/ingress acceptance",
+    "SMTP/open registration and named administrator recovery are not configured",
+    "No physical-authenticator, E2EE-device authorization or full unit-completion claim",
+    "No cloud service or paid resource created",
+    "Local rootless Docker has no cgroup limit enforcement; dedicated CI validates the allocated 2 GiB startup budget."
+  ]
+}

@@ -9,3 +9,5 @@ artifacts/
 dist/
 artifacts/
 .browser-cache/
+__pycache__/
+deploy/identity/*.env

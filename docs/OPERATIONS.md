@@ -29,3 +29,10 @@ The PR verification workflow contains only the substantive verify/image jobs;
 main-only publication jobs therefore do not appear as skipped PR checks. The
 strict merge preflight remains unchanged. Tests cover wrong source/repository,
 failed/skipped/cancelled/incomplete evidence and queued-to-completed transitions.
+
+The new provider candidate and its private import generator are documented in
+IDENTITY_PROVIDER.md. The identity-provider verification job exercises the real
+pinned Keycloak image, certificate-verified TLS 1.3 discovery/database access,
+TLS downgrade/untrusted-CA refusal and password/OTP login through the engine.
+The disposable provider fixture is loopback-only and must never be exposed as a
+customer service; the production image contains no fixture users or credentials.

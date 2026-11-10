@@ -78,3 +78,12 @@ The source must not be represented as usable private end-to-end-encrypted collab
 DCE-002 (passkey verifier and provider restoration), DCE-005 (editor/browser/accessibility acceptance), DCE-006/007 (configuration UI and complete reference workflows) remain partial despite tested advances. Do not infer acceptance from contribution PR counts.
 
 The DCE-002 concrete-verifier contribution pins SimpleWebAuthn, adds account add/verify/revoke controls, and verifies native browser ceremonies with a virtual authenticator. See PASSKEY_VERIFIER.md. Production attestation-policy selection, provider restoration UI, real hardware/provider evidence and deployment acceptance remain outstanding. No unit acceptance or PR mapping is invented.
+
+The owner-requested new identity-provider candidate uses pinned Keycloak with
+TLS-only endpoints, a separate verified-TLS PostgreSQL database, exact confidential
+client callbacks/PKCE, and required password/OTP authentication. A real upstream
+provider/engine browser integration proves assurance stays primary during OTP
+enrollment and only a fresh verified MFA login permits recovery-code issuance.
+See IDENTITY_PROVIDER.md for tested local setup and explicit production inputs.
+Public hosting, operator recovery, physical-device assurance and full DCE-002
+acceptance remain outstanding; this does not begin downstream application work.

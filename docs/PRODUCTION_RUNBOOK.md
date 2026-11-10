@@ -32,6 +32,7 @@ The migrator applies checksummed migrations transactionally, and refuses an inco
 | TLS_KEY_FILE | Mounted private-key file |
 | TLS_CERT_FILE | Mounted chain certificate file |
 | QUILL_PRODUCT | civic or charter |
+| PASSKEY_ATTESTATION_POLICY | Optional explicit named JSON authenticator allowlist; see PASSKEY_VERIFIER.md. Omit or leave empty to disable passkeys. |
 | PORT | HTTPS port, default 8443 |
 | BIND_ADDRESS | Explicit bind address; default 127.0.0.1 |
 

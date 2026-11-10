@@ -51,7 +51,10 @@ const escape = (value) =>
 export async function accountFixture({
   proposalListDelayMs = 0,
   documentListDelayMs = 0,
+  passkeyConfiguration = {},
+  hostname = '127.0.0.1',
 } = {}) {
+  if (!['127.0.0.1', 'localhost'].includes(hostname)) throw Error('Loopback fixture hostname required');
   for (const delay of [proposalListDelayMs, documentListDelayMs])
     if (!Number.isSafeInteger(delay) || delay < 0 || delay > 1000)
       throw Error("Invalid fixture delay");
@@ -104,7 +107,7 @@ export async function accountFixture({
     },
   );
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const origin = "https://127.0.0.1:" + server.address().port,
+  const origin = "https://" + hostname + ":" + server.address().port,
     issuer = origin + "/fixture",
     clientId = "engine-browser-fixture",
     clientSecret = "fixture-only-client-secret";
@@ -114,6 +117,7 @@ export async function accountFixture({
       return fn(tx);
     });
   const store = createIdentityStore({
+    ...passkeyConfiguration,
     transaction,
     origin,
     sessionKey: randomBytes(32),

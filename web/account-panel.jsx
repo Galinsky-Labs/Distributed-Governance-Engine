@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createAccountAPI, readInvitationPackage } from "./account-api.mjs";
 import { InvitationControls } from "./invitations.jsx";
+import { PasskeyControls } from "./passkey-controls.jsx";
 
 const messages = {
+  ERROR_CEREMONY_ABORTED: "Passkey verification was cancelled. You can try again.",
+  ERROR_INVALID_DOMAIN: "Passkeys require this service to use a valid HTTPS hostname.",
+  ERROR_INVALID_RP_ID: "Passkeys are not configured for this hostname.",
+  PASSKEY_VERIFIER_UNAVAILABLE: "Passkeys are not configured for this service yet.",
+  PASSKEY_ATTESTATION_POLICY_REJECTED: "This authenticator is not allowed by the service's passkey policy.",
+  PASSKEY_VERIFICATION_FAILED: "Passkey verification failed. Try again with an enrolled passkey.",
+  PASSKEY_NOT_ENROLLED: "Add a passkey before using passkey verification.",
   AUTHENTICATION_REQUIRED: "Sign in to continue.",
   REAUTHENTICATION_REQUIRED: "Sign in again before changing workspace access.",
   STEP_UP_REQUIRED: "Sign in with multifactor authentication before issuing recovery codes.",
@@ -259,6 +267,7 @@ export function AccountPanel() {
               <p>
                 <a href="/auth/start">Sign in again for access changes</a>
               </p>
+              <PasskeyControls api={api} session={session} perform={perform} busy={busy} reload={reload} />
               <p className="small">
                 Issuing recovery codes invalidates any unused codes from an earlier set.
                 Save the new codes offline before closing this panel.

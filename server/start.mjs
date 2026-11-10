@@ -20,6 +20,7 @@ import { createProposalRoutes, proposalBodyLimit } from "./proposal-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication, createEngineServer } from "./application.mjs";
 import { attachPublicCollaborationHub } from "./public-collaboration-hub.mjs";
+import { configuredPasskeys } from "./passkey-verifier.mjs";
 
 const required = (name) => {
   const value = process.env[name];
@@ -57,6 +58,7 @@ try {
     sessionKey: decode("SESSION_KEY"),
     stateKey: decode("OIDC_STATE_KEY"),
     origin,
+    ...configuredPasskeys(process.env.PASSKEY_ATTESTATION_POLICY),
   });
   // Each pass deletes at most 500 expired challenges; the timer is not a
   // credential or session validity boundary, and it must not keep shutdown alive.

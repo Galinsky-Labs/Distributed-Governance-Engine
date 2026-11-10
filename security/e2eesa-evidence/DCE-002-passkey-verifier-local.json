@@ -15,7 +15,7 @@
     "package-lock.json": "fa7624e12450a54fd659ec9703ecd4ea689b4af8fcf8b67382f7b2b0af99a320"
   },
   "localChecks": {
-    "engineTests": 242,
+    "engineTests": 244,
     "generatedCases": 2000,
     "browserJourneys": 4,
     "browser": "Chromium 156.0.8078.79",
@@ -43,5 +43,6 @@
     "Full DCE-002 acceptance and provider-restoration UI remain incomplete",
     "Full local browser suite has system-browser-specific timeout/file URL policy limits; exact-head CI remains required",
     "No private encryption, unit-completion or production conformance claim"
-  ]
+  ],
+  "additionalScope": "DCE-036 exact-main publication gate; merge preflight remains unchanged"
 }

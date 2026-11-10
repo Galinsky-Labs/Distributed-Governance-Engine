@@ -871,7 +871,10 @@
       ],
       "specification": "docs/prs/DCE-036.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        53
+      ]
     },
     {
       "id": "DCE-037",
@@ -1728,7 +1731,7 @@
     {
       "id": 5234151879,
       "number": 53,
-      "title": "DCE-002: verify native passkeys and add account security controls",
+      "title": "DCE-002/036: verify passkeys and preserve exact-head publication gates",
       "state": "open",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/53",
       "createdAt": "2026-11-10T01:31:27Z",

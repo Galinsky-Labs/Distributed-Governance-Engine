@@ -21,3 +21,11 @@ Registration: repository neophilism/Distributed-Governance-Engine, immutable ID 
 Use dependency-ordered PRs, stable unit IDs and actual GitHub mappings. Planned specifications are reviewable documents; dependency-blocked empty PRs are unnecessary. Use scripts/verify-pr-merge.mjs with two fresh exact-head observations. Missing, pending, skipped, failed or incomplete required checks never count as passed.
 
 Production acceptance requires exact deployed commit evidence, readiness/dependency checks, isolated identity, migration records, real multiuser journeys, anchor receipts, recovery drills and measured cost/scale assumptions. Human review is deferred to the deployed handoff; independent review/certification remain pending.
+
+Candidate publication now runs only on main pushes in `publish-candidates.yml`.
+Its release-source gate requires the verification workflow to finish successfully
+for that exact main SHA before either existing candidate release is updated.
+The PR verification workflow contains only the substantive verify/image jobs;
+main-only publication jobs therefore do not appear as skipped PR checks. The
+strict merge preflight remains unchanged. Tests cover wrong source/repository,
+failed/skipped/cancelled/incomplete evidence and queued-to-completed transitions.

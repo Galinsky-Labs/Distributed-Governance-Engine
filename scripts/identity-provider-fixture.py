@@ -19,16 +19,30 @@ REPOSITORY = Path(__file__).resolve().parent.parent
 POSTGRES_IMAGE = 'postgres@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac'
 IMAGE = 'quill-identity-integration'
 LABEL = 'org.quill.identity-integration'
+PHASE = 'initialization'
 DOCKER_ENV = {k: v for k, v in os.environ.items() if k not in {
     'DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_TLS', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH'}}
 
 
 def docker(*args, data=None, capture=False):
-    result = subprocess.run(['docker', '--host=unix:///var/run/docker.sock', *args],
+    try:
+        result = subprocess.run(['docker', '--host=unix:///var/run/docker.sock', *args],
                             env=DOCKER_ENV, input=data, check=True,
                             stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
                             stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as error:
+        # This build only references public pinned image/configuration. Other
+        # commands may process private SQL/env inputs and must not echo stderr.
+        if args[0] == 'build':
+            print('Public pinned-image build diagnostic:', error.stderr.decode(errors='replace')[-3000:], flush=True)
+        raise
     return result.stdout.decode().strip() if capture else None
+
+
+def phase(value):
+    global PHASE
+    PHASE = value
+    print('Identity fixture phase: ' + value, flush=True)
 
 
 def write_private(path, contents):
@@ -106,8 +120,11 @@ def start(state_path):
         (root / (name + '.key')).chmod(0o600)
 
     try:
+        phase('local Docker health')
         docker('info')
+        phase('pinned provider image build')
         docker('build', '--tag', IMAGE, str(REPOSITORY / 'deploy/identity'))
+        phase('private TLS and client configuration')
         certificate('ca', '/CN=Quill local integration CA')
         certificate('server', '/CN=localhost', 'DNS:localhost,IP:127.0.0.1')
         certificate('postgres', '/CN=quill-idp-db', 'DNS:quill-idp-db')
@@ -128,6 +145,7 @@ def start(state_path):
         write('pg_hba.conf', 'local all all trust\nhostssl all all 0.0.0.0/0 scram-sha-256\n'
               'hostssl all all ::0/0 scram-sha-256\nhostnossl all all 0.0.0.0/0 reject\nhostnossl all all ::0/0 reject\n')
         docker('network', 'create', '--label', LABEL + '=' + nonce, base)
+        phase('isolated TLS PostgreSQL startup')
         postgres_start = (
             'cp /run/fixture/pg_hba.conf /tmp/pg_hba.conf; '
             'cp /run/fixture/postgres.key /tmp/server.key; cp /run/fixture/postgres.crt /tmp/server.crt; '
@@ -151,6 +169,7 @@ def start(state_path):
         sql = (f"CREATE ROLE keycloak LOGIN PASSWORD '{credentials['database']}' NOSUPERUSER NOCREATEDB "
                "NOCREATEROLE NOREPLICATION NOBYPASSRLS;\nCREATE DATABASE keycloak OWNER keycloak;\n")
         docker('exec', '-i', base + '-db', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', data=sql.encode())
+        phase('TLS provider startup')
         write('keycloak.env', '\n'.join([
             f'KC_HOSTNAME=https://localhost:{port}',
             'KC_HTTPS_CERTIFICATE_FILE=/run/tls/server.crt', 'KC_HTTPS_CERTIFICATE_KEY_FILE=/run/tls/server.key',
@@ -165,6 +184,7 @@ def start(state_path):
                '--mount', f'type=bind,src={root},dst=/run/tls,readonly',
                '--mount', f'type=bind,src={root}/quill-realm.json,dst=/opt/keycloak/data/import/quill-realm.json,readonly', IMAGE)
         print('Started local identity fixture; waiting for verified TLS discovery.', flush=True)
+        phase('verified TLS discovery')
         context = ssl.create_default_context(cafile=str(root / 'ca.crt'))
         context.minimum_version = context.maximum_version = ssl.TLSVersion.TLSv1_3
         for _ in range(120):
@@ -184,6 +204,7 @@ def start(state_path):
         if version != 'TLSv1.3':
             raise RuntimeError('Provider database TLS version mismatch')
         origin = state['issuer'].split('/realms/')[0]
+        phase('local integration-user provisioning')
         body = urllib.parse.urlencode({'grant_type': 'password', 'client_id': 'admin-cli',
                                        'username': 'quillbootstrap', 'password': credentials['admin']}).encode()
         with urllib.request.urlopen(urllib.request.Request(origin + '/realms/master/protocol/openid-connect/token', data=body),
@@ -212,5 +233,6 @@ if __name__ == '__main__':
     try:
         stop(args.state) if args.stop else start(args.state)
     except Exception as error:
-        print('Local identity fixture failed (' + type(error).__name__ + '); credentials were not logged.', flush=True)
+        message = 'Local identity fixture failed during ' + PHASE + ' (' + type(error).__name__ + '); credentials were not logged.'
+        print(('::error::' if os.environ.get('GITHUB_ACTIONS') == 'true' else '') + message, flush=True)
         raise SystemExit(1)

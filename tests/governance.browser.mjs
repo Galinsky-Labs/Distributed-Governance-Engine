@@ -112,8 +112,26 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
     await page.waitForFunction(()=>document.querySelector('.decision-policy-preview')?.textContent.includes('At least 2/3'));
     const opening=await page.$(".decision-ack input");
     await opening.click();
+    // Lose the real committed opening response, then prove the retry keeps
+    // the exact command/policy rather than opening a different vote.
+    const decisionPath='/api/workspaces/'+tenantId+'/documents/'+document.id+'/proposals/'+proposed.proposal.id+'/decision';
+    const cdp=await page.createCDPSession(),openRequests=[];
+    await cdp.send('Fetch.enable',{patterns:[{urlPattern:fixture.origin+decisionPath,requestStage:'Response'}]});
+    cdp.on('Fetch.requestPaused',async event=>{
+      if(event.request.method==='POST'){
+        openRequests.push(JSON.parse(event.request.postData));
+        if(openRequests.length===1){await cdp.send('Fetch.failRequest',{requestId:event.requestId,errorReason:'ConnectionClosed'});return;}
+      }
+      await cdp.send('Fetch.continueRequest',{requestId:event.requestId});
+    });
+    await page.click(".decision-open>button");
+    await page.waitForFunction(()=>document.querySelector('.decision-error')?.textContent.includes('Retry sends the same command ID'));
+    assert.equal(await page.$eval('.decision-policy',node=>node.disabled),true);
+    assert.equal(await page.$eval('.decision-open select',node=>node.disabled),true);
     await page.click(".decision-open>button");
     await page.waitForSelector(".decision-tally");
+    assert.equal(openRequests.length,2);assert.deepEqual(openRequests[0],openRequests[1]);
+    await cdp.send('Fetch.disable');await cdp.detach();
     assert.match(await page.$eval(".decision-window",el=>el.textContent),/2 eligible members/);
     assert.match(await page.$eval('.decision-rule',el=>el.textContent),/At least 2 frozen eligible member accounts; At least 2\/3.*including abstentions/);
     assert.equal(await page.$('.decision-policy'),null,'Active policy has no editable form');

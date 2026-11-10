@@ -13,7 +13,7 @@
     "tests/vote-policy-settings.test.mjs": "4807d5b48c95846ba7c011b93357124bfbcaf23cf31883086114c9355b35b44e",
     "tests/decision-store.test.mjs": "a101077f5c8fc3db94b1b005ad835ae41558c8264ed2ac317c6b7897f7bea6a4",
     "tests/decision-adoption.test.mjs": "3097be434ee3991a94343fcb0b94ef87ff65ec6a5ed3de5fa3173afb512a669f",
-    "tests/governance.browser.mjs": "86f7fbd824b7199009fb9d4b7a448ab8339e01a508b4c97a7017beeefc7a67d7"
+    "tests/governance.browser.mjs": "c462d464fde6799f39c263d3c68bcea04c7f2c62ca0a06d4d57ab360a707282b"
   },
   "localChecks": {
     "engineUnitTests": 328,
@@ -24,7 +24,8 @@
     "scheduledOpeningAndExclusiveDeadline": true,
     "frozenMembershipAndChangedCommandRejection": true,
     "tenantCsrfAndRecentProviderAuthentication": true,
-    "publicInputPreservesActualFrozenSource": true
+    "publicInputPreservesActualFrozenSource": true,
+    "realCommitLostResponseSameCommandRecovery": true
   },
   "dependenciesChanged": false,
   "databaseMigration": false,

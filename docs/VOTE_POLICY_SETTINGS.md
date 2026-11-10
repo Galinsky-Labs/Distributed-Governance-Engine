@@ -44,7 +44,7 @@ credential, cloud service or paid resource is required by this contribution.
 
 Retries bind normalized settings and duration to the command ID. An uncertain
 browser retry retains the same body/ID and locks the rule form until resolution
-or an explicit refresh. Changed settings cannot reuse that command. The saved
+or an explicit refresh. Changed settings cannot reuse that command. The authenticated browser regression drops the real committed response through Chrome DevTools, checks the locked form and retries the identical body successfully. The saved
 policy ID/digest and human-readable rule come from the snapshot, including for
 historical votes; opening a new policy does not change any active vote. Database
 runtime grants permit no update to snapshot columns. Existing requests without

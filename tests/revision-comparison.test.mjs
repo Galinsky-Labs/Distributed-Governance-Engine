@@ -94,3 +94,10 @@ test('ten thousand sibling nodes compare with bounded structure and stable order
  const after=structuredClone(before);after.content.unshift(after.content.pop());
  const result=compareLegalRevisions(before,after);assert.deepEqual(result.changes.map(change=>change.id),['p9999']);assert.equal(result.changes[0].moved,true);
 });
+
+test('semantic change ordering is independent of source object key ordering',()=>{
+ const before=fixture(),after=structuredClone(before);after.content[0].kind='exhibit';after.content[0].title='Exhibit wording';
+ const reordered=structuredClone(before);reordered.content[0]=Object.fromEntries(Object.entries(reordered.content[0]).reverse());
+ assert.deepEqual(compareLegalRevisions(before,after),compareLegalRevisions(reordered,after));
+ assert.deepEqual(compareLegalRevisions(before,after).changes[0].fields,['kind','title']);
+});

@@ -54,7 +54,7 @@ export function compareLegalRevisions(beforeDocument,afterDocument){
  for(const [id,current]of next.nodes){
   const prior=old.nodes.get(id);
   if(!prior){changes.push({id,kind:'added',before:null,after:current,fields:[],moved:false,text:compareRevisionText('',current.text)});continue;}
-  const fields=[...new Set([...Object.keys(prior.source),...Object.keys(current.source)])].filter(key=>canonicalize(prior.source[key]??null)!==canonicalize(current.source[key]??null));
+  const fields=[...new Set([...Object.keys(prior.source),...Object.keys(current.source)])].sort().filter(key=>canonicalize(prior.source[key]??null)!==canonicalize(current.source[key]??null));
   const moved=prior.parentId!==current.parentId||!stable.has(id);
   if(fields.length||moved||prior.label!==current.label||prior.text!==current.text)changes.push({id,kind:'changed',before:prior,after:current,fields,moved,text:compareRevisionText(prior.text,current.text)});
  }

@@ -4,7 +4,7 @@
   "roadmapVersion": 32,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T07:04:54Z",
+  "observedAt": "2026-11-10T07:20:47Z",
   "units": [
     {
       "id": "DCE-001",
@@ -502,8 +502,11 @@
         "Diff goldens, large edits, history pagination, restoration authorization, signature invalidation and branch/adopted isolation tests."
       ],
       "specification": "docs/prs/DCE-019.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "partial",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        67
+      ]
     },
     {
       "id": "DCE-020",
@@ -1950,16 +1953,31 @@
       "id": 5237266384,
       "number": 66,
       "title": "DCE-010: Freeze configurable account voting rules and deliberation windows",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/66",
       "createdAt": "2026-11-10T07:04:54Z",
-      "updatedAt": "2026-11-10T07:04:54Z",
+      "updatedAt": "2026-11-10T07:11:33Z",
+      "mergedAt": "2026-11-10T07:11:33Z",
+      "closedAt": "2026-11-10T07:11:33Z",
+      "draft": false,
+      "headSha": "6d51e21ae3bd03b54c5e7ab6102a05a81cd23a92",
+      "baseRef": "main",
+      "mergeCommitSha": "a1343045efa28b0dcd9fa2220a14a579aa40d5e1"
+    },
+    {
+      "id": 5237425059,
+      "number": 67,
+      "title": "DCE-019: Compare exact saved editions without changing the open document",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/67",
+      "createdAt": "2026-11-10T07:20:47Z",
+      "updatedAt": "2026-11-10T07:20:47Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "74c6a7eb5137716ce5971e9fac4463dc19ae16ec",
+      "headSha": "c355c1522ca7817646b6e669f7034897ef3e71b9",
       "baseRef": "main",
-      "mergeCommitSha": "bb4211c14bf103bcb60acfcf065b0b78e085eb87"
+      "mergeCommitSha": "766f80417b78ea9971941c9f8359b6ca4c1ec893"
     }
   ]
 }

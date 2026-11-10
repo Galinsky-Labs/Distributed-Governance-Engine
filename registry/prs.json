@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 27,
+  "roadmapVersion": 28,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T05:05:53Z",
+  "observedAt": "2026-11-10T05:17:10Z",
   "units": [
     {
       "id": "DCE-001",
@@ -149,7 +149,8 @@
         42,
         44,
         58,
-        60
+        60,
+        61
       ]
     },
     {
@@ -174,7 +175,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         22,
-        60
+        60,
+        61
       ]
     },
     {
@@ -1849,16 +1851,31 @@
       "id": 5236133497,
       "number": 60,
       "title": "DCE-006: Preview and undo numbering settings in the editor",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/60",
       "createdAt": "2026-11-10T05:05:16Z",
-      "updatedAt": "2026-11-10T05:05:16Z",
+      "updatedAt": "2026-11-10T05:09:10Z",
+      "mergedAt": "2026-11-10T05:09:10Z",
+      "closedAt": "2026-11-10T05:09:10Z",
+      "draft": false,
+      "headSha": "99a254da194d2816fbb182fad4f3bd49d00f9aa6",
+      "baseRef": "main",
+      "mergeCommitSha": "188134f7563922c364c5229094269f6520f7a4b7"
+    },
+    {
+      "id": 5236248526,
+      "number": 61,
+      "title": "DCE-006: Preview and apply section hierarchy moves",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/61",
+      "createdAt": "2026-11-10T05:16:46Z",
+      "updatedAt": "2026-11-10T05:16:46Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "c5e140fc5d71a51604f7fea8dca97fe77c21888c",
+      "headSha": "16476ac772ed8663f3239ec2d5507e0ef3fed4ce",
       "baseRef": "main",
-      "mergeCommitSha": "61cbb80b2e9da2d6c266db220a836b95ae63b8b2"
+      "mergeCommitSha": "b96fb8409b6e93f48d80a576ef6c3bc6461a4e11"
     }
   ]
 }

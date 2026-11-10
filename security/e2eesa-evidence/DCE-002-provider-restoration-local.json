@@ -20,7 +20,8 @@
     "realKeycloakBrowserJourney": true,
     "generatedCases": 2000,
     "browser": "Chromium 156.0.8078.79",
-    "strictTLSVerification": true
+    "strictTLSVerification": true,
+    "engineTests": 261
   },
   "securityReview": {
     "type": "author source review",

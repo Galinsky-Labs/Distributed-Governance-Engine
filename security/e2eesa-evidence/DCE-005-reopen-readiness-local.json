@@ -1,0 +1,34 @@
+{
+  "unit": "DCE-005",
+  "scope": "browser acceptance waits for actual document reopen instead of stale identical saved status",
+  "observedAt": "2026-11-10T06:04:05.399425+00:00",
+  "sourceFiles": {
+    "tests/support/editor-browser.mjs": "1090d6ed0fe15d7fafac3e0bd9842c7c3a56b04f4fa00f7c057540f4e6041351",
+    "tests/editor-readiness.browser.mjs": "3d14923aae14d9e06c1523445ced68a48d2d4d066a49ba5a9688bdc46860aa2d",
+    "tests/documents.browser.mjs": "85483e7cb8539f35e14742f501799965ab4a41c7d4dc047f50bdad0f51f51ef8",
+    "tests/numbering.browser.mjs": "c0614276ce687446de257448c8cd58d22316530cf18026473d7ba6177acd81b2",
+    "tests/sections.browser.mjs": "711e2ba5d3d9524765e9d19d52460ba3c26d9788e706915779f98a261cbc4c29",
+    "tests/tables.browser.mjs": "bc6323cd36fe907c28aaf6a81a5bacadb407cc1ef6c028013496113665d308ed"
+  },
+  "localChecks": {
+    "editorBrowserJourneys": 6,
+    "browser": "Chromium 156.0.8078.79",
+    "actualDocumentGetHeldAndReleased": true,
+    "previousSavedStatusRemainsDuringHeldRequest": true,
+    "readinessWaitsForReplacementEditor": true,
+    "existingAssertionsRetained": true,
+    "timeoutsUnchanged": true
+  },
+  "productSourceChanged": false,
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Signed fixture OIDC/PGlite/local TLS acceptance is not hosted production or assistive-technology evidence",
+    "Managed local Chrome blocks standalone file URLs; complete pinned-browser and exact-head required checks remain mandatory",
+    "The helper reflects the current document-switch lifecycle that creates a new editor/history boundary"
+  ]
+}

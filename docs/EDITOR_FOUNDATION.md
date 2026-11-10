@@ -35,3 +35,7 @@ See [Table editing](TABLE_EDITING.md) for limits, structural commands, stable-ID
 ## Section hierarchy
 
 [Previewed section indent/outdent](SECTION_HIERARCHY.md) preserves IDs, text and selection, shows destination and dependent-reference changes before application, and uses existing undo/autosave. These structured moves remain disabled in live, view-only and immutable editors.
+
+## Reopen acceptance readiness
+
+The browser journeys wait for the saved-document panel to close and the previous editor instance to detach before interacting with a reopened document. The same document can have an unchanged version and wording, so its earlier “Saved” text alone cannot prove that the new request or editor initialization finished. A regression holds the actual document GET, confirms that the old saved status/editor remain visible, and verifies that readiness completes only after releasing the request and mounting the replacement. Existing source, undo, layout, collaboration and immutability assertions remain intact; no timeout is widened and no failed test is skipped.

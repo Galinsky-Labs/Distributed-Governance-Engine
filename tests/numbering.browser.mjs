@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import puppeteer from 'puppeteer-core';
 import {createLegalDocument} from '../src/legal-structure.mjs';
 import {accountFixture} from './support/account-fixture.mjs';
+import {openSelectedSavedDocument} from './support/editor-browser.mjs';
 const binary=process.env.DGE_BROWSER_EXECUTABLE;
 if(!binary)throw Error('DGE_BROWSER_EXECUTABLE is required');
 async function click(page,text){await page.bringToFront();await page.waitForFunction(text=>[...document.querySelectorAll('button')].some(button=>button.textContent===text&&!button.disabled),{polling:100},text);const handle=await page.evaluateHandle(text=>[...document.querySelectorAll('button')].find(button=>button.textContent===text),text);await handle.asElement().click();await handle.dispose();}
@@ -19,7 +20,7 @@ test('authenticated numbering preview applies, undoes, reloads and respects live
   const d=structuredClone(createLegalDocument({id,tenantId,title:'Numbering acceptance'}));
   d.content=[{kind:'section',id:'reports',title:'Reports',children:[{kind:'paragraph',id:'reports-body',inlines:[{kind:'text',text:'Report annually.',marks:['bold']}]}]},{kind:'section',id:'review',title:'Review',children:[{kind:'paragraph',id:'review-body',inlines:[{kind:'text',text:'See '},{kind:'reference',targetId:'reports'}]}]}];
   await post(page,`/api/workspaces/${tenantId}/documents`,{document:d,commandId:randomUUID(),disclosure:'publish-all-revisions-v1'});
-  await click(page,'Documents');await page.waitForSelector('.document-list button');await page.click('.document-list button');await saved(page,1);
+  await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await saved(page,1);
   const before=await page.evaluate(async id=>(await(await fetch('/api/public/documents/'+id)).json()).document.content,id);
   await page.select('.numbering-tools select','corporate-v1');await field(page,'.numbering-tools input[type=number]','4');await field(page,'.numbering-tools input:not([type=number])','5');await click(page,'Preview numbering');
   assert.match(await page.$eval('.ProseMirror h2',node=>node.textContent),/^SEC\. 1\./);
@@ -29,7 +30,7 @@ test('authenticated numbering preview applies, undoes, reloads and respects live
   const after=await page.evaluate(async id=>(await(await fetch('/api/public/documents/'+id)).json()).document.content,id);assert.deepEqual(after,before);
   await click(page,'Undo');await page.waitForFunction(()=>document.querySelector('.ProseMirror h2')?.textContent.startsWith('SEC. 1.'),{polling:100});await saved(page,3);
   assert.equal(await page.evaluate(async id=>Object.hasOwn((await(await fetch('/api/public/documents/'+id)).json()).document.metadata,'numberingRules'),id),false);
-  await click(page,'Redo');await saved(page,4);await click(page,'Documents');await page.waitForSelector('.document-list button');await page.click('.document-list button');await saved(page,4);assert.match(await page.$eval('.ProseMirror h2',node=>node.textContent),/^\(IV\)/);
+  await click(page,'Redo');await saved(page,4);await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await saved(page,4);assert.match(await page.$eval('.ProseMirror h2',node=>node.textContent),/^\(IV\)/);
   await field(page,'.numbering-tools input:not([type=number])','9, 8');await click(page,'Preview numbering');assert.match(await page.$eval('.numbering-tools [role=status]',node=>node.textContent),/strictly increasing/);assert.equal(await page.$('.numbering-preview'),null);
   await field(page,'.numbering-tools input:not([type=number])','5');await click(page,'Preview numbering');await page.click('.ProseMirror p');await page.keyboard.press('Home');await page.keyboard.type('Updated ');await page.waitForFunction(()=>!document.querySelector('.numbering-preview'),{polling:100});await saved(page,5);
   await click(page,'Join live editing');await page.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('Public collaboration connected'),{polling:100});

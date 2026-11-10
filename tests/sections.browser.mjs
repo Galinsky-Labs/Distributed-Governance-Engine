@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import puppeteer from 'puppeteer-core';
 import {createLegalDocument} from '../src/legal-structure.mjs';
 import {accountFixture} from './support/account-fixture.mjs';
+import {openSelectedSavedDocument} from './support/editor-browser.mjs';
 const binary=process.env.DGE_BROWSER_EXECUTABLE;
 if(!binary)throw Error('DGE_BROWSER_EXECUTABLE is required');
 async function click(page,text){await page.bringToFront();await page.waitForFunction(text=>[...document.querySelectorAll('button')].some(button=>button.textContent===text&&!button.disabled),{polling:100},text);const handle=await page.evaluateHandle(text=>[...document.querySelectorAll('button')].find(button=>button.textContent===text),text);await handle.asElement().click();await handle.dispose();}
@@ -20,7 +21,7 @@ test('authenticated section previews preserve IDs, undo and saved source while r
   const paragraph=(id,text)=>({kind:'paragraph',id,inlines:[{kind:'text',text,marks:['bold']}]});
   d.content=[{kind:'section',id:'reports',title:'Reports',children:[paragraph('reports-body','Report annually.')]},{kind:'section',id:'review',title:'Review',children:[paragraph('review-body','Review reports.')]},{kind:'section',id:'records',title:'Records',children:[{kind:'paragraph',id:'records-body',inlines:[{kind:'reference',targetId:'review'}]}]}];
   await post(page,`/api/workspaces/${tenantId}/documents`,{document:d,commandId:randomUUID(),disclosure:'publish-all-revisions-v1'});
-  await click(page,'Documents');await page.waitForSelector('.document-list button');await page.click('.document-list button');await saved(page,1);
+  await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await saved(page,1);
   const originalIds=await ids(page);await page.click('.ProseMirror [data-block-id="review-body"]');await click(page,'Preview indent');
   assert.equal(await page.$('.ProseMirror [data-block-id="reports"] [data-block-id="review"]'),null);
   assert.deepEqual(await page.$$eval('.section-tools tbody tr',rows=>rows.map(row=>[...row.cells].map(cell=>cell.textContent))),[['Review','SEC. 2.','(a)'],['Records','SEC. 3.','SEC. 2.']]);
@@ -31,8 +32,13 @@ test('authenticated section previews preserve IDs, undo and saved source while r
   await click(page,'Redo');await page.waitForSelector('.ProseMirror [data-block-id="reports"] [data-block-id="review"]');await saved(page,4);
   await click(page,'Preview outdent');await click(page,'Apply section move');await page.waitForSelector('.ProseMirror > [data-block-id="review"]');await saved(page,5);
   const restored=await page.evaluate(async id=>(await(await fetch('/api/public/documents/'+id)).json()).document.content,id);assert.deepEqual(restored,d.content);assert.deepEqual(await ids(page),originalIds);
-  await click(page,'Documents');await page.waitForSelector('.document-list button');await page.click('.document-list button');await saved(page,5);assert.deepEqual(await ids(page),originalIds);
-  await page.click('.ProseMirror [data-block-id="review-body"]');await click(page,'Preview indent');await page.click('.ProseMirror [data-block-id="review-body"]');await page.keyboard.type('Changed ');await page.waitForFunction(()=>!document.querySelector('.section-tools table'),{polling:100});await saved(page,6);
+  await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await saved(page,5);assert.deepEqual(await ids(page),originalIds);
+  await page.click('.ProseMirror [data-block-id="review-body"]');
+  await click(page,'Preview indent');
+  await page.click('.ProseMirror [data-block-id="review-body"]');
+  await page.keyboard.type('Changed ');
+  await page.waitForFunction(()=>!document.querySelector('.section-tools table'),{polling:100});
+  await saved(page,6);
   await click(page,'Join live editing');await page.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('Public collaboration connected'),{polling:100});await page.click('.ProseMirror [data-block-id="review-body"]');
   assert.equal(await page.$$eval('.section-tools button',nodes=>nodes.every(node=>node.disabled)),true);
   page.once('dialog',dialog=>dialog.accept());await click(page,'Exit live editing');await page.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('Saved version'),{polling:100});

@@ -147,3 +147,54 @@ test("out-of-window ballots and stale source versions cannot authorize edits",as
   assert.equal(result.state,"closed");
   assert.equal(result.outcome.executed,false);
 });
+
+test("custom frozen policy delays opening from publication, binds retries and survives electorate changes",async()=>{
+  now=Date.now();
+  const parameters={hours:1,commandId:randomUUID(),policySettings:{
+    minimumDeliberationHours:2,minYes:"2",quorum:{kind:"count",minimum:"2"},
+    approval:{basis:"participating",comparison:"gte",numerator:"2",denominator:"3"}
+  }};
+  const opened=await decisions.open(owner,tenantId,document.id,proposal.proposal.id,parameters);
+  assert.equal(opened.outcome.status,"not-open");
+  assert.equal(opened.rule.minimumDeliberationHours,2);
+  assert.match(opened.rule.quorum,/At least 2/);
+  assert.match(opened.rule.approval,/2\/3.*including abstentions/);
+  const row=(await db.query("SELECT snapshot FROM dge_decisions.decisions")).rows[0];
+  assert.equal(row.snapshot.policy.opensAt,row.snapshot.policy.proposalPublishedAt+7200000);
+  assert.equal(row.snapshot.policy.closesAt-row.snapshot.policy.opensAt,3600000);
+  assert.equal(opened.policyDigest,row.snapshot.policyDigest);
+  await assert.rejects(cast(owner,"yes"),{code:"VOTE_WINDOW_CLOSED"});
+  await assert.rejects(decisions.close(owner,tenantId,document.id,proposal.proposal.id),{code:"VOTE_STILL_OPEN"});
+  await assert.rejects(decisions.open(owner,tenantId,document.id,proposal.proposal.id,{
+    ...parameters,policySettings:{...parameters.policySettings,minYes:"1"}
+  }),{code:"COMMAND_REUSED"});
+  await identity.changeMember(owner,tenantId,member.accountId,"viewer");
+  const retry=await decisions.open(owner,tenantId,document.id,proposal.proposal.id,parameters);
+  assert.equal(retry.snapshotDigest,opened.snapshotDigest);assert.equal(retry.eligibleCount,2);
+  now=row.snapshot.policy.opensAt;
+  await cast(owner,"yes");
+  assert.equal((await decisions.read(owner,tenantId,document.id,proposal.proposal.id)).outcome.status,"open");
+  now=row.snapshot.policy.closesAt;
+  await assert.rejects(cast(owner,"no",1),{code:"VOTE_WINDOW_CLOSED"});
+  const closed=await decisions.close(owner,tenantId,document.id,proposal.proposal.id);
+  assert.equal(closed.certificate.outcome.status,"failed");
+  assert.equal(closed.certificate.outcome.quorumMet,false);
+  assert.equal((await documents.read(owner,tenantId,document.id)).version,1);
+});
+
+test("policy API rejects unknown fields, supplied weights, unattainable thresholds and missing CSRF",async()=>{
+  for(const policySettings of [{allowEarlyClose:true},{mode:"collaboration"},{weighting:"shares"},{minYes:"3"},
+    {quorum:{kind:"count",minimum:"3"}},{approval:{basis:"eligible",comparison:"gt",numerator:"1",denominator:"1"}},
+    {quorum:{kind:"fraction-count",numerator:"1",denominator:"2",weight:"9"}}]){
+    const response=await call(paths(),{method:"POST",body:{hours:1,commandId:randomUUID(),policySettings}});
+    assert.equal(response.status,400);
+  }
+  const denied=await handler(new Request(origin+paths(),{method:"POST",headers:{
+    cookie:"__Host-dge_session="+owner.sessionToken,origin,"content-type":"application/json"
+  },body:JSON.stringify({hours:1,commandId:randomUUID(),policySettings:{}})}),{peerAddress:"127.0.0.1"});
+  assert.equal(denied.status,403);
+  assert.equal((await db.query("SELECT count(*)::int n FROM dge_decisions.decisions")).rows[0].n,0);
+  // Age the actual persisted OIDC session; no caller-provided assurance flag.
+  await db.query("UPDATE dge_identity.sessions SET created_at=created_at-interval '6 minutes',authenticated_at=authenticated_at-interval '6 minutes' WHERE account_id=$1",[owner.accountId]);
+  await assert.rejects(start(),{code:"REAUTHENTICATION_REQUIRED"});
+});

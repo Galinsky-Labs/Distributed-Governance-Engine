@@ -7,6 +7,11 @@ export function validatePolicy(p) {
   invariant(typeof p.allowEarlyClose==='boolean','Early closure must be explicit');
   timestamp(p.opensAt); timestamp(p.closesAt);
   invariant(p.closesAt>p.opensAt,'Invalid voting window');
+  if(Object.hasOwn(p,'minimumDeliberationHours')||Object.hasOwn(p,'proposalPublishedAt')){
+    invariant(Number.isSafeInteger(p.minimumDeliberationHours)&&p.minimumDeliberationHours>=0&&p.minimumDeliberationHours<=720,'Invalid minimum deliberation');
+    timestamp(p.proposalPublishedAt);const floor=p.proposalPublishedAt+p.minimumDeliberationHours*3600000;
+    invariant(Number.isSafeInteger(floor)&&p.opensAt>=floor,'Vote opens before minimum deliberation');
+  }
   integer(p.minYes,{positive:true});
   invariant(p.quorum && ['count','weight','fraction-count','fraction-weight'].includes(p.quorum.kind),'Invalid quorum');
   if(p.quorum.kind.startsWith('fraction-')) {

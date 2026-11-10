@@ -102,11 +102,25 @@ test("real browser: two authenticated members publish, deliberate and vote on a 
     assert(links.includes("/account"));
     assert(links.includes("/"));
     await page.waitForSelector(".decision-open");
+    // Configure a non-default, exact-threshold policy through the real form.
+    await page.select('[aria-label="Quorum type"]','count');
+    await page.locator('[aria-label="Minimum participating accounts"]').fill('2');
+    await page.select('[aria-label="Approval denominator"]','participating');
+    await page.select('[aria-label="Approval comparison"]','gte');
+    await page.locator('[aria-label="Approval numerator"]').fill('2');
+    await page.locator('[aria-label="Approval denominator number"]').fill('3');
+    await page.waitForFunction(()=>document.querySelector('.decision-policy-preview')?.textContent.includes('At least 2/3'));
     const opening=await page.$(".decision-ack input");
     await opening.click();
     await page.click(".decision-open>button");
     await page.waitForSelector(".decision-tally");
     assert.match(await page.$eval(".decision-window",el=>el.textContent),/2 eligible members/);
+    assert.match(await page.$eval('.decision-rule',el=>el.textContent),/At least 2 frozen eligible member accounts; At least 2\/3.*including abstentions/);
+    assert.equal(await page.$('.decision-policy'),null,'Active policy has no editable form');
+    const saved=await page.evaluate(async()=>{
+      return [...document.querySelectorAll('.decision-rule code')].map(x=>x.textContent);
+    });
+    assert.match(saved[0],/^policy-/);
     await page.evaluate(()=>[...document.querySelectorAll(".decision-ballot button")].find(x=>x.textContent==="Vote yes").click());
     await page.waitForFunction(()=>document.querySelector(".decision-state")?.textContent.includes("Your ballot: yes"));
     await other.goto(fixture.origin+"/governance");

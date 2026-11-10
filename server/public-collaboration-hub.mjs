@@ -38,14 +38,14 @@ function drop(connection,code=1008) {
  * Private documents must use a separate reviewed E2EE protocol and server.
  * Every accepted edit goes through the existing permissioned immutable-version document store.
  */
-export function attachPublicCollaborationHub({server,origin,documents,maxRooms=32,maxClientsPerRoom=12,maxPending=12}={}) {
+export function attachPublicCollaborationHub({server,origin,documents,maxRooms=32,maxClientsPerRoom=12,maxPending=12,maxAdmissions=32}={}) {
  if(!server?.on||!server?.off||typeof documents?.read!=='function'||typeof documents?.save!=='function'||
     typeof documents?.collaborationState!=='function'||
     new URL(origin).protocol!=='https:'||new URL(origin).origin!==origin||
-    ![maxRooms,maxClientsPerRoom,maxPending].every(n=>Number.isSafeInteger(n)&&n>=1&&n<=100))
+    ![maxRooms,maxClientsPerRoom,maxPending,maxAdmissions].every(n=>Number.isSafeInteger(n)&&n>=1&&n<=100))
   throw Error('Invalid public collaboration hub configuration');
  const expectedHost=new URL(origin).host;
- const rooms=new Map();
+ const rooms=new Map(),joining=new Map(),admissions=new Set();
  const wss=new WebSocketServer({noServer:true,maxPayload:65536,perMessageDeflate:false,
   handleProtocols:protocols=>protocols.has('dge-public-v1')?'dge-public-v1':false});
  let stopped=false;
@@ -113,6 +113,7 @@ export function attachPublicCollaborationHub({server,origin,documents,maxRooms=3
   }
  }
  async function onUpgrade(req,socket,head) {
+  let releaseAdmission,ticket,admissionKey;
   try {
    if(stopped||!req.socket.encrypted||req.socket.getProtocol?.()!=='TLSv1.3'||
       req.headers.host!==expectedHost||req.headers.origin!==origin||
@@ -123,7 +124,17 @@ export function attachPublicCollaborationHub({server,origin,documents,maxRooms=3
    if(!match)return refuse(socket,404);
    const [,tenantId,documentId]=match,key=tenantId+'/'+documentId;
    const credentials=credentialCookies(req.headers.cookie??'',origin);
+   if(admissions.size>=maxAdmissions)return refuse(socket,503);
+   admissions.add(socket);admissionKey=key;
+   const prior=joining.get(key)??Promise.resolve();
+   ticket=new Promise(resolve=>{releaseAdmission=resolve;});
+   joining.set(key,ticket);
+   // Same-document first joins must not independently seed separate Yjs histories.
+   // Authorization and version reads occur in the serialized admission turn.
+   await prior;
+   if(stopped||socket.destroyed)return refuse(socket,503);
    const snapshot=await documents.read(credentials,tenantId,documentId);
+   if(stopped||socket.destroyed)return refuse(socket,503);
    if(snapshot.visibility!=='public'||snapshot.document.mode!=='collaboration'||
       snapshot.document.lifecycle!=='draft')return refuse(socket);
    let room=rooms.get(key);
@@ -132,6 +143,9 @@ export function attachPublicCollaborationHub({server,origin,documents,maxRooms=3
    if(!room) {
     if(rooms.size>=maxRooms)return refuse(socket,503);
     const persisted=await documents.collaborationState(credentials,tenantId,documentId);
+    if(stopped||socket.destroyed)return refuse(socket,503);
+    // Other document keys initialize independently; recheck after the awaited read.
+    if(rooms.size>=maxRooms)return refuse(socket,503);
     if(persisted && (persisted.version!==snapshot.version||typeof persisted.state!=='string'))
      return refuse(socket);
     const shared=createPublicSharedDraft({
@@ -173,12 +187,18 @@ export function attachPublicCollaborationHub({server,origin,documents,maxRooms=3
     catch{drop(ws,1011);}
    });
   } catch {refuse(socket);}
+  finally {
+   admissions.delete(socket);
+   releaseAdmission?.();
+   if(ticket&&joining.get(admissionKey)===ticket)joining.delete(admissionKey);
+  }
  }
  server.on('upgrade',onUpgrade);
  return Object.freeze({
   close() {
    if(stopped)return;
    stopped=true;server.off('upgrade',onUpgrade);
+   for(const socket of admissions)refuse(socket,503);
    for(const room of [...rooms.values()])endRoom(room);
    wss.close();
   },

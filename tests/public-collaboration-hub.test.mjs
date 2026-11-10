@@ -29,7 +29,7 @@ function firstText(ydoc) {
  }
  return scan(ydoc.getXmlFragment('prosemirror'));
 }
-async function fixture({jsonbOrder=false,emptySource=false}={}) {
+async function fixture({jsonbOrder=false,emptySource=false,admissionYield=false,pauseAdmission=false,maxAdmissions=32,maxRooms=2,multipleDocuments=false}={}) {
  const temp=mkdtempSync(join(tmpdir(),'dge-wss-test-'));
  try {
   const result=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes',
@@ -42,10 +42,13 @@ async function fixture({jsonbOrder=false,emptySource=false}={}) {
    (req,res)=>{res.statusCode=404;res.end();});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const origin='https://127.0.0.1:'+server.address().port;
-  const tenantId=randomUUID(),documentId=randomUUID();
+  const tenantId=randomUUID(),documentId=randomUUID(),secondDocumentId=randomUUID();
+  const knownDocument=doc=>doc===documentId||multipleDocuments&&doc===secondDocumentId;
   let document=structuredClone(createLegalDocument({id:documentId,tenantId,title:'Public project'}));
   document.content[0].inlines=[{kind:'text',text:emptySource?'':'Seed'}];
   let version=1,saveCount=0,visibility='public',persistedCrdt=null;
+  let admissionReads=0;
+  let releaseAdmission;const admissionGate=new Promise(resolve=>{releaseAdmission=resolve;});
   const roles=new Map([[sessionA,'editor'],[sessionB,'viewer'],[sessionC,'editor']]);
   const check=(credentials,write=false)=>{
    if(credentials.origin!==origin||credentials.csrfToken!==csrf||!roles.has(credentials.sessionToken))throw Error('ACCESS_DENIED');
@@ -55,12 +58,14 @@ async function fixture({jsonbOrder=false,emptySource=false}={}) {
   const documents={
    async read(credentials,tenant,doc) {
     const role=check(credentials);
-    if(tenant!==tenantId||doc!==documentId)throw Error('WRONG_DOCUMENT');
-    return {document:jsonbOrder?JSON.parse(canonicalize(document)):structuredClone(document),viewerRole:role,version,visibility};
+    if(tenant!==tenantId||!knownDocument(doc))throw Error('WRONG_DOCUMENT');
+    return {document:jsonbOrder?JSON.parse(canonicalize({...document,id:doc})):structuredClone({...document,id:doc}),viewerRole:role,version,visibility};
    },
    async collaborationState(credentials,tenant,doc) {
+    admissionReads++;
+    if(admissionYield||pauseAdmission)await admissionGate;
     check(credentials);
-    if(tenant!==tenantId||doc!==documentId)throw Error('WRONG_DOCUMENT');
+    if(tenant!==tenantId||!knownDocument(doc))throw Error('WRONG_DOCUMENT');
     return persistedCrdt;
    },
    async save(credentials,tenant,doc,command) {
@@ -74,10 +79,12 @@ async function fixture({jsonbOrder=false,emptySource=false}={}) {
     return {document:structuredClone(document),version,visibility};
    }
   };
-  const hub=attachPublicCollaborationHub({server,origin,documents,maxRooms:2});
+  const hub=attachPublicCollaborationHub({server,origin,documents,maxRooms,maxAdmissions});
+  let upgrades=0;
+  server.on('upgrade',()=>{upgrades++;if(admissionYield&&upgrades===2)setImmediate(releaseAdmission);});
   const sockets=[];
-  async function connect(token,{originHeader=origin}={}) {
-   const ws=new WebSocket('wss://127.0.0.1:'+server.address().port+'/ws/public/'+tenantId+'/'+documentId,
+  async function connect(token,{originHeader=origin,targetDocument=documentId}={}) {
+   const ws=new WebSocket('wss://127.0.0.1:'+server.address().port+'/ws/public/'+tenantId+'/'+targetDocument,
     ['dge-public-v1'],{rejectUnauthorized:false,headers:{
      Origin:originHeader,Cookie:'__Host-dge_session='+token+'; __Host-dge_csrf='+csrf
     }});
@@ -89,7 +96,8 @@ async function fixture({jsonbOrder=false,emptySource=false}={}) {
    return {ws,frames};
   }
   return {
-   connect,tenantId,documentId,roles,hub,
+   connect,tenantId,documentId,secondDocumentId,roles,hub,
+   releaseAdmission,admissionReads:()=>admissionReads,upgrades:()=>upgrades,
    freeze:()=>{visibility='private';},
    getSaveCount:()=>saveCount,
    getDocument:()=>document,
@@ -170,4 +178,71 @@ test('a persisted CRDT with different text is still refused after projection nor
  const fx=await fixture({jsonbOrder:true});let forged;
  try{const changed=structuredClone(fx.getDocument());changed.content[0].inlines=[{kind:'text',text:'Unapproved source substitution'}];forged=createPublicSharedDraft({document:changed,classification:'public'});fx.setPersistedState(Buffer.from(forged.encodeState()).toString('base64url'));const client=await fx.connect(sessionA);assert.equal(client.ws.readyState,WebSocket.CLOSED);assert.equal(fx.hub.stats().connections,0);assert.equal(fx.getSaveCount(),0);}
  finally{forged?.close();await fx.close();}
+});
+
+// Yield the initial history read so both first sockets reach the cold-room path.
+test('simultaneous first room joins share one initial CRDT history and tracked room',{timeout:15000},async()=>{
+ const fx=await fixture({admissionYield:true});
+ try{
+  const [one,two]=await Promise.all([fx.connect(sessionA),fx.connect(sessionC)]);
+  const first=await until(()=>one.frames.find(frame=>frame[0]===1));
+  const second=await until(()=>two.frames.find(frame=>frame[0]===1));
+  assert.deepEqual(second,first,'Every first joiner must receive the same Yjs history');
+  assert.deepEqual(fx.hub.stats(),{rooms:1,connections:2});
+ }finally{await fx.close();}
+});
+
+test('queued joins reauthenticate after an earlier failed initialization releases the turn',{timeout:15000},async()=>{
+ const fx=await fixture({pauseAdmission:true});
+ try{
+  const first=fx.connect(sessionA);await until(()=>fx.admissionReads()===1);
+  const second=fx.connect(sessionC);await until(()=>fx.upgrades()===2);
+  fx.roles.delete(sessionA);fx.releaseAdmission();
+  const rejected=await first,admitted=await second;
+  assert.equal(rejected.ws.readyState,WebSocket.CLOSED);
+  await until(()=>admitted.frames.some(frame=>frame[0]===1));
+  assert.deepEqual(fx.hub.stats(),{rooms:1,connections:1});
+ }finally{fx.releaseAdmission();await fx.close();}
+});
+test('revocation while queued refuses admission when the queued turn starts',{timeout:15000},async()=>{
+ const fx=await fixture({pauseAdmission:true});
+ try{
+  const first=fx.connect(sessionA);await until(()=>fx.admissionReads()===1);
+  const second=fx.connect(sessionC);await until(()=>fx.upgrades()===2);
+  fx.roles.delete(sessionC);fx.releaseAdmission();
+  const admitted=await first,rejected=await second;
+  await until(()=>admitted.frames.some(frame=>frame[0]===1));
+  assert.equal(rejected.ws.readyState,WebSocket.CLOSED);assert.equal(rejected.frames.length,0);
+  assert.deepEqual(fx.hub.stats(),{rooms:1,connections:1});
+ }finally{fx.releaseAdmission();await fx.close();}
+});
+test('pending admission budget refuses excess sockets and releases capacity after completion',{timeout:15000},async()=>{
+ const fx=await fixture({pauseAdmission:true,maxAdmissions:1});
+ try{
+  const first=fx.connect(sessionA);await until(()=>fx.admissionReads()===1);
+  const excess=await fx.connect(sessionC);assert.equal(excess.ws.readyState,WebSocket.CLOSED);assert.equal(excess.frames.length,0);
+  fx.releaseAdmission();const admitted=await first;await until(()=>admitted.frames.some(frame=>frame[0]===1));
+  const retry=await fx.connect(sessionC);await until(()=>retry.frames.some(frame=>frame[0]===1));
+  assert.deepEqual(fx.hub.stats(),{rooms:1,connections:2});
+ }finally{fx.releaseAdmission();await fx.close();}
+});
+test('shutdown refuses an in-flight first join and cannot resurrect a room',{timeout:15000},async()=>{
+ const fx=await fixture({pauseAdmission:true});
+ try{
+  const first=fx.connect(sessionA);await until(()=>fx.admissionReads()===1);fx.hub.close();
+  const rejected=await first;assert.equal(rejected.ws.readyState,WebSocket.CLOSED);
+  fx.releaseAdmission();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(rejected.frames.length,0);assert.deepEqual(fx.hub.stats(),{rooms:0,connections:0});
+ }finally{fx.releaseAdmission();await fx.close();}
+});
+
+test('simultaneous different-document initialization cannot exceed the configured room budget',{timeout:15000},async()=>{
+ const fx=await fixture({admissionYield:true,multipleDocuments:true,maxRooms:1});
+ try{
+  const sockets=await Promise.all([fx.connect(sessionA),fx.connect(sessionC,{targetDocument:fx.secondDocumentId})]);
+  await until(()=>sockets.some(client=>client.frames.some(frame=>frame[0]===1)));
+  assert.equal(sockets.filter(client=>client.ws.readyState===WebSocket.OPEN).length,1);
+  assert.equal(sockets.filter(client=>client.ws.readyState===WebSocket.CLOSED).length,1);
+  assert.deepEqual(fx.hub.stats(),{rooms:1,connections:1});
+ }finally{fx.releaseAdmission();await fx.close();}
 });

@@ -1,0 +1,48 @@
+{
+  "unit": "DCE-002",
+  "scope": "partial concrete WebAuthn verification and account controls",
+  "observedAt": "2026-11-10T01:30:38.817275+00:00",
+  "sourceFiles": {
+    "server/passkey-verifier.mjs": "b293c75a5c7b00dbb5f38375dfed4291c724407b4cd57fb94f02bb463b33dfc6",
+    "server/start.mjs": "e3bfc199cdd376d890a9066ff500e494bf36b1c176cb2affecdc8260bc54ddf4",
+    "web/passkey-controls.jsx": "5b6f3a41ed2fe998a637972a54dd828b149402d31258176b8a1253bcb94b107b",
+    "web/passkeys.mjs": "edd754eab96601293e424d1d87a402f3465fd70462d1176c088205add4aa8a57",
+    "web/account-panel.jsx": "674aacd08769721d6b292a80527dd8ba8c6903c2afb6f6aa8736e29ef6c78889",
+    "tests/passkey-verifier.test.mjs": "d636d34560a195b63fc4ca4264200c9bf5194fb4e5e38a4d869c91c950ac65bd",
+    "tests/passkeys.browser.mjs": "5d0b6be15dfbb1f2a52fdc955bba233399f3568e8e877a7a537922db632e4c69",
+    "tests/support/account-fixture.mjs": "d314150e2178b034d98c6ef8207d1baaacbc4cc38ed4c1cfa56fdd6ac3d4fe13",
+    "package.json": "9ca500d8e382e8d8f26960cbd44843b1819c1180b8039b20110162a85f19414c",
+    "package-lock.json": "fa7624e12450a54fd659ec9703ecd4ea689b4af8fcf8b67382f7b2b0af99a320"
+  },
+  "localChecks": {
+    "engineTests": 244,
+    "generatedCases": 2000,
+    "browserJourneys": 4,
+    "browser": "Chromium 156.0.8078.79",
+    "productionDependencyAdvisories": 0,
+    "build": true,
+    "offlineBuild": true
+  },
+  "securityReview": {
+    "type": "author source review",
+    "reviewedBoundaries": [
+      "server-bound one-use challenges and signed origin/RP/UV",
+      "explicit frozen authenticator allowlist",
+      "cross-origin ceremony rejection",
+      "generic failed verification without credential logging",
+      "account/session/CSRF-bound enrollment and revocation",
+      "recovery restrictions and distinction from encryption-device authority"
+    ],
+    "blockingFindings": []
+  },
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Synthetic OIDC and virtual authenticator only; no physical-device assurance",
+    "Full DCE-002 acceptance and provider-restoration UI remain incomplete",
+    "Full local browser suite has system-browser-specific timeout/file URL policy limits; exact-head CI remains required",
+    "No private encryption, unit-completion or production conformance claim"
+  ],
+  "additionalScope": "DCE-036 exact-main publication gate; merge preflight remains unchanged"
+}

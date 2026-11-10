@@ -13,3 +13,5 @@ The reconciliation code:
 - Writes no tokens into files or logs. Do not inject a token into a shell command that will be retained in a repository or CI output.
 
 Production and security acceptance remain unverified. Never use a stale snapshot as evidence that no newer PR exists. Obtain live GitHub evidence before any merge.
+
+The repository transfer to Galinsky-Labs preserves immutable GitHub repository ID 1422876391. The canonical registry, retired-roadmap marker and security identity now use the actual GitHub owner; the pinned standard revision and all incomplete security/operational states are preserved. PR observations through #53 come from the real API, with partial contributions kept separate from accepted units.

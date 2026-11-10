@@ -108,3 +108,10 @@ daemon runs rootless without cgroups, so local runs do not establish enforcement
 of a memory limit; the dedicated CI runner must validate that environment.
 Failure diagnostics expose only exit/OOM state and bounded error lines after
 removing all generated fixture credentials. Never dump container environments.
+
+Fixture CAs include critical certificate-signing usage and subject key identifiers;
+leaves include authority/subject identifiers and critical end-entity constraints.
+Python's strict X.509 verification is explicitly enabled locally as well as in
+CI. A certificate verification error fails immediately instead of being treated
+as a warming-up endpoint or bypassed. This corrects the older local Python versus
+newer CI Python trust-policy difference without disabling verification.

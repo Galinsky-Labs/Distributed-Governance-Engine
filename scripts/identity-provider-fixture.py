@@ -108,12 +108,15 @@ def start(state_path):
         if san is None:
             openssl('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(root / (name + '.key')),
                     '-out', str(root / (name + '.crt')), '-subj', subject, '-days', '2',
-                    '-addext', 'basicConstraints=critical,CA:TRUE')
+                    '-addext', 'basicConstraints=critical,CA:TRUE',
+                    '-addext', 'keyUsage=critical,keyCertSign,cRLSign',
+                    '-addext', 'subjectKeyIdentifier=hash')
         else:
             openssl('req', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(root / (name + '.key')),
                     '-out', str(root / (name + '.csr')), '-subj', subject)
             extension = write(name + '.ext', 'subjectAltName=' + san + '\nbasicConstraints=critical,CA:FALSE\n'
-                              'keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n')
+                              'keyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n'
+                              'subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid:always\n')
             openssl('x509', '-req', '-in', str(root / (name + '.csr')), '-CA', str(root / 'ca.crt'),
                     '-CAkey', str(root / 'ca.key'), '-CAcreateserial', '-out', str(root / (name + '.crt')),
                     '-days', '2', '-extfile', str(extension))
@@ -186,6 +189,7 @@ def start(state_path):
         print('Started local identity fixture; waiting for verified TLS discovery.', flush=True)
         phase('verified TLS discovery')
         context = ssl.create_default_context(cafile=str(root / 'ca.crt'))
+        context.verify_flags |= ssl.VERIFY_X509_STRICT
         context.minimum_version = context.maximum_version = ssl.TLSVersion.TLSv1_3
         for _ in range(120):
             try:
@@ -195,7 +199,10 @@ def start(state_path):
                 if metadata['issuer'] != state['issuer']:
                     raise RuntimeError('Provider issuer mismatch')
                 break
-            except (OSError, ValueError):
+            except (OSError, ValueError) as error:
+                reason = getattr(error, 'reason', error)
+                if isinstance(reason, ssl.SSLCertVerificationError):
+                    raise RuntimeError('Fixture certificate rejected by strict verification') from None
                 time.sleep(1)
         else:
             raise RuntimeError('Local identity provider did not become ready')

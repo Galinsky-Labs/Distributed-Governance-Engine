@@ -1,12 +1,12 @@
 {
   "unit": "DCE-002",
   "scope": "new upstream Keycloak provider candidate and real TLS/MFA engine integration",
-  "observedAt": "2026-11-10T02:09:39.696Z",
+  "observedAt": "2026-11-10T02:29:09.421Z",
   "sourceFiles": {
     "deploy/identity/Dockerfile": "d4e7979e886040cdb33798d6f96708d179e5703b9827eeca18abdfc922d585ea",
     "deploy/identity/realm.mjs": "315fefbb3cdf99b5865ae824ded5984885e399c775c7f95284bfc363da766459",
     "deploy/identity/provider.env.example": "404e2367d6a909a333f1934dbe8f673510bb6db7b82e2e8ab99c60499fd0570d",
-    "scripts/identity-provider-fixture.py": "ab26044bace1d6937a883cb41c65881f6006ae2552c9d1da9eb930aac9b0db73",
+    "scripts/identity-provider-fixture.py": "5b8515698c5238bf30db052d32a3801a8a608bdbbabaff430cbea348fda687e3",
     "scripts/run-identity-provider-test.mjs": "15226415b5f3cb0b1df3525b29264a81190ac26d0f59d6d322eb45f393750a4a",
     "tests/identity-provider.test.mjs": "f4a00cd2e6364554774557007ba2685508088b807084b0bf41362c303fa0cda6",
     "tests/identity-provider.integration.mjs": "7d237541cc3ef7a2ed5747ab60508e3620f79583fe9ea4698d5a5b00662cb1fc",
@@ -22,7 +22,8 @@
     "databaseTLS": "TLSv1.3, verify-full JDBC",
     "TLS12Rejected": true,
     "untrustedCARejected": true,
-    "browser": "Chromium 156.0.8078.79"
+    "browser": "Chromium 156.0.8078.79",
+    "strictX509FixtureCertificates": true
   },
   "provider": {
     "implementation": "Keycloak 26.8.2",

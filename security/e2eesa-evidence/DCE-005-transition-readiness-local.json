@@ -1,0 +1,35 @@
+{
+  "unit": "DCE-005",
+  "scope": "browser acceptance distinguishes in-progress readonly safety lock from completed immutable-editor transition",
+  "observedAt": "2026-11-10T06:25:36.879720+00:00",
+  "sourceFiles": {
+    "tests/support/editor-browser.mjs": "6ce68706f52faea51be5e0fcff82db3cf27eaf73239e1982b18f43b7ce1956e1",
+    "tests/editor-readiness.browser.mjs": "42756eee209d086478a60688e954d5cb4a200c92d028aa095c322e17a79400a0",
+    "tests/documents.browser.mjs": "b212d37c0eee2d9c7c8a70d4e54e050c23e1b76822f0f9724ff04860a367c6c2",
+    "tests/numbering.browser.mjs": "b63f1d50ff8657996edc8c1c27eb2d5e883ff1f96a6bfebedf528d6a69ed1946",
+    "tests/sections.browser.mjs": "4684c374ebba57b727e0d02666bc0f4d99012060996b03c4cc479d021d18e518",
+    "tests/tables.browser.mjs": "6b4395fa7865859c4491b1c46750f1b826dc47c9e22c72aaaeb7fd70df7e4e44"
+  },
+  "localChecks": {
+    "editorBrowserJourneys": 6,
+    "browser": "Chromium 156.0.8078.79",
+    "actualDocumentGetAndFreezePostHeldAndReleased": true,
+    "priorStatusAndEarlyReadonlyLockRemainDuringPendingRequests": true,
+    "readinessRequiresReplacementEditor": true,
+    "finalFixedSourceEditionVerified": true,
+    "stableLocatorInteractions": true,
+    "existingAssertionsRetained": true,
+    "timeoutsUnchanged": true
+  },
+  "productSourceChanged": false,
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "This validates current editor-transition acceptance in signed fixture OIDC/PGlite/local TLS, not cloud production or all assistive technologies",
+    "Managed local Chrome blocks standalone file URLs; complete pinned-browser and exact-head checks remain required"
+  ]
+}

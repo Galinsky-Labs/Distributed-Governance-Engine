@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import puppeteer from 'puppeteer-core';
 import {accountFixture} from './support/account-fixture.mjs';
-import {openSelectedSavedDocument} from './support/editor-browser.mjs';
+import {openSelectedSavedDocument,withEditorReplacement} from './support/editor-browser.mjs';
 const binary=process.env.DGE_BROWSER_EXECUTABLE;
 if(!binary)throw Error('DGE_BROWSER_EXECUTABLE is required');
 async function click(page,text){
@@ -13,7 +13,7 @@ async function click(page,text){
 }
 async function login(context,origin,subject){
  const page=await context.newPage();page.setDefaultTimeout(15000);await page.goto(origin+'/account');
- await page.click('a[href="/auth/start"]');await page.waitForSelector('input[name="subject"]');await page.type('input[name="subject"]',subject);await click(page,'Continue fixture login');await page.waitForSelector('.account-id');return page;
+ await page.locator('a[href="/auth/start"]').click();await page.waitForSelector('input[name="subject"]');await page.type('input[name="subject"]',subject);await click(page,'Continue fixture login');await page.waitForSelector('.account-id');return page;
 }
 async function saved(page){await page.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('Saved version '),{polling:100});}
 async function openCurrent(page){await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await page.waitForSelector('.save-controls');}
@@ -28,7 +28,7 @@ test('table layout, keyboard, saved reload, narrow layout and immutable source w
  try{
   browser=await puppeteer.launch({executablePath:binary,headless:true,acceptInsecureCerts:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   const context=await browser.createBrowserContext(),page=await login(context,fixture.origin,'tableauthor');debugPage=page;
-  await click(page,'Create workspace');await page.waitForFunction(()=>document.querySelector('select[aria-label="Your workspace"]')?.value,{polling:100});await click(page,'Documents');await page.waitForSelector('.public-create');await page.click('.public-create input[type="checkbox"]');await click(page,'Publish current text');await saved(page);
+  await click(page,'Create workspace');await page.waitForFunction(()=>document.querySelector('select[aria-label="Your workspace"]')?.value,{polling:100});await click(page,'Documents');await page.waitForSelector('.public-create');await page.locator('.public-create input[type="checkbox"]').click();await click(page,'Publish current text');await saved(page);
   await click(page,'Table');await page.waitForSelector('[aria-label="Table layout"]');await page.keyboard.type('Stable cell');
   const cellId=await page.$eval('.ProseMirror td',node=>node.dataset.blockId);
   await click(page,'Insert row below');await click(page,'Insert column right');
@@ -36,7 +36,7 @@ test('table layout, keyboard, saved reload, narrow layout and immutable source w
   assert.equal(await page.$eval('[data-block-id="'+cellId+'"]',node=>node.textContent),'Stable cell');
   await click(page,'Undo');assert.equal(await page.$$eval('.ProseMirror tr:first-child td',cells=>cells.length),2);
   await click(page,'Redo');assert.equal(await page.$$eval('.ProseMirror tr:first-child td',cells=>cells.length),3);
-  await page.click('.ProseMirror tr:last-child td:last-child p');
+  await page.locator('.ProseMirror tr:last-child td:last-child p').click();
   await page.waitForFunction(()=>document.querySelector('[aria-label="Table layout"]')?.textContent.includes('Row 3, column 3.'),{polling:100});
   await page.keyboard.press('Tab');
   await page.waitForFunction(()=>document.querySelectorAll('.ProseMirror tr').length===4,{polling:100});
@@ -45,9 +45,9 @@ test('table layout, keyboard, saved reload, narrow layout and immutable source w
   assert.equal(await page.$eval('[data-block-id="'+cellId+'"]',node=>node.textContent),'Stable cell');
   assert.match(await page.$eval('.ProseMirror tr:last-child',node=>node.textContent),/Keyboard row/);
   await page.setViewport({width:320,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  await page.setViewport({width:1360,height:1000});await page.click('.side-panel section input[type="checkbox"]');await click(page,'Freeze source for public input');
+  await page.setViewport({width:1360,height:1000});await page.locator('.side-panel section input[type="checkbox"]').click();await withEditorReplacement(page,()=>click(page,'Freeze source for public input'));
   await page.waitForFunction(()=>document.querySelector('.ProseMirror')?.getAttribute('contenteditable')==='false',{polling:100});
-  await page.click('.ProseMirror td p');
+  await page.locator('.ProseMirror td p').click();
   assert.equal(await page.$$eval('[aria-label="Table layout"] button',buttons=>buttons.every(button=>button.disabled)),true);
   const before=await page.$eval('.ProseMirror table',node=>node.textContent);await page.keyboard.type('FORGED TABLE EDIT');assert.equal(await page.$eval('.ProseMirror table',node=>node.textContent),before);
  }catch(error){if(debugPage)console.log('Table fixture diagnostic:',await debugPage.evaluate(()=>({status:document.querySelector('.status')?.textContent,save:document.querySelector('.save-controls')?.textContent,table:document.querySelector('[aria-label="Table layout"]')?.textContent,rows:document.querySelectorAll('.ProseMirror tr').length,focus:document.activeElement?.tagName})));throw error;}finally{await browser?.close();await fixture.close();}
@@ -68,22 +68,22 @@ test('real WSS table row insertion preserves another authenticated editor text u
     removeEventListener(name,listener,options){return super.removeEventListener(name,name==='message'?(this.listeners.get(listener)??listener):listener,options);}
    };
   });
-  await owner.goto(fixture.origin+'/account');await owner.click('a[href="/auth/start"]');await owner.waitForSelector('input[name="subject"]');await owner.type('input[name="subject"]','tableowner');await click(owner,'Continue fixture login');await owner.waitForSelector('.account-id');await click(owner,'Create workspace');
+  await owner.goto(fixture.origin+'/account');await owner.locator('a[href="/auth/start"]').click();await owner.waitForSelector('input[name="subject"]');await owner.type('input[name="subject"]','tableowner');await click(owner,'Continue fixture login');await owner.waitForSelector('.account-id');await click(owner,'Create workspace');
   await owner.waitForFunction(()=>document.querySelector('select[aria-label="Your workspace"]')?.value,{polling:100});
   const tenantId=await owner.$eval('select[aria-label="Your workspace"]',node=>node.value);
   const peer=await login(peerContext,fixture.origin,'tablepeer');debugPeer=peer;const accountId=await peer.$eval('.account-id',node=>node.textContent);
   const invitation=await csrfRequest(owner,`/api/workspaces/${tenantId}/invitations`,'POST',{accountId,role:'editor'});
   await csrfRequest(peer,`/api/workspaces/${tenantId}/join`,'POST',{invitationToken:invitation.invitationToken});
-  await click(owner,'Documents');await owner.waitForSelector('.public-create');await owner.click('.public-create input[type="checkbox"]');await click(owner,'Publish current text');await saved(owner);await click(owner,'Table');await saved(owner);
+  await click(owner,'Documents');await owner.waitForSelector('.public-create');await owner.locator('.public-create input[type="checkbox"]').click();await click(owner,'Publish current text');await saved(owner);await click(owner,'Table');await saved(owner);
   await openCurrent(peer);await peer.waitForSelector('.ProseMirror table');
   await click(owner,'Join live editing');await owner.waitForFunction(()=>['Public collaboration connected','Live edit acknowledged'].some(text=>document.querySelector('.save-controls')?.textContent.includes(text)),{polling:100});
   await click(peer,'Join live editing');await peer.waitForFunction(()=>['Public collaboration connected','Live edit acknowledged'].some(text=>document.querySelector('.save-controls')?.textContent.includes(text)),{polling:100});
   for(const page of [owner,peer])assert.equal(await page.$eval('.ProseMirror',node=>node.getAttribute('contenteditable')),'true');
   await owner.evaluate(()=>{window.delayTableUpdates=true;});
-  await peer.bringToFront();await peer.click('.ProseMirror tr:first-child td:last-child p');await peer.keyboard.type('Peer text must survive');
+  await peer.bringToFront();await peer.locator('.ProseMirror tr:first-child td:last-child p').click();await peer.keyboard.type('Peer text must survive');
   await peer.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('acknowledged'),{polling:100});
   await owner.waitForFunction(()=>window.delayedTableUpdates.length>0,{polling:100});
-  await owner.bringToFront();await owner.click('.ProseMirror td:first-child p');await click(owner,'Insert row below');
+  await owner.bringToFront();await owner.locator('.ProseMirror td:first-child p').click();await click(owner,'Insert row below');
   await owner.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('acknowledged'),{polling:100});
   await owner.evaluate(()=>window.releaseTableUpdates());
   for(const page of [owner,peer])await page.waitForFunction(()=>document.querySelectorAll('.ProseMirror tr').length===3&&document.querySelector('.ProseMirror table')?.textContent.includes('Peer text must survive'),{polling:100});

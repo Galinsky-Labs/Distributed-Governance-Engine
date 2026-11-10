@@ -7,6 +7,8 @@ The same engine supplies CivicQuill and CharterQuill sign-in, workspace membersh
 | Route | Behavior |
 | --- | --- |
 | GET /auth/start, /auth/callback | Browser-bound real OIDC authorization-code flow, fixed callback and account landing page |
+| POST /api/recovery-session | Exact-Origin single-use code redemption without a preexisting session |
+| POST /api/provider-restoration | Protected dual-proof OIDC restoration start; no identity JSON |
 | GET /api/session | Internal account ID and session times; no session/CSRF token JSON |
 | POST /api/logout, /api/logout-all | Protected session or account-wide revocation |
 | POST /api/passkeys/enrollment/options, /api/passkeys/enrollment/verify | Begin/finish a verifier-backed, session-bound passkey enrollment |
@@ -19,7 +21,7 @@ The same engine supplies CivicQuill and CharterQuill sign-in, workspace membersh
 | DELETE /api/workspaces/:id/invitations/:invitation | Cancel pending invitation |
 | POST /api/workspaces/:id/join | Accept an account-bound invitation |
 
-All mutations require an exact configured Origin, an authenticated Secure/HttpOnly host session cookie and a session-bound CSRF proof in the x-dge-csrf header. The separate Secure/SameSite=Strict CSRF cookie is readable by the app solely to deliver that proof. Setting that cookie alone grants no authority; the stored session binding is checked. JSON never supplies trusted account, role, origin or session context. There is no cross-origin API access. Same-origin script compromise remains a risk requiring CSP and secure dependency deployment.
+Except for single-use recovery-code redemption, all mutations require an exact configured Origin, an authenticated Secure/HttpOnly host session cookie and a session-bound CSRF proof in the x-dge-csrf header. The separate Secure/SameSite=Strict CSRF cookie is readable by the app solely to deliver that proof. Setting that cookie alone grants no authority; the stored session binding is checked. JSON never supplies trusted account, role, origin or session context. There is no cross-origin API access. Same-origin script compromise remains a risk requiring CSP and secure dependency deployment.
 
 Request bodies are JSON with exact allowed fields, at most 8 KiB. Lists accept unique after/limit parameters, at most 200 entries. The socket peer, never a forwarding header, selects the per-process request budget. Defaults are 120 requests/peer/minute and 2,000 total/minute with at most 4,096 peer buckets. These availability limits are not identity verification or distributed abuse prevention. Server parameters also limit active sessions to 20/account, owned workspaces to 10/account, and pending invitations to 500/workspace. Configurable limits cannot bypass last-owner, origin or role invariants. The future entitlement/admin layer will control paid creation policies separately from participation rights.
 
@@ -47,6 +49,14 @@ Account JSON requests reject duplicate keys at every nesting level, including es
 
 The local request budget rejects zero, nonfinite or out-of-range configuration and fails closed if its clock is invalid. It remains a per-process availability guard; fleet-wide abuse protection requires a separately reviewed deployment control.
 
-Source-bound evidence is in security/e2eesa-evidence/DCE-002-account-http-local.json. The engine now has a server-only dual-proof provider-restoration transaction, but no browser route accepts replacement identity claims: only the configured OIDC adapter may supply them. Real callback/UI integration, browser/authenticator interoperability, production verifier/attestation policy, private-content key recovery/rekeying, account discovery, retention, fleet-wide abuse protection and production deployment remain incomplete. Login and recovery never enroll an encryption device or prove private-content authorization. No production security conformance or independent-review claim is made.
+Source-bound evidence is in security/e2eesa-evidence/DCE-002-account-http-local.json. The engine now has a dual-proof provider-restoration transaction and browser flow; no route accepts replacement identity claims: only the configured OIDC adapter may supply them. Physical-authenticator interoperability, production attestation policy, private-content key recovery/rekeying, account discovery, retention, fleet-wide abuse protection and production deployment remain incomplete. Login and recovery never enroll an encryption device or prove private-content authorization. No production security conformance or independent-review claim is made.
 
 Concrete verifier configuration and the native browser account controls are documented in PASSKEY_VERIFIER.md. The bootstrap supports an explicit optional PASSKEY_ATTESTATION_POLICY. Its default remains disabled, and virtual-authenticator tests do not establish physical-device or real-provider production acceptance.
+
+The browser provider-restoration contribution now connects limited code redemption,
+already-enrolled passkey verification and a purpose/session-bound fresh OIDC
+callback. See PROVIDER_RESTORATION.md for current behavior, rollback and evidence.
+Hosted recovery drills, physical devices, private-content
+recovery and full DCE-002 acceptance remain unverified. No new deployment
+credential is required beyond the configured issuer/client, independent session
+and state keys, database/TLS credentials and explicit passkey policy.

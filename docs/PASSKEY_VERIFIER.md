@@ -43,4 +43,12 @@ Run `npm run build` before that browser test, then
 `DGE_BROWSER_EXECUTABLE=/path/to/chrome node --test tests/passkeys.browser.mjs`.
 CI uses the repository-pinned browser. Local evidence also uses managed system
 Chromium; its version must be recorded with results. Full DCE-002 acceptance,
-provider-restoration browser integration and real deployment remain outstanding.
+hosted provider-restoration drills and real deployment remain outstanding.
+
+The browser provider-restoration contribution now connects limited code redemption,
+already-enrolled passkey verification and a purpose/session-bound fresh OIDC
+callback. See PROVIDER_RESTORATION.md for current behavior, rollback and evidence.
+Hosted recovery drills, physical devices, private-content
+recovery and full DCE-002 acceptance remain unverified. No new deployment
+credential is required beyond the configured issuer/client, independent session
+and state keys, database/TLS credentials and explicit passkey policy.

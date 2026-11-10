@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createAccountAPI, readInvitationPackage } from "./account-api.mjs";
+import { createAccountAPI, readInvitationPackage, recoverWithCode } from "./account-api.mjs";
 import { InvitationControls } from "./invitations.jsx";
 import { PasskeyControls } from "./passkey-controls.jsx";
 
 const messages = {
+  RECOVERY_NOT_ACCEPTED: "Recovery could not be completed. Check your account ID and unused recovery code.",
+  PASSKEY_STEP_UP_REQUIRED: "Verify with your previously enrolled passkey before restoring sign-in.",
+  PROVIDER_RESTORATION_UNAVAILABLE: "Provider restoration is unavailable. Try again later.",
   ERROR_CEREMONY_ABORTED: "Passkey verification was cancelled. You can try again.",
   ERROR_INVALID_DOMAIN: "Passkeys require this service to use a valid HTTPS hostname.",
   ERROR_INVALID_RP_ID: "Passkeys are not configured for this hostname.",
@@ -90,6 +93,39 @@ function Member({ member, authority, perform, workspace, busy }) {
     </li>
   );
 }
+
+function RecoveryForm({perform, busy, recovered}) {
+  const [accountId, setAccountId] = useState(''), [code, setCode] = useState('');
+  return <details onToggle={e => {if (!e.currentTarget.open) setCode('');}}>
+    <summary>Use a recovery code</summary>
+    <p>Use your saved account ID and one-time recovery code for limited access.
+      Restoring sign-in also requires a passkey enrolled before you lost access.</p>
+    <form autoComplete="off" onSubmit={e => {
+      e.preventDefault();
+      const submittedCode = code; setCode('');
+      perform(async () => {await recoverWithCode(accountId.trim(), submittedCode.trim()); await recovered();}, 'Limited recovery access restored.');
+    }}>
+      <label>Recovery account ID<input name="recoveryAccountId" value={accountId} onChange={e => setAccountId(e.target.value)} required maxLength={36} /></label>
+      <label>One-time recovery code<input name="recoveryCode" type="password" autoComplete="off" value={code} onChange={e => setCode(e.target.value)} required maxLength={43} /></label>
+      <button disabled={busy}>Recover limited access</button>
+    </form>
+  </details>;
+}
+function ProviderRestorationControls({perform, busy, session}) {
+  return <section aria-label="Restore provider sign-in">
+    <h3>Restore sign-in</h3>
+    <p>This temporary session cannot open workspace documents, change membership or enroll a new passkey.
+      Verify with a previously enrolled passkey, then sign in with the provider account
+      you want to bind to this account. This replaces your previous sign-in binding.</p>
+    <button disabled={busy || !session.passkeyStepUpExpiresAt} onClick={() => perform(async () => {
+      const {authorizationUrl} = await api('/api/provider-restoration', {method: 'POST', body: {}});
+      const destination = new URL(authorizationUrl);
+      if (destination.protocol !== 'https:' || destination.username || destination.password) throw Error('Invalid provider destination');
+      location.assign(destination.href);
+    }, 'Opening provider sign-in…', {refresh: false})}>Restore provider sign-in</button>
+  </section>;
+}
+
 export function AccountPanel() {
   const [open, setOpen] = useState(location.pathname === "/account"),
     [session, setSession] = useState(null),
@@ -136,7 +172,7 @@ export function AccountPanel() {
   async function load() {
     try {
       const who = await api("/api/session"),
-        page = await api("/api/workspaces");
+        page = who.recoveryRestricted ? {items: [], nextCursor: null} : await api("/api/workspaces");
       if (!alive.current) return;
       setSession(who);
       setWorkspaces(page.items);
@@ -147,7 +183,7 @@ export function AccountPanel() {
           : (page.items[0]?.tenantId ?? ""),
       );
     } catch (error) {
-      if (alive.current) report(error);
+      if (alive.current) {if (error.status === 401) forget(); else report(error);}
     }
   }
   async function perform(action, message, { refresh = true } = {}) {
@@ -157,8 +193,8 @@ export function AccountPanel() {
     try {
       await action();
       if (alive.current) {
-        setStatus(message);
-        if (refresh) setReload((x) => x + 1);
+        if (refresh) { await load(); setReload((x) => x + 1); }
+        if (alive.current) setStatus(message);
       }
     } catch (error) {
       if (alive.current) report(error);
@@ -190,13 +226,13 @@ export function AccountPanel() {
     return () => window.removeEventListener("keydown", key);
   }, [open]);
   useEffect(() => {
-    if (!session || !selected) {
+    if (!session || session.recoveryRestricted || !selected) {
       setMemberPage({ tenantId: "", items: [], nextCursor: null });
       return;
     }
     setMemberPage((old) =>
       old.tenantId === selected
-        ? { ...old, items: [], nextCursor: null }
+        ? old
         : { tenantId: selected, items: [], nextCursor: null },
     );
     const abort = new AbortController();
@@ -212,7 +248,7 @@ export function AccountPanel() {
         }
       });
     return () => abort.abort();
-  }, [selected, reload, session?.accountId]);
+  }, [selected, reload, session?.accountId, session?.recoveryRestricted]);
   const authority =
     memberPage.tenantId === selected ? memberPage.viewerRole : null;
   const members = memberPage.tenantId === selected ? memberPage.items : [];
@@ -256,6 +292,7 @@ export function AccountPanel() {
               <a className="button-link" href="/auth/start">
                 Sign in
               </a>
+              <RecoveryForm perform={perform} busy={busy} recovered={load} />
             </>
           ) : (
             <>
@@ -264,13 +301,19 @@ export function AccountPanel() {
               <p className="small">
                 A workspace owner can use this ID to invite you.
               </p>
-              <p>
+              {!session.recoveryRestricted && <p>
                 <a href="/auth/start">Sign in again for access changes</a>
-              </p>
+              </p>}
               <PasskeyControls api={api} session={session} perform={perform} busy={busy} reload={reload} />
+              {session.recoveryRestricted ? <>
+                <ProviderRestorationControls perform={perform} busy={busy} session={session} />
+                <button disabled={busy} onClick={() => perform(async () => {
+                  await api('/api/logout', {method: 'POST', body: {}}); forget();
+                }, 'Signed out.')}>Sign out</button>
+              </> : <>
               <p className="small">
                 Issuing recovery codes invalidates any unused codes from an earlier set.
-                Save the new codes offline before closing this panel.
+                Save your account ID and the new codes offline before closing this panel.
               </p>
               <div className="account-actions">
                 <button
@@ -338,7 +381,7 @@ export function AccountPanel() {
               {recoveryCodes.length > 0 && (
                 <section aria-label="One-time recovery codes">
                   <p>
-                    Save these one-time codes offline. They will disappear when you
+                    Save your account ID above and these one-time codes offline. They will disappear when you
                     close this panel, and they cannot authorize an encrypted device.
                   </p>
                   <ol className="recovery-codes">
@@ -483,6 +526,7 @@ export function AccountPanel() {
                 </label>
                 <button disabled={busy}>Accept invitation</button>
               </form>
+              </>}
             </>
           )}
         </aside>

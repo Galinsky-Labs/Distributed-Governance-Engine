@@ -282,6 +282,7 @@ export function createAccountHandler({
           const result = await login.complete(
             url.href,
             cookies.get("__Host-dge_login"),
+            cookies.get("__Host-dge_session"),
           );
           const maxAge = Math.max(
             0,
@@ -318,6 +319,14 @@ export function createAccountHandler({
         method(["GET"]);
         if (url.search) throw new HttpError(400, "INVALID_QUERY");
         return json(await store.sessionInfo(credentials.sessionToken));
+      }
+      if (url.pathname === "/api/provider-restoration") {
+        method(["POST"]);
+        write();
+        await boundedJson(request, []);
+        if (typeof login.startRestoration !== "function") throw new HttpError(503, "PROVIDER_RESTORATION_UNAVAILABLE");
+        const result = await login.startRestoration(credentials);
+        return cookiesResponse(json({authorizationUrl: result.authorizationUrl}), [result.cookie]);
       }
       if (url.pathname === "/api/recovery-codes") {
         method(["POST"]);

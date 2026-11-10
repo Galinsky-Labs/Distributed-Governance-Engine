@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 21,
+  "roadmapVersion": 22,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T02:13:08Z",
+  "observedAt": "2026-11-10T02:51:59Z",
   "units": [
     {
       "id": "DCE-001",
@@ -59,7 +59,8 @@
         21,
         39,
         53,
-        54
+        54,
+        55
       ]
     },
     {
@@ -1748,16 +1749,31 @@
       "id": 5234576598,
       "number": 54,
       "title": "DCE-002: prepare a real TLS-only identity provider and verify MFA through the engine",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/54",
       "createdAt": "2026-11-10T02:11:53Z",
-      "updatedAt": "2026-11-10T02:11:53Z",
+      "updatedAt": "2026-11-10T02:33:42Z",
+      "mergedAt": "2026-11-10T02:33:42Z",
+      "closedAt": "2026-11-10T02:33:42Z",
+      "draft": false,
+      "headSha": "dbc2a95bcf281a56cc1a791928612a995629845c",
+      "baseRef": "main",
+      "mergeCommitSha": "488a0f10d28562f83ddd9ddac7567422df2c2914"
+    },
+    {
+      "id": 5234934835,
+      "number": 55,
+      "title": "DCE-002: restore provider sign-in through recovery and an enrolled passkey",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/55",
+      "createdAt": "2026-11-10T02:51:30Z",
+      "updatedAt": "2026-11-10T02:51:30Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "d1e8de168f92fc34be49a3feff0e33100e0941ec",
+      "headSha": "ba3fea7fae306cde984e5fb9446854f682616e3f",
       "baseRef": "main",
-      "mergeCommitSha": "9b8071a7de4357c1ab4cac30eb8d9f94bf026fa4"
+      "mergeCommitSha": "92d8d34ea60abd5641b443a113933b132bd62a0b"
     }
   ]
 }

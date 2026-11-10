@@ -1,0 +1,48 @@
+{
+  "unit": "DCE-002",
+  "scope": "browser dual-proof provider restoration and reliable provider fixture readiness",
+  "observedAt": "2026-11-10T02:51:00.332138+00:00",
+  "sourceFiles": {
+    "server/identity-store.mjs": "10a5e715793b2f53da619093af9816d527ba9f812ae51adbd0d5c9fb097a7193",
+    "server/oidc-login.mjs": "5b40cbdb4d8a0d29e012376b0ee22ca3ace961189568b38c86bf999e03af507b",
+    "server/account-http.mjs": "62a2da9089ce2b2f7f9fef783b2ff0161214ec2e46e00aaa461ac50502fa2301",
+    "web/account-api.mjs": "cce9667c4651a2782f6086dd2e9556f7f2a37e4841a6a1567213e9b06e73cad3",
+    "web/account-panel.jsx": "a88558ae9d6d3306744fca574fdaccfff526f02b796ef06f9bef2e8a67ffed18",
+    "tests/identity.test.mjs": "4b4c9ee9422af8b16fa6db0953fa723300164227afd080254e2eda73511e6fcd",
+    "tests/account-http.test.mjs": "52bff6a338e75f1767555fa80c4378f395654c2662ef36c6faca81caa5c929d7",
+    "tests/passkeys.browser.mjs": "87d718defeeca641dce61399e3adfb8bc2905b74cddb88973bfcc0269e588bdd",
+    "scripts/identity-provider-fixture.py": "f8d1409a9b565273cc7ee7dda2ab03dcc68d636cfdef7aeca92e183bfb132e71"
+  },
+  "localChecks": {
+    "targetedIdentityAndHTTPTests": 67,
+    "nativePasskeyBrowserJourneys": 2,
+    "existingAccountBrowserJourney": true,
+    "realKeycloakBrowserJourney": true,
+    "generatedCases": 2000,
+    "browser": "Chromium 156.0.8078.79",
+    "strictTLSVerification": true,
+    "engineTests": 261
+  },
+  "securityReview": {
+    "type": "author source review",
+    "boundaries": [
+      "server-selected purpose inside authenticated encrypted login state",
+      "original restricted account/session/CSRF binding at start and callback",
+      "active old passkey and proof freshness rechecked after signed provider exchange",
+      "actual provider assurance retained without implicit encryption-device authorization",
+      "replacement binding preserves account/workspace and denies linked identity collisions",
+      "no credential inputs in URLs/browser storage/telemetry",
+      "PostgreSQL TCP readiness excludes entrypoint temporary initialization server"
+    ],
+    "blockingFindings": []
+  },
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Synthetic signed-token OIDC and virtual authenticator for account-binding change; real Keycloak tested separately",
+    "No hosted recovery drill, physical-authenticator evidence or private-content recovery",
+    "Fleet-wide abuse protection, operator recovery and full DCE-002 acceptance remain incomplete",
+    "No cloud services or paid resources created"
+  ]
+}

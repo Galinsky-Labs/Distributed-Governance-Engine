@@ -619,3 +619,42 @@ test("configured workspace, pending-invitation and active-session budgets are en
     /INVITATION_LIMIT_REACHED/,
   );
 });
+
+test('restoration start accepts no provider claims, requires same-origin CSRF POST and sets only login cookie', async () => {
+  const who = await user('restore'), calls = [];
+  handler = createAccountHandler({store, origin, login: {startRestoration: async credentials => {
+    calls.push(credentials);
+    return {authorizationUrl: 'https://provider.example/authorize', cookie: '__Host-dge_login=' + randomBytes(32).toString('base64url') + '; Path=/; HttpOnly; Secure; SameSite=Lax'};
+  }}});
+  assert.equal((await call('/api/provider-restoration')).status, 405);
+  assert.equal((await call('/api/provider-restoration', {method:'POST', body:{}})).status, 403);
+  assert.equal((await call('/api/provider-restoration', {who, method:'POST', body:{}, headers:{origin:'https://attacker.example'}})).status,403);
+  assert.equal((await call('/api/provider-restoration', {who, method:'POST', body:{issuer:'https://attacker.example', subject:'owner'}})).status,400);
+  assert.equal(calls.length,0);
+  const result = await call('/api/provider-restoration', {who, method:'POST', body:{}});
+  assert.equal(result.status,200);
+  assert.deepEqual(await result.json(),{authorizationUrl:'https://provider.example/authorize'});
+  assert.deepEqual(calls,[{sessionToken:who.sessionToken,csrfToken:who.csrfToken,origin}]);
+  assert.equal(result.headers.getSetCookie().length,1);
+  assert.match(result.headers.get('set-cookie'),/^__Host-dge_login=/);
+});
+test('restoration unavailable does not fall back to ordinary sign-in', async () => {
+  const who = await user('restore');
+  const result=await call('/api/provider-restoration',{who,method:'POST',body:{}});
+  assert.equal(result.status,503);assert.equal((await result.json()).error,'PROVIDER_RESTORATION_UNAVAILABLE');
+});
+test('browser recovery sends codes only in a same-origin POST body and reports generic rejection',async()=>{
+  const {recoverWithCode}=await import('../web/account-api.mjs');
+  const accountId=randomUUID(),recoveryCode=randomBytes(32).toString('base64url');
+  let count=0;
+  const fetcher=async(path,init)=>{
+    count++;assert.equal(path,'/api/recovery-session');assert.equal(init.method,'POST');
+    assert.equal(init.credentials,'same-origin');assert.equal(init.cache,'no-store');
+    assert.deepEqual(JSON.parse(init.body),{accountId,recoveryCode});
+    assert.equal(init.headers['x-dge-csrf'],undefined);
+    return Response.json({error:'ACCESS_DENIED'},{status:403});
+  };
+  await assert.rejects(recoverWithCode(accountId,recoveryCode,fetcher),e=>e.code==='RECOVERY_NOT_ACCEPTED');
+  await assert.rejects(recoverWithCode(accountId,'bad-code',fetcher),e=>e.code==='RECOVERY_NOT_ACCEPTED');
+  assert.equal(count,1);
+});

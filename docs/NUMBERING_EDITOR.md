@@ -12,4 +12,6 @@ The ProseMirror adapter carries the numbering profile, rules and explicit rules-
 
 Tests cover detached preview/affected-reference output, stable content, one-step undo/redo, restoring absent and existing rules, stale preview rejection, selection stability, invalid profiles/rules, immutable/read-only guards and legacy/live-root behavior. The authenticated Chromium journey previews and applies numbering, checks semantic body equality, saves/undoes/redoes/reopens, rejects invalid reservations, invalidates a preview after typing, joins/exits the actual public WSS editor, checks 320-pixel reflow and freezes source. Its signed fixture OIDC and PGlite database are not production-provider or cloud deployment acceptance.
 
-No new credentials, dependencies or migrations are required. This is a partial DCE-006 contribution; section restructuring controls, broader jurisdiction profiles, live metadata synchronization, typed package migration and complete production/assistive-technology acceptance remain separate work.
+No new credentials, dependencies or migrations are required. This is a partial DCE-006 contribution; deleted-section workflows, broader jurisdiction profiles, live metadata synchronization, typed package migration and complete production/assistive-technology acceptance remain separate work.
+
+[Section hierarchy](SECTION_HIERARCHY.md) supplies the separate previewed indent/outdent controls for ordinary drafts.

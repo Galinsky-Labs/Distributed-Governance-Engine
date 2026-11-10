@@ -10,6 +10,7 @@ import {findNextText,findTextMatches} from './search.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
 import {moveTableCell} from './tables.mjs';
 import {numberingCapability,prepareNumbering,applyPreparedNumbering} from './numbering.mjs';
+import {sectionMoveCapability,prepareSectionMove,applyPreparedSectionMove} from './sections.mjs';
 
 const attrs={id:{default:null}};
 const blockAttrs=node=>({'data-block-id':node.attrs.id});
@@ -84,7 +85,7 @@ export function identityPlugin(baseDocument) {
 export function createLegalEditorState(document,{readOnly=false}={}) {
  const editable=canDirectlyEdit(document)&&!readOnly;
  return EditorState.create({schema:editorSchema,doc:legalToEditor(document),plugins:[
-  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),numberingCapability(editable),identityPlugin(document),history(),
+  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),numberingCapability(editable),sectionMoveCapability(editable),identityPlugin(document),history(),
   keymap({'Mod-z':undo,'Mod-y':redo,'Mod-Shift-z':redo,'Mod-b':toggleMark(editorSchema.marks.bold),'Mod-i':toggleMark(editorSchema.marks.italic),'Mod-u':toggleMark(editorSchema.marks.underline),'Enter':splitListItem(editorSchema.nodes.list_item),'Tab':moveTableCell({grow:editable}),'Shift-Tab':moveTableCell({backward:true})}),keymap(baseKeymap)
  ]});
 }
@@ -101,6 +102,8 @@ export function mountLegalEditor(element,initial,{onChange=()=>{},onError=()=>{}
  onSelectionChange(view.state);
  return {view,getDocument:()=>current,
  previewNumbering:options=>prepareNumbering(view.state,current,options),
+ previewSectionMove:direction=>prepareSectionMove(view.state,current,direction),
+ applySectionMove(preview){return this.command(applyPreparedSectionMove(preview));},
  applyNumbering(preview){return this.command(applyPreparedNumbering(preview));},
  getTextSelection(){
   const native=element.ownerDocument.defaultView.getSelection();

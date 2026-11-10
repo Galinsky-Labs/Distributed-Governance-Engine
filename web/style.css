@@ -97,3 +97,5 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 
 .table-tools p{flex-basis:100%;margin:0;font-size:12px}.ProseMirror table{table-layout:fixed}.ProseMirror td{min-width:0;overflow-wrap:anywhere}
 .numbering-tools label{display:block;font-size:12px;margin:8px 0}.numbering-tools input,.numbering-tools select{display:block;width:100%;min-width:0;padding:6px;border:1px solid var(--border);border-radius:4px;font:inherit}.numbering-preview{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;overflow-wrap:anywhere}.numbering-preview th,.numbering-preview td{border:1px solid var(--border);padding:4px;text-align:left}.numbering-tools ul{padding-left:18px;font-size:12px}.numbering-tools [role=status]:empty{display:none}
+
+.section-tools ul{padding-left:18px;font-size:12px}.section-tools [role=status]:empty{display:none}

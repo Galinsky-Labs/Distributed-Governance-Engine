@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import puppeteer from 'puppeteer-core';
 import {accountFixture} from './support/account-fixture.mjs';
+import {openSelectedSavedDocument} from './support/editor-browser.mjs';
 const binary=process.env.DGE_BROWSER_EXECUTABLE;
 if(!binary)throw Error('DGE_BROWSER_EXECUTABLE is required');
 async function click(page,text){
@@ -15,7 +16,7 @@ async function login(context,origin,subject){
  await page.click('a[href="/auth/start"]');await page.waitForSelector('input[name="subject"]');await page.type('input[name="subject"]',subject);await click(page,'Continue fixture login');await page.waitForSelector('.account-id');return page;
 }
 async function saved(page){await page.waitForFunction(()=>document.querySelector('.save-controls')?.textContent.includes('Saved version '),{polling:100});}
-async function openCurrent(page){await click(page,'Documents');await page.waitForSelector('.document-list button');await page.click('.document-list button');await page.waitForSelector('.save-controls');}
+async function openCurrent(page){await click(page,'Documents');await page.waitForSelector('.document-list button');await openSelectedSavedDocument(page);await page.waitForSelector('.save-controls');}
 async function csrfRequest(page,path,method,body){return page.evaluate(async({path,method,body})=>{
  const csrf=document.cookie.split('; ').find(value=>value.startsWith('__Host-dge_csrf=')).split('=')[1];
  const response=await fetch(path,{method,headers:{'content-type':'application/json','x-dge-csrf':csrf},body:JSON.stringify(body)});

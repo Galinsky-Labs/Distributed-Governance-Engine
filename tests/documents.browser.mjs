@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 import { accountFixture } from "./support/account-fixture.mjs";
+import {openSelectedSavedDocument} from "./support/editor-browser.mjs";
 const binary = process.env.DGE_BROWSER_EXECUTABLE;
 if (!binary) throw Error("DGE_BROWSER_EXECUTABLE is required");
 async function click(page, label) {
@@ -28,7 +29,7 @@ async function click(page, label) {
 async function openCurrent(page) {
   await click(page, "Documents");
   await page.waitForSelector(".document-list button");
-  await page.click(".document-list button");
+  await openSelectedSavedDocument(page);
   await page.waitForSelector(".save-controls");
 }
 async function prepend(page, text) {
@@ -210,7 +211,7 @@ test(
       await owner.reload();
       await click(owner, "Documents");
       await owner.waitForSelector(".document-list button");
-      await owner.click(".document-list button");
+      await openSelectedSavedDocument(owner);
       await saved(owner, 4);
       assert.ok(
         (await owner.$eval(".ProseMirror", (el) => el.textContent)).includes(

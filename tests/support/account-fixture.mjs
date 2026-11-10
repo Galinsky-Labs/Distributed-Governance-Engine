@@ -31,6 +31,7 @@ import {
 } from "../../server/proposal-http.mjs";
 import { createAccountHandler } from "../../server/account-http.mjs";
 import { createDocumentStore } from "../../server/document-store.mjs";
+import {attachPublicCollaborationHub} from "../../server/public-collaboration-hub.mjs";
 import {
   createDocumentRoutes,
   documentBodyLimit,
@@ -53,7 +54,9 @@ export async function accountFixture({
   documentListDelayMs = 0,
   passkeyConfiguration = {},
   hostname = '127.0.0.1',
+  publicCollaboration = false,
 } = {}) {
+  if (typeof publicCollaboration !== 'boolean') throw Error('Invalid public collaboration fixture setting');
   if (!['127.0.0.1', 'localhost'].includes(hostname)) throw Error('Loopback fixture hostname required');
   for (const delay of [proposalListDelayMs, documentListDelayMs])
     if (!Number.isSafeInteger(delay) || delay < 0 || delay > 1000)
@@ -302,11 +305,14 @@ export async function accountFixture({
       });
     },
   });
+  const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:createDocumentStore({identity:store,transaction})}):null;
   return {
     origin,
     db,
     store,
+    collaborationStats:()=>collaboration?.stats()??null,
     close: async () => {
+      collaboration?.close();
       await new Promise((resolve) => {
         server.close(resolve);
         server.closeAllConnections();

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 24,
+  "roadmapVersion": 25,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T04:06:48Z",
+  "observedAt": "2026-11-10T04:43:51Z",
   "units": [
     {
       "id": "DCE-001",
@@ -147,7 +147,8 @@
         38,
         41,
         42,
-        44
+        44,
+        58
       ]
     },
     {
@@ -230,7 +231,8 @@
         35,
         36,
         56,
-        57
+        57,
+        58
       ]
     },
     {
@@ -1798,16 +1800,31 @@
       "id": 5235595957,
       "number": 57,
       "title": "DCE-003: persist encrypted endpoint state before releasing protocol results",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/57",
       "createdAt": "2026-11-10T04:03:41Z",
-      "updatedAt": "2026-11-10T04:03:41Z",
+      "updatedAt": "2026-11-10T04:11:24Z",
+      "mergedAt": "2026-11-10T04:11:24Z",
+      "closedAt": "2026-11-10T04:11:24Z",
+      "draft": false,
+      "headSha": "2c08fd3c65b09250b4566804336a2670769720fb",
+      "baseRef": "main",
+      "mergeCommitSha": "e2afe4f69618ae2096aba9208545f24bcc5c58c2"
+    },
+    {
+      "id": 5235936983,
+      "number": 58,
+      "title": "DCE-005: Edit bounded tables and preserve concurrent public text",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/58",
+      "createdAt": "2026-11-10T04:43:42Z",
+      "updatedAt": "2026-11-10T04:43:42Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "5d225d415da3d7daabf8ef3f1f0fef06e1378727",
+      "headSha": "aa845f962cd176d59feb4445f3aa42c4f7323fc7",
       "baseRef": "main",
-      "mergeCommitSha": "6aa396ded39332363bb928b515f593504efc3315"
+      "mergeCommitSha": "7a189324e0618f2265f222b3bbfcc024b2deb272"
     }
   ]
 }

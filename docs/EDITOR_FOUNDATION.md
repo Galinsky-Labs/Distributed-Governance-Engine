@@ -2,7 +2,7 @@
 
 The React/ProseMirror editor uses the same portable legal-structure validator as the engine. Semantic IDs, references, section titles, basic marks, lists, rectangular tables, definitions, exhibits and footnotes survive the editor adapter. New/split blocks receive unique IDs. Editor transactions that would directly change public-input, published, adopted or signed editions are rejected at both state and controller boundaries.
 
-Included controls: bold/italic/underline/strike; undo/redo and keyboard shortcuts; numbered/bulleted lists; safe external-link and citation creation, editing and removal; section and table insertion; outline navigation; native spellcheck; working-copy JSON/plain-text download; print styling; mode-specific read-only preview; accessible live status and anchored walkthrough. The same entry point can demonstrate CivicQuill and CharterQuill with related branding. The brand selector has no authorization authority.
+Included controls: bold/italic/underline/strike; undo/redo and keyboard shortcuts; numbered/bulleted lists; safe external-link and citation creation, editing and removal; section insertion and bounded table row/column editing with keyboard cell navigation; outline navigation; native spellcheck; working-copy JSON/plain-text download; print styling; mode-specific read-only preview; accessible live status and anchored walkthrough. The same entry point can demonstrate CivicQuill and CharterQuill with related branding. The brand selector has no authorization authority.
 
 Find/replace now searches literal body text, including words spanning formatting runs. It does not search section-title attributes or cross paragraph/reference boundaries. Match-case and wraparound next-match selection are available in fixed public-input editions too. Replace-selected checks the current selection against current text; replace-all is one undoable transaction. IDs and formatting outside the replaced range survive. The replacement inherits the starting text style. Literal replacement text is never interpreted as markup or replacement expressions.
 
@@ -23,3 +23,7 @@ The authenticated Chrome journey now commits CJK text, a multi-code-point emoji 
 The real-Chrome journey also verifies that the editor exposes a named multiline textbox, the grouped controls expose toolbar semantics, keyboard focus has a visible three-pixel outline, and the document reflows at 320 CSS pixels without page-level horizontal scrolling.
 
 This is browser evidence for the current Chromium/fixture-provider/PostgreSQL path. It does not establish every operating-system IME, manual screen-reader behavior, assistive-technology interoperability, offline editing across reloads, private encrypted drafts, production networking or deployment acceptance.
+
+## Table editing and concurrent text
+
+See [Table editing](TABLE_EDITING.md) for limits, structural commands, stable-ID behavior, read-only enforcement and authenticated two-browser WSS evidence. The contextual controls stay in the side panel so selecting a cell does not move the editor under the pointer. Narrow-layout and print behavior remain covered by the browser journey.

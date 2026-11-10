@@ -8,6 +8,7 @@ import {wrapInList,splitListItem} from 'prosemirror-schema-list';
 import {validateLegalDocument,legalOutline,normalizeExternalUrl,normalizeCitationMetadata} from '../src/legal-structure.mjs';
 import {findNextText,findTextMatches} from './search.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
+import {moveTableCell} from './tables.mjs';
 
 const attrs={id:{default:null}};
 const blockAttrs=node=>({'data-block-id':node.attrs.id});
@@ -78,7 +79,7 @@ export function createLegalEditorState(document,{readOnly=false}={}) {
  const editable=canDirectlyEdit(document)&&!readOnly;
  return EditorState.create({schema:editorSchema,doc:legalToEditor(document),plugins:[
   new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),identityPlugin(document),history(),
-  keymap({'Mod-z':undo,'Mod-y':redo,'Mod-Shift-z':redo,'Mod-b':toggleMark(editorSchema.marks.bold),'Mod-i':toggleMark(editorSchema.marks.italic),'Mod-u':toggleMark(editorSchema.marks.underline),'Enter':splitListItem(editorSchema.nodes.list_item)}),keymap(baseKeymap)
+  keymap({'Mod-z':undo,'Mod-y':redo,'Mod-Shift-z':redo,'Mod-b':toggleMark(editorSchema.marks.bold),'Mod-i':toggleMark(editorSchema.marks.italic),'Mod-u':toggleMark(editorSchema.marks.underline),'Enter':splitListItem(editorSchema.nodes.list_item),'Tab':moveTableCell({grow:editable}),'Shift-Tab':moveTableCell({backward:true})}),keymap(baseKeymap)
  ]});
 }
 export function applyLegalTransaction(state,transaction,base) {
@@ -86,11 +87,12 @@ export function applyLegalTransaction(state,transaction,base) {
  const result=state.applyTransaction(transaction),changed=result.transactions.some(t=>t.docChanged);
  return {state:result.state,document:changed?editorToLegal(result.state.doc,base,{increment:true}):base,changed};
 }
-export function mountLegalEditor(element,initial,{onChange=()=>{},onError=()=>{},readOnly=false}={}) {
+export function mountLegalEditor(element,initial,{onChange=()=>{},onError=()=>{},onSelectionChange=()=>{},readOnly=false}={}) {
  let current=validateLegalDocument(initial),rejectedTransactions=0;
  const view=new EditorView(element,{state:createLegalEditorState(current,{readOnly}),editable:()=>canDirectlyEdit(current)&&!readOnly,transformPastedHTML:html=>cleanPastedHTML(html,element.ownerDocument).innerHTML,attributes:{role:'textbox','aria-label':'Legal document text','aria-multiline':'true',spellcheck:'true'},dispatchTransaction(transaction){
-  try{const next=applyLegalTransaction(view.state,transaction,current);current=next.document;view.updateState(next.state);if(next.changed)onChange(current);}catch(error){rejectedTransactions++;onError(error.message);}
+  try{const next=applyLegalTransaction(view.state,transaction,current);current=next.document;view.updateState(next.state);onSelectionChange(view.state);if(next.changed)onChange(current);}catch(error){rejectedTransactions++;onError(error.message);}
  }});
+ onSelectionChange(view.state);
  return {view,getDocument:()=>current,
  getTextSelection(){
   const native=element.ownerDocument.defaultView.getSelection();
@@ -142,7 +144,7 @@ export function appendSection(title) {return (state,dispatch)=>{
 };}
 export function appendTable(rows=2,columns=2) {return (state,dispatch)=>{
  if(!Number.isInteger(rows)||!Number.isInteger(columns)||rows<1||rows>20||columns<1||columns>10)return false;
- if(dispatch){const children=Array.from({length:rows},()=>editorSchema.nodes.table_row.createChecked({id:newId()},Array.from({length:columns},()=>editorSchema.nodes.table_cell.createChecked({id:newId()},editorSchema.nodes.paragraph.create({id:newId()})))));const table=editorSchema.nodes.table.createChecked({id:newId()},children);dispatch(state.tr.insert(state.doc.content.size,table).scrollIntoView());}return true;
+ if(dispatch){const children=Array.from({length:rows},()=>editorSchema.nodes.table_row.createChecked({id:newId()},Array.from({length:columns},()=>editorSchema.nodes.table_cell.createChecked({id:newId()},editorSchema.nodes.paragraph.create({id:newId()})))));const table=editorSchema.nodes.table.createChecked({id:newId()},children);const position=state.doc.content.size,tr=state.tr.insert(position,table);tr.setSelection(TextSelection.near(tr.doc.resolve(position+3),1));dispatch(tr.scrollIntoView());}return true;
 };}
 function cleanPastedHTML(html,domDocument) {
  const container=domDocument.createElement('div');container.innerHTML=html;

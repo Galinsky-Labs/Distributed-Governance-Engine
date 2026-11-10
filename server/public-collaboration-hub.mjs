@@ -2,6 +2,8 @@ import {randomUUID} from 'node:crypto';
 import {WebSocketServer,WebSocket} from 'ws';
 import {requestCookies} from './account-http.mjs';
 import {createPublicSharedDraft} from '../editor/shared-legal-draft.mjs';
+import {canonicalize} from '../src/integrity-values.mjs';
+import {legalToEditor,editorToLegal} from '../editor/model.mjs';
 
 const UUID='[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}';
 const PATH=new RegExp('^/ws/public/('+UUID+')/('+UUID+')$');
@@ -136,7 +138,11 @@ export function attachPublicCollaborationHub({server,origin,documents,maxRooms=3
      document:snapshot.document,classification:'public',
      ...(persisted?{initialState:new Uint8Array(Buffer.from(persisted.state,'base64url'))}:{})
     });
-    if(JSON.stringify(shared.snapshot().content)!==JSON.stringify(snapshot.document.content)) {
+    // Compare the exact editor representation: JSONB key order and redundant
+    // empty/adjacent text runs are not faithfully represented by ProseMirror.
+    // Actual text, identities, references, structure and formatting must agree.
+    const projected=editorToLegal(legalToEditor(snapshot.document),snapshot.document);
+    if(canonicalize(shared.snapshot().content)!==canonicalize(projected.content)) {
      shared.close();return refuse(socket);
     }
     room={key,tenantId,documentId,shared,document:snapshot.document,version:snapshot.version,

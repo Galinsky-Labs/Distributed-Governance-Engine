@@ -21,6 +21,8 @@ import {
 } from "../src/legal-structure.mjs";
 import { createPublicDraftCache } from "../editor/draft-cache.mjs";
 import "./style.css";
+import { TableTools } from "./table-tools.jsx";
+import { selectedTable } from "../editor/tables.mjs";
 import { SearchTools } from "./search-tools.jsx";
 import { AccountPanel } from "./account-panel.jsx";
 import { GovernanceHome } from "./governance-home.jsx";
@@ -263,6 +265,7 @@ function App() {
   );
   const [generation, setGeneration] = useState(0),
     [title, setTitle] = useState(""),
+    [tableSelection, setTableSelection] = useState(null),
     [status, setStatus] = useState(
       "Changes stay on this page unless you choose device recovery.",
     ),
@@ -290,9 +293,14 @@ function App() {
   const brand = brands[product],
     editable =
       canDirectlyEdit(doc) && mayEdit(record) && !freezing && !freezeUncertain && (!live || liveReady);
+  function selectionChanged(state) {
+    const next = selectedTable(state);
+    setTableSelection(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+  }
   useEffect(() => {
     document.title = brand.name + " — " + doc.metadata.title;
     document.documentElement.style.setProperty("--accent", brand.color);
+    setTableSelection(null);
     saveEnabled.current = false;
     setSave(false);
     setFreezeConfirmed(false);
@@ -317,6 +325,7 @@ function App() {
         origin: window.location.origin,
         readOnly: !mayEdit(record),
         onChange(next) { if (active) setDoc(next); },
+        onSelectionChange(state) { if (active) selectionChanged(state); },
         onStatus(message) {
           if (!active) return;
           setLiveStatus(message);
@@ -382,6 +391,7 @@ function App() {
         } else setStatus("Draft updated. Changes stay on this page.");
       },
       onError: setStatus,
+      onSelectionChange: selectionChanged,
     });
     controller.current = editor;
     return () => {
@@ -434,7 +444,7 @@ function App() {
   }, []);
   function canLeave() {
     if (live) return window.confirm(
-      "This live session has no durable WebSocket acknowledgement. Download a local copy if necessary before leaving. Leave the live editor?",
+      "Live updates without a save acknowledgment may be lost when leaving. Download a local copy if necessary. Leave the live editor?",
     );
     return (
       !session.current?.getState().dirty ||
@@ -474,7 +484,6 @@ function App() {
     if (!record || record.historicalVersion || doc.mode !== "collaboration" ||
         doc.lifecycle !== "draft") return;
     if (live) {
-      if (!canLeave()) return;
       try {
         const fresh = await api("/api/workspaces/" + doc.tenantId + "/documents/" + doc.id);
         openSaved(fresh);
@@ -513,11 +522,8 @@ function App() {
       setStatus("Public local working copy imported. Export JSON to preserve later changes.");
     } catch { setStatus("Import rejected. Use a valid public working-copy JSON export from this Quill product."); }
   }
-  function run(command) {
-    if (!controller.current?.command(command))
-      setStatus(
-        "Place the cursor in a suitable paragraph to use this control.",
-      );
+  function run(command, unavailable = "Place the cursor in a suitable paragraph to use this control.") {
+    if (!controller.current?.command(command)) setStatus(unavailable);
   }
   function citationDetails(current = {}) {
     const title = window.prompt("Optional source title", current.title ?? "");
@@ -879,6 +885,7 @@ function App() {
           )}
         </section>
         <aside className="side-panel">
+          <TableTools selection={tableSelection} editable={editable} run={run} />
           <p className="eyebrow">EDITION CONTROLS</p>
           <h2>From language to decisions</h2>
           <p>

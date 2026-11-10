@@ -99,3 +99,7 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 .numbering-tools label{display:block;font-size:12px;margin:8px 0}.numbering-tools input,.numbering-tools select{display:block;width:100%;min-width:0;padding:6px;border:1px solid var(--border);border-radius:4px;font:inherit}.numbering-preview{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;overflow-wrap:anywhere}.numbering-preview th,.numbering-preview td{border:1px solid var(--border);padding:4px;text-align:left}.numbering-tools ul{padding-left:18px;font-size:12px}.numbering-tools [role=status]:empty{display:none}
 
 .section-tools ul{padding-left:18px;font-size:12px}.section-tools [role=status]:empty{display:none}
+
+.ProseMirror .internal-reference-unresolved{color:#8b3027;background:#fff0e7;text-decoration:underline wavy;text-underline-offset:3px;padding:0 2px}
+
+.reference-tools label{display:block;font-size:12px;margin:8px 0}.reference-tools input,.reference-tools select,.reference-tools textarea{display:block;width:100%;min-width:0;padding:6px;border:1px solid var(--border);border-radius:4px;font:inherit}.reference-tools textarea{resize:vertical}

@@ -2,15 +2,16 @@ import {Schema,DOMParser,DOMSerializer} from 'prosemirror-model';
 import {EditorState,Plugin,NodeSelection,TextSelection} from 'prosemirror-state';
 import {EditorView} from 'prosemirror-view';
 import {baseKeymap,toggleMark} from 'prosemirror-commands';
-import {history,undo,redo} from 'prosemirror-history';
+import {history,undo,redo,closeHistory} from 'prosemirror-history';
 import {keymap} from 'prosemirror-keymap';
 import {wrapInList,splitListItem} from 'prosemirror-schema-list';
-import {validateLegalDocument,legalOutline,normalizeExternalUrl,normalizeCitationMetadata} from '../src/legal-structure.mjs';
+import {validateLegalDocument,legalOutline,normalizeExternalUrl,normalizeCitationMetadata,legalReferenceLabels,legalReferenceText} from '../src/legal-structure.mjs';
 import {findNextText,findTextMatches} from './search.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
 import {moveTableCell} from './tables.mjs';
 import {numberingCapability,prepareNumbering,applyPreparedNumbering} from './numbering.mjs';
 import {sectionMoveCapability,prepareSectionMove,applyPreparedSectionMove} from './sections.mjs';
+import {referencePresentation} from './reference-presentation.mjs';
 
 const attrs={id:{default:null}};
 const blockAttrs=node=>({'data-block-id':node.attrs.id});
@@ -85,7 +86,7 @@ export function identityPlugin(baseDocument) {
 export function createLegalEditorState(document,{readOnly=false}={}) {
  const editable=canDirectlyEdit(document)&&!readOnly;
  return EditorState.create({schema:editorSchema,doc:legalToEditor(document),plugins:[
-  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),numberingCapability(editable),sectionMoveCapability(editable),identityPlugin(document),history(),
+  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),numberingCapability(editable),sectionMoveCapability(editable),referencePresentation(state=>editorToLegal(state.doc,document)),identityPlugin(document),history(),
   keymap({'Mod-z':undo,'Mod-y':redo,'Mod-Shift-z':redo,'Mod-b':toggleMark(editorSchema.marks.bold),'Mod-i':toggleMark(editorSchema.marks.italic),'Mod-u':toggleMark(editorSchema.marks.underline),'Enter':splitListItem(editorSchema.nodes.list_item),'Tab':moveTableCell({grow:editable}),'Shift-Tab':moveTableCell({backward:true})}),keymap(baseKeymap)
  ]});
 }
@@ -104,6 +105,8 @@ export function mountLegalEditor(element,initial,{onChange=()=>{},onError=()=>{}
  previewNumbering:options=>prepareNumbering(view.state,current,options),
  previewSectionMove:direction=>prepareSectionMove(view.state,current,direction),
  applySectionMove(preview){return this.command(applyPreparedSectionMove(preview));},
+ removeReference(){const selected=selectedInternalReference(view.state);return selected?this.command(removeInternalReference(legalReferenceText(selected,legalReferenceLabels(current)))):false;},
+ goToReference(){return goToInternalReference(view.state,view.dispatch,view,current.id);},
  applyNumbering(preview){return this.command(applyPreparedNumbering(preview));},
  getTextSelection(){
   const native=element.ownerDocument.defaultView.getSelection();
@@ -149,6 +152,58 @@ export function removeExternalInline(state,dispatch) {
  if(dispatch)dispatch(state.tr.replaceWith(selected.from,selected.to,state.schema.text(selected.node.attrs.label)).scrollIntoView());
  return true;
 }
+function internalSelection(state){const {selection}=state;return selection instanceof NodeSelection&&['reference','footnote_reference'].includes(selection.node.type.name)?selection:null;}
+export function selectedInternalReference(state){
+ const selection=internalSelection(state);if(!selection)return null;
+ const {targetId,label}=selection.node.attrs;
+ return {kind:selection.node.type.name==='reference'?'reference':'footnote-reference',from:selection.from,targetId,...(label===null?{}:{label})};
+}
+function referenceNode(state,{kind='reference',targetId,label=null}={},existing=null){
+ if(!['reference','footnote-reference'].includes(kind)||typeof targetId!=='string'||label!==null&&typeof label!=='string')return null;
+ let target;state.doc.descendants(node=>{if(node.attrs.id===targetId)target=node;});
+ if(!target&&!(existing?.targetId===targetId&&existing?.kind===kind))return null;
+ if(target&&kind==='footnote-reference'&&target.type.name!=='footnote')return null;
+ if(label!==null&&label.length>1000)return null;
+ const text=label===null?null:label.trim()||null;
+ return state.schema.nodes[kind==='reference'?'reference':'footnote_reference'].createChecked({targetId,label:text});
+}
+export function insertInternalReference(options){return(state,dispatch)=>{
+ if(!state.selection.$from.sameParent(state.selection.$to)||!state.selection.$from.parent.isTextblock)return false;
+ const node=referenceNode(state,options);if(!node)return false;
+ if(dispatch){const position=state.selection.from,tr=state.tr.replaceSelectionWith(node);tr.setSelection(NodeSelection.create(tr.doc,position));dispatch(tr.scrollIntoView());}
+ return true;
+};}
+export function updateInternalReference(options={}){return(state,dispatch)=>{
+ const selection=internalSelection(state);if(!selection)return false;
+ const original=selectedInternalReference(state),node=referenceNode(state,{...original,...options},original);if(!node)return false;
+ if(dispatch){const tr=state.tr.setNodeMarkup(selection.from,node.type,node.attrs,selection.node.marks);tr.setSelection(NodeSelection.create(tr.doc,selection.from));dispatch(tr.scrollIntoView());}
+ return true;
+};}
+export function removeInternalReference(displayText){return(state,dispatch)=>{
+ const selection=internalSelection(state);if(!selection||typeof displayText!=='string'||displayText.length>1000)return false;
+ if(dispatch){const tr=displayText?state.tr.replaceWith(selection.from,selection.to,state.schema.text(displayText,selection.node.marks)):state.tr.delete(selection.from,selection.to);dispatch(tr.scrollIntoView());}
+ return true;
+};}
+export function goToInternalReference(state,dispatch,view,documentId){
+ const selection=internalSelection(state);if(!selection)return false;let position=selection.node.attrs.targetId===documentId?0:null;
+ state.doc.descendants((node,pos)=>{if(node.attrs.id===selection.node.attrs.targetId)position=pos;});if(position===null)return false;
+ if(dispatch)dispatch(state.tr.setSelection(TextSelection.near(state.doc.resolve(Math.min(position+1,state.doc.content.size)),1)).scrollIntoView());
+ view?.focus();return true;
+}
+export function appendDefinition(term,meaning){return(state,dispatch)=>{
+ if(typeof term!=='string'||!term.trim()||term.length>1000||typeof meaning!=='string'||!meaning.trim()||meaning.length>10000)return false;
+ if(dispatch){const node=state.schema.nodes.definition.createChecked({id:newId(),term:term.trim()},state.schema.text(meaning)),position=state.doc.content.size,tr=state.tr.insert(position,node);tr.setSelection(TextSelection.near(tr.doc.resolve(position+1),1));dispatch(closeHistory(tr).scrollIntoView());}
+ return true;
+};}
+export function selectedDefinition(state){const {$from,$to}=state.selection;return $from.sameParent($to)&&$from.parent.type.name==='definition'?{id:$from.parent.attrs.id,term:$from.parent.attrs.term}:null;}
+export function renameDefinition(term){return(state,dispatch)=>{
+ const selected=selectedDefinition(state);if(!selected||typeof term!=='string'||!term.trim()||term.length>1000)return false;
+ if(dispatch)dispatch(closeHistory(state.tr.setNodeMarkup(state.selection.$from.before(),undefined,{...state.selection.$from.parent.attrs,term:term.trim()})).scrollIntoView());return true;
+};}
+export function insertFootnote(text){return(state,dispatch)=>{
+ if(typeof text!=='string'||!text.trim()||text.length>10000||!state.selection.$from.sameParent(state.selection.$to)||!state.selection.$from.parent.isTextblock)return false;
+ if(dispatch){const targetId=newId(),position=state.selection.from,footnote=state.schema.nodes.footnote.createChecked({id:targetId},state.schema.text(text));const tr=state.tr.replaceSelectionWith(state.schema.nodes.footnote_reference.createChecked({targetId,label:null}));tr.insert(tr.doc.content.size,footnote);tr.setSelection(NodeSelection.create(tr.doc,position));dispatch(closeHistory(tr).scrollIntoView());}return true;
+};}
 export function appendSection(title) {return (state,dispatch)=>{
  if(typeof title!=='string'||!title.trim()||title.length>200)return false;
  if(dispatch){const section=editorSchema.nodes.section.createChecked({id:newId(),title:title.trim()},editorSchema.nodes.paragraph.create({id:newId()}));const pos=state.doc.content.size;const tr=state.tr.insert(pos,section);tr.setSelection(TextSelection.near(tr.doc.resolve(pos+2)));dispatch(tr.scrollIntoView());}return true;

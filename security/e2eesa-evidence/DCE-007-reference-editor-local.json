@@ -1,0 +1,60 @@
+{
+  "unit": "DCE-007",
+  "additionalUnits": [
+    "DCE-005",
+    "DCE-006",
+    "DCE-008"
+  ],
+  "scope": "stable-target internal reference controls, authored definitions, atomic footnotes and view-only full-path presentation",
+  "observedAt": "2026-11-10T06:33:34.511117+00:00",
+  "sourceFiles": {
+    "src/legal-structure.mjs": "8ba3de501095f648dcc5854316290678609a8d9913b633b01f9b5116fa01c61a",
+    "editor/model.mjs": "7025ed862f88c46b99f3dc534e374ab4e23dffee049a43b059b91cbce9c92b36",
+    "editor/realtime-editor.mjs": "4e56c9652d2853281f3722eb907a0911b15edc2a779e92278eaa90910e9a11d4",
+    "editor/reference-presentation.mjs": "3753134a027d1ebb83e7cdc1caf279e1319326bb9ad828c3acd1b4df5c37fe7a",
+    "web/app.jsx": "8457760242fe71fa421939c2cbc93d6c17c51fcc9c43c0bfafdb9dcff5630fa8",
+    "web/reference-tools.jsx": "8a92958e3bd28b4f8a4a771586e83e243759bed4a2c9f727d8481168adb3b073",
+    "web/numbering-tools.jsx": "e563806a880e860b41880d69c4eb7371b4a45328d870eef0854429272804649b",
+    "web/section-tools.jsx": "e747e2532def75fa2be3b24ade771d45c8334924aaf1d8cd55b3b267312883a4",
+    "web/style.css": "bd384092764fa21c13e5ece5b0ad0e0bc7037b0cc7c2f18566f1a2402ca311ea",
+    "tests/editor-references.test.mjs": "8ac8563313401a76de84647ad9462947352655b401461ca86cdf44150f205525",
+    "tests/references.browser.mjs": "0abcc780efc0b2b7145ff66909a2826892928a3c97971a3eb3db95f3043c74f9"
+  },
+  "localChecks": {
+    "engineUnitTests": 317,
+    "engineGeneratedCases": 2000,
+    "referenceModelAndDomTests": 13,
+    "authenticatedReferenceBrowserJourneys": 2,
+    "editorBrowserRegressionJourneys": 7,
+    "browser": "Chromium 156.0.8078.79",
+    "savedCreateUpdateUnlinkUndoAndReopen": true,
+    "definitionRenamePreservesTargets": true,
+    "footnoteAndReferenceAtomicUndoRedo": true,
+    "nestedParentPathImpactWithUnchangedLocalHeading": true,
+    "boundedContextAndWellFormedUnicode": true,
+    "viewOnlyLiveRenderingAndNavigationEmitZeroUpdates": true,
+    "actualLiveReferenceInsertionAcknowledged": true,
+    "readonlyNavigationAndImmutableEditingGuards": true,
+    "clipboardAndPlainExportUseVisibleLabels": true,
+    "untrustedClipboardHtmlDoesNotPromoteReferenceIdentity": true,
+    "literalMarkupIsInert": true,
+    "narrowViewportCssPixels": 320
+  },
+  "dependenciesChanged": false,
+  "semanticSchemaChanged": false,
+  "canonicalSourceHashFormatChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "privateApplicationEnabled": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Citation import/provider resolution and verified cross-document semantic clipboard/import remain separate work",
+    "Long automatic exhibit context is visibly shortened while preserving numeric path and the original source/target",
+    "Authored labels remain literal and require author review after target renumbering",
+    "The browser uses signed fixture OIDC/PGlite/local TLS, not hosted production or broad assistive-technology acceptance",
+    "Managed local Chrome blocks standalone file URLs; all pinned-browser and exact-head checks remain mandatory",
+    "Private device/key/recovery and operational acceptance are not supplied by these editor controls"
+  ]
+}

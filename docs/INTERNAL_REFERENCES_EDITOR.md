@@ -1,0 +1,25 @@
+# Internal references, defined terms and footnotes
+
+Reference in the shared toolbar opens a target picker for sections, definitions, exhibits and footnotes. Targets are stable semantic IDs; labels are presentation. An empty optional label uses the target's current derived wording. Authored labels remain literal. Insert/update requires an inline position and a valid newly chosen target; footnote references require a footnote. Existing legacy targets can keep their identity during a label edit, but an unresolved target stays visibly unresolved until explicitly replaced. The picker does not guess which duplicate term the author meant.
+
+Selecting an atom allows Update reference, Go to target, or Remove reference. Navigation changes only selection and is available to read-only readers. Removing retains the currently displayed wording as ordinary text and participates in undo. A missing target cannot be navigated or repaired merely by changing its label. Draft diagnostics and finalization checks retain their existing missing-target, ambiguous-term and definition-cycle behavior.
+
+Definition accepts an authored term and nonempty meaning, appends a definition with a new semantic ID, and places the cursor in it. Rename selected term preserves that ID and updates automatic references. Duplicate terms stay flagged for author review rather than auto-binding by name. Footnote creates a new body at the document end and its reference at the current inline selection in one undoable transaction. Undo/redo restores both and retains the original generated ID. Footnote ordinals are derived from current document order; they do not replace target IDs.
+
+## Derived labels and preview impact
+
+A section reference includes its ancestor numbering path, for example `SEC. 2(a)(1)` or `(II)(A)`. Exhibit context distinguishes sections in exhibits. Long exhibit context is shortened with an ellipsis, preserves the complete numeric path and stays within the existing 1,000 UTF-16-unit label bound without cutting a surrogate pair; the original title and target remain intact. Definition references show the current term, exhibit references their title, ordinary footnote references “Footnote N”, and superscript references the ordinal. Unknown or unnamed legacy targets retain a visible ID fallback; an explicitly authored label overrides automatic text.
+
+The shared `legalReferenceLabels`/`legalReferenceText` helpers also drive plain-text export and clipboard display text. Live and ordinary editor NodeViews refresh after source changes without adding derived strings to semantic JSON or Yjs attributes. The canonical source/hash formats and stored immutable editions are unchanged. This change does not rewrite previously frozen export bytes.
+
+Numbering and move previews now additionally return `referenceChanges` for full derived paths. This catches a move from `SEC. 1(a)` to `SEC. 2(a)` even when the local heading `(a)` did not change. Existing local-heading `affectedReferences`, `renamed`, and numbering fields remain available for compatibility. The UI displays the full-path impact and reminds authors that explicit labels may need review.
+
+Clipboard plain text and HTML contain the current visible reference wording. The existing untrusted HTML paste sanitizer still does not promote those attributes into cross-document semantic identity: pasted wording remains safe text. A verified tenant/document-aware semantic clipboard/import format is separate future work.
+
+## Authority, evidence and remaining scope
+
+The existing controller, immutable-edition and server role/version guards apply. Read-only sources expose navigation and inspection while edits stay disabled. Inline references, definitions and footnotes can use the existing authorized public live editor; rendering and navigation alone do not send updates or create versions. Private UI remains disabled until its separate device/key/recovery prerequisites are satisfied. No credential, dependency, semantic-schema or database migration changes are required.
+
+Model/DOM cases cover derived/export labels, inline creation/update/removal, literal markup safety, missing-target repair, duplicate definitions, rename stability, atomic footnote undo/redo, read-only navigation, cross-paragraph refusal, clipboard sanitization, nested parent-path impact and Unicode-safe display bounds. The authenticated Chromium journeys exercise saved edit/unlink/undo, definition/footnote creation, rename and reopen; numbering/move/undo label updates; actual WSS rendering with zero outgoing writes; an acknowledged live reference insertion; frozen-source navigation/disabled editing and 320-pixel reflow. Fixtures use signed OIDC/PGlite/local TLS, not cloud production acceptance.
+
+DCE-007 remains partial: external citation import/provider resolution, verified import/clipboard formats, more jurisdiction-specific citation presentation, broader assistive-technology checks and deployed acceptance are not supplied by these controls. Do not infer legal execution, unique-person verification, private E2EE or independent security certification from these tests.

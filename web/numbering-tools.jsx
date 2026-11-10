@@ -9,7 +9,7 @@ export function NumberingTools({document:doc,editable,live,prepare,apply}){
  const [profile,setProfile]=useState(doc.metadata.numberingProfile),[parent,setParent]=useState(doc.id),[start,setStart]=useState('1'),[reserved,setReserved]=useState(''),[preview,setPreview]=useState(null),[message,setMessage]=useState('');
  useEffect(()=>{setProfile(doc.metadata.numberingProfile);setPreview(null);setMessage('');if(!scopes.some(scope=>scope.id===parent))setParent(doc.id);},[doc]);
  useEffect(()=>{const rule=doc.metadata.numberingRules?.find(rule=>rule.parentId===parent);setStart(String(rule?.startAt??1));setReserved((rule?.reserved??[]).join(', '));setPreview(null);setMessage('');},[doc,parent]);
- const disabled=!editable||live;
+ const disabled=!editable||live,impacted=preview?.referenceChanges??preview?.affectedReferences??[];
  function change(setter,value){setter(value);setPreview(null);setMessage('');}
  function showPreview(event){
   event.preventDefault();if(disabled)return;
@@ -37,8 +37,8 @@ export function NumberingTools({document:doc,editable,live,prepare,apply}){
   {preview&&<>
    <table className="numbering-preview"><caption>Proposed section labels</caption><thead><tr><th>Section</th><th>Before</th><th>After</th></tr></thead><tbody>{preview.changed.map(row=><tr key={row.id}><td>{preview.after.find(section=>section.id===row.id)?.title}</td><td>{row.from??'New'}</td><td>{row.to}</td></tr>)}</tbody></table>
    {!preview.changed.length&&<p>No displayed section labels change.</p>}
-   <p>{preview.affectedReferences.length} dependent references. Explicit reference labels keep their wording and may need review.</p>
-   {!!preview.affectedReferences.length&&<ul>{preview.affectedReferences.map((ref,index)=><li key={index}>{preview.after.find(section=>section.id===ref.targetId)?.title}: {ref.from} → {ref.to}</li>)}</ul>}
+   <p>{impacted.length} dependent references. Explicit reference labels keep their wording and may need review.</p>
+   {!!impacted.length&&<ul>{impacted.map((ref,index)=><li key={index}>{preview.after.find(section=>section.id===ref.targetId)?.title}: {ref.from} → {ref.to}</li>)}</ul>}
    <button disabled={disabled} onClick={commit}>Apply numbering</button>
   </>}
  </section>;

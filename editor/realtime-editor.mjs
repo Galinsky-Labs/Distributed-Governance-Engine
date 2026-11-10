@@ -5,12 +5,13 @@ import {toggleMark,baseKeymap} from 'prosemirror-commands';
 import {keymap} from 'prosemirror-keymap';
 import {splitListItem} from 'prosemirror-schema-list';
 import {ySyncPlugin,yUndoPlugin,undo as yUndo,redo as yRedo,initProseMirrorDoc,yDocToProsemirror} from 'y-prosemirror';
-import {validateLegalDocument} from '../src/legal-structure.mjs';
+import {validateLegalDocument,legalReferenceLabels,legalReferenceText} from '../src/legal-structure.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
-import {editorSchema,editorToLegal,commands,identityPlugin} from './model.mjs';
+import {editorSchema,editorToLegal,commands,identityPlugin,selectedInternalReference,removeInternalReference,goToInternalReference} from './model.mjs';
 import {findTextMatches,findNextText} from './search.mjs';
 import {moveTableCell} from './tables.mjs';
 import {fixedNumberingMetadata} from './numbering.mjs';
+import {referencePresentation} from './reference-presentation.mjs';
 
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const binary=(code,bytes)=>{const out=new Uint8Array(bytes.length+1);out[0]=code;out.set(bytes,1);return out;};
@@ -84,7 +85,7 @@ export async function mountPublicRealtimeEditor(element,initial,{
   const {doc,mapping}=initProseMirrorDoc(type,editorSchema);
   current=editorToLegal(doc,base);
   state=EditorState.create({schema:editorSchema,doc,plugins:[
-   fixedNumberingMetadata(),identityPlugin(base),ySyncPlugin(type,{mapping}),yUndoPlugin(),
+   fixedNumberingMetadata(),referencePresentation(state=>editorToLegal(state.doc,base)),identityPlugin(base),ySyncPlugin(type,{mapping}),yUndoPlugin(),
    keymap({'Mod-z':yUndo,'Mod-y':yRedo,'Mod-Shift-z':yRedo,
     'Mod-b':toggleMark(editorSchema.marks.bold),
     'Mod-i':toggleMark(editorSchema.marks.italic),
@@ -174,6 +175,8 @@ export async function mountPublicRealtimeEditor(element,initial,{
   onStatus('Public collaboration connected; server save acknowledgement is pending.');
   return Object.freeze({
    view,getDocument:()=>current,
+   removeReference(){const selected=selectedInternalReference(view.state);return selected?this.command(removeInternalReference(legalReferenceText(selected,legalReferenceLabels(current)))):false;},
+   goToReference(){return goToInternalReference(view.state,view.dispatch,view,current.id);},
    getTextSelection() {
     const selection=view.state.selection;
     if(selection.empty||!selection.$from.sameParent(selection.$to)||!selection.$from.parent.isTextblock)

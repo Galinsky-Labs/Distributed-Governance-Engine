@@ -178,7 +178,7 @@ def start(state_path):
             'KC_BOOTSTRAP_ADMIN_USERNAME=quillbootstrap', 'KC_BOOTSTRAP_ADMIN_PASSWORD=' + credentials['admin'],
             'JAVA_OPTS_APPEND=-Djdk.tls.client.protocols=TLSv1.3']) + '\n')
         docker('run', '-d', '--name', base, '--label', LABEL + '=' + nonce, '--network', base,
-               '--user', f'{os.getuid()}:{os.getgid()}', '--memory', '1g',
+               '--user', f'{os.getuid()}:0', '--memory', '2g',
                '--tmpfs', f'/opt/keycloak/data:uid={os.getuid()},gid={os.getgid()},mode=0700',
                '-p', f'127.0.0.1:{port}:8443', '--env-file', str(root / 'keycloak.env'),
                '--mount', f'type=bind,src={root},dst=/run/tls,readonly',
@@ -221,6 +221,33 @@ def start(state_path):
                 raise RuntimeError('Could not create local integration user')
         print('Verified provider discovery and PostgreSQL use TLS 1.3; local test user provisioned.', flush=True)
     except Exception:
+        # Only emit bounded failure evidence, with fixture credentials removed.
+        sensitive = list(locals().get('credentials', {}).values())
+        for name in ['civic.secret', 'charter.secret']:
+            if (root / name).exists():
+                sensitive.append((root / name).read_text().strip())
+        if locals().get('admin_token'):
+            sensitive.append(admin_token)
+        for name in [base, base + '-db']:
+            result = subprocess.run(['docker', '--host=unix:///var/run/docker.sock', 'inspect', '--format',
+                                     'running={{.State.Running}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}}', name],
+                                    env=DOCKER_ENV, capture_output=True, text=True)
+            if result.returncode != 0:
+                continue
+            detail = 'Identity fixture process: ' + result.stdout.strip()
+            print(('::error::' if os.environ.get('GITHUB_ACTIONS') == 'true' else '') + detail, flush=True)
+            logs = subprocess.run(['docker', '--host=unix:///var/run/docker.sock', 'logs', '--tail', '80', name],
+                                  env=DOCKER_ENV, capture_output=True, text=True)
+            text = logs.stdout + logs.stderr
+            for value in sensitive:
+                if value:
+                    text = text.replace(value, '[redacted]')
+            text = re.sub(r'-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----', '[redacted key]', text, flags=re.S)
+            for line in [line for line in text.splitlines() if any(word in line for word in
+                         ['ERROR', 'FATAL', 'Exception', 'Permission denied', 'Key material'])][-5:]:
+                message = 'Provider setup diagnostic: ' + line[:500]
+                message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                print(('::error::' if os.environ.get('GITHUB_ACTIONS') == 'true' else '') + message, flush=True)
         stop(state_path)
         raise
 

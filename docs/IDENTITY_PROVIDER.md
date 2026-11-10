@@ -99,3 +99,12 @@ Upstream basis: `keycloak/keycloak` tag `26.8.2`, specifically
 `login-config-totp.ftl`. No upstream cryptographic primitive or token verifier
 is replaced. This is a prepared/local-tested provider candidate, not a hosted
 service, a completed DCE-002 unit, or independent certification.
+
+The CI provider container is allocated 2 GiB for bootstrap and uses an ordinary
+UID with the upstream image's group-0 file-access convention. That group does
+not grant container UID 0 or host administration rights. This is a startup-test
+allocation, not a measured production capacity claim. The managed local Docker
+daemon runs rootless without cgroups, so local runs do not establish enforcement
+of a memory limit; the dedicated CI runner must validate that environment.
+Failure diagnostics expose only exit/OOM state and bounded error lines after
+removing all generated fixture credentials. Never dump container environments.

@@ -36,7 +36,7 @@ jobs:
       - name: Verify runtime
         run: npm ci --ignore-scripts --no-audit --no-fund && npm run check && npm run test:postgres && npm run build && npm run build:offline
       - name: Verify browser account journey
-        run: node_modules/.bin/browsers install chrome-headless-shell@155.0.8059.84 --path .browser-cache && chmod u+x "$DGE_BROWSER_EXECUTABLE" && npm run test:browser
+        run: node_modules/.bin/browsers install chrome-headless-shell@155.0.8059.84 --path .browser-cache && chmod u+x "$DGE_BROWSER_EXECUTABLE" && node --test --test-concurrency=1 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/github-test-reporter.mjs --test-reporter-destination=stdout tests/*.browser.mjs
       - name: Publish standalone editor previews
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

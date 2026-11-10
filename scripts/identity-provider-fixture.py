@@ -34,7 +34,22 @@ def docker(*args, data=None, capture=False):
         # This build only references public pinned image/configuration. Other
         # commands may process private SQL/env inputs and must not echo stderr.
         if args[0] == 'build':
-            print('Public pinned-image build diagnostic:', error.stderr.decode(errors='replace')[-3000:], flush=True)
+            diagnostic = error.stderr.decode(errors='replace')[-3000:]
+            print('Public pinned-image build diagnostic:', diagnostic, flush=True)
+            # Only fixed categories reach annotations; never forward stderr or
+            # commands that may handle private SQL/environment inputs.
+            categories = []
+            for status in ['401', '403', '404', '408', '429', '500', '502', '503', '504']:
+                if re.search(r'(?<![0-9])' + status + r'(?![0-9])', diagnostic):
+                    categories.append('HTTP_' + status)
+            for token, category in [('no space left', 'STORAGE_FULL'), ('out of memory', 'OUT_OF_MEMORY'),
+                                    ('exit code: 137', 'PROCESS_KILLED_137'), ('permission denied', 'PERMISSION_DENIED'),
+                                    ('failed to resolve', 'IMAGE_RESOLUTION'), ('TLS handshake', 'TLS_HANDSHAKE'),
+                                    ('i/o timeout', 'NETWORK_TIMEOUT')]:
+                if token.lower() in diagnostic.lower():
+                    categories.append(category)
+            reason = ','.join(categories) if categories else 'BUILD_COMMAND_FAILED'
+            print('::error title=Pinned identity image build::Exit ' + str(error.returncode) + '; ' + reason, flush=True)
         raise
     return result.stdout.decode().strip() if capture else None
 

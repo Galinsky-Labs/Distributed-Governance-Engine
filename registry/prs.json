@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 29,
+  "roadmapVersion": 30,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T05:42:24Z",
+  "observedAt": "2026-11-10T06:04:39Z",
   "units": [
     {
       "id": "DCE-001",
@@ -151,7 +151,8 @@
         58,
         60,
         61,
-        62
+        62,
+        63
       ]
     },
     {
@@ -1883,16 +1884,31 @@
       "id": 5236471312,
       "number": 62,
       "title": "DCE-008: Confirm and coalesce public live edits before sending more",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/62",
       "createdAt": "2026-11-10T05:42:13Z",
-      "updatedAt": "2026-11-10T05:42:13Z",
+      "updatedAt": "2026-11-10T05:48:23Z",
+      "mergedAt": "2026-11-10T05:48:23Z",
+      "closedAt": "2026-11-10T05:48:23Z",
+      "draft": false,
+      "headSha": "9d596c8d7f03c4b5136c09ac5fd61ca6e1dc4a32",
+      "baseRef": "main",
+      "mergeCommitSha": "dba925ba2aac23ea19176c152c3e4ea338ec6696"
+    },
+    {
+      "id": 5236672709,
+      "number": 63,
+      "title": "DCE-005: Verify document reopen before interacting with its editor",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/63",
+      "createdAt": "2026-11-10T06:04:09Z",
+      "updatedAt": "2026-11-10T06:04:09Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "78b35a25cd5b53e040f4731a4cf3fbe038d3d853",
+      "headSha": "65245524b52d97febb364e8b1a5f77ab748c7a1c",
       "baseRef": "main",
-      "mergeCommitSha": "a6a96558c97f89b18809b8bc390add7a691d7378"
+      "mergeCommitSha": "37bdf9f3750ad80a2767fa24569ba1362d437a24"
     }
   ]
 }

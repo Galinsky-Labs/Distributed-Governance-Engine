@@ -26,3 +26,9 @@ The shared engine now exposes \`sealPrivateYjsUpdate\` and \`openPrivateYjsUpdat
 \`tests/private-collaboration-crypto.test.mjs\` covers authenticated Yjs roundtrips, confidentiality of wire payload, nonce separation, wrong key, altered ciphertext/nonce/sequence, wrong context, oversized inputs, invalid envelope, and non-extractable-key policy. It is **unit evidence**, not an independently audited MLS implementation or production E2EE acceptance.
 
 Source status: **partial implementation**. DCE-003/DCE-008 operational acceptance remains unverified.
+
+The pinned OpenMLS endpoint contribution now exercises standard group messages,
+complete client-pinned rosters and member-removal rotation natively and in isolated
+browsers. See MLS_ENDPOINT.md for actual scope and integration gates. Production
+private paths, durable encrypted state, device/pin distribution, recovery and
+complete DCE-003/DCE-008 acceptance remain unverified.

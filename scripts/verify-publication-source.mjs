@@ -3,9 +3,9 @@ import {pathToFileURL} from 'node:url';
 // Publication happens only after the existing verification workflow has passed
 // on this exact main-branch push. Missing/running/failed evidence cannot publish.
 export async function verifyPublicationSource({repository, sha, token, request = fetch,
-  wait = ms => new Promise(resolve => setTimeout(resolve, ms)), attempts = 120}) {
+  wait = ms => new Promise(resolve => setTimeout(resolve, ms)), attempts = 240}) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? '') ||
-      !/^[a-f0-9]{40}$/.test(sha ?? '') || !token || !Number.isInteger(attempts) || attempts < 1 || attempts > 120)
+      !/^[a-f0-9]{40}$/.test(sha ?? '') || !token || !Number.isInteger(attempts) || attempts < 1 || attempts > 240)
     throw Error('Valid repository, exact source SHA and scoped token required');
   const url = `https://api.github.com/repos/${repository}/actions/workflows/verify.yml/runs?event=push&head_sha=${sha}&per_page=100`;
   for (let attempt = 0; attempt < attempts; attempt++) {

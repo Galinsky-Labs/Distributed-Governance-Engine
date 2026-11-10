@@ -11,3 +11,5 @@ artifacts/
 .browser-cache/
 __pycache__/
 deploy/identity/*.env
+
+crypto/mls-endpoint/target/

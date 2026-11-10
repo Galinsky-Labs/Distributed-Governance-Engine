@@ -95,3 +95,9 @@ Hosted recovery drills, physical devices, private-content
 recovery and full DCE-002 acceptance remain unverified. No new deployment
 credential is required beyond the configured issuer/client, independent session
 and state keys, database/TLS credentials and explicit passkey policy.
+
+The pinned OpenMLS endpoint contribution now exercises standard group messages,
+complete client-pinned rosters and member-removal rotation natively and in isolated
+browsers. See MLS_ENDPOINT.md for actual scope and integration gates. Production
+private paths, durable encrypted state, device/pin distribution, recovery and
+complete DCE-003/DCE-008 acceptance remain unverified.

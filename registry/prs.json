@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 22,
+  "roadmapVersion": 23,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T02:51:59Z",
+  "observedAt": "2026-11-10T03:23:09Z",
   "units": [
     {
       "id": "DCE-001",
@@ -87,7 +87,8 @@
         24,
         30,
         32,
-        33
+        33,
+        56
       ]
     },
     {
@@ -226,7 +227,8 @@
         30,
         34,
         35,
-        36
+        36,
+        56
       ]
     },
     {
@@ -1764,16 +1766,31 @@
       "id": 5234934835,
       "number": 55,
       "title": "DCE-002: restore provider sign-in through recovery and an enrolled passkey",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/55",
       "createdAt": "2026-11-10T02:51:30Z",
-      "updatedAt": "2026-11-10T02:51:30Z",
+      "updatedAt": "2026-11-10T02:54:24Z",
+      "mergedAt": "2026-11-10T02:54:23Z",
+      "closedAt": "2026-11-10T02:54:24Z",
+      "draft": false,
+      "headSha": "e6f23089cb7189a2065c5d95cedb7388d64c7da2",
+      "baseRef": "main",
+      "mergeCommitSha": "8d896c8706bfbc0fd08c0082cd7300416d070ee2"
+    },
+    {
+      "id": 5235221161,
+      "number": 56,
+      "title": "DCE-003: integrate pinned MLS endpoint protocol with authorized rosters",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/56",
+      "createdAt": "2026-11-10T03:22:49Z",
+      "updatedAt": "2026-11-10T03:22:49Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "ba3fea7fae306cde984e5fb9446854f682616e3f",
+      "headSha": "f144e490be238e946b0cf26518230f2bc4729dbe",
       "baseRef": "main",
-      "mergeCommitSha": "92d8d34ea60abd5641b443a113933b132bd62a0b"
+      "mergeCommitSha": "99bdff84a490c7d8086afc211e502ca842b3e650"
     }
   ]
 }

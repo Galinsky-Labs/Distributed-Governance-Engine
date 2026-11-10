@@ -18,7 +18,9 @@
     "migrate:identity": "node scripts/migrate-identity.mjs",
     "test:browser": "node --test --test-concurrency=1 tests/*.browser.mjs",
     "migrate": "node scripts/migrate-identity.mjs",
-    "build:offline": "node scripts/build-offline.mjs"
+    "build:offline": "node scripts/build-offline.mjs",
+    "build:mls": "node scripts/build-mls.mjs",
+    "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",

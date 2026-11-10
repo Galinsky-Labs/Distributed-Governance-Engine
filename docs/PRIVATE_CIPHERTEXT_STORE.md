@@ -25,3 +25,9 @@ Group key distribution and rotation, interoperable MLS, device proof, member-rem
 Before enabling a private UI or server path: integrate a reviewed client MLS/device-key implementation, verified hardware-passkey provider, authoritative key epochs bound to workspace member history, ciphertext-only attachments and Yjs relaying, membership revocation/rekey tests, interop/reconnect/concurrency/load suites, backups and deployed TLS/routing evidence.
 
 **Status: partial. No production deployment, private group E2EE acceptance or third-party certification.**
+
+The pinned OpenMLS endpoint contribution now exercises standard group messages,
+complete client-pinned rosters and member-removal rotation natively and in isolated
+browsers. See MLS_ENDPOINT.md for actual scope and integration gates. Production
+private paths, durable encrypted state, device/pin distribution, recovery and
+complete DCE-003/DCE-008 acceptance remain unverified.

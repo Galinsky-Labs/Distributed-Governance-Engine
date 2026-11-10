@@ -24,3 +24,9 @@ Only owner/admin/editor OIDC members can append. Device-authorized current membe
 Unit/PGlite tests include real Yjs/WebCrypto ciphertext round trips, sender replay, conflicting reuse, tampering, current-epoch isolation, member removal, tenant isolation, storage budget rollback, pagination, unprivileged SQL history immutability and HTTP origin/CSRF/extra-plaintext-field rejection.
 
 Still required: interoperable audited MLS implementation (key exchange, membership credentials, epoch updates/removals, backups, rekey, sender authentication), persistent device-binding protocol, private websocket state-vector and encrypted snapshot protocol, multi-instance coordination, real browsers/physical authenticators, distributed load tests and a production deployment. No E2E encryption or production readiness claim is made by this increment.
+
+The pinned OpenMLS endpoint contribution now exercises standard group messages,
+complete client-pinned rosters and member-removal rotation natively and in isolated
+browsers. See MLS_ENDPOINT.md for actual scope and integration gates. Production
+private paths, durable encrypted state, device/pin distribution, recovery and
+complete DCE-003/DCE-008 acceptance remain unverified.

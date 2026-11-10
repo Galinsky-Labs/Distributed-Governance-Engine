@@ -1,0 +1,77 @@
+{
+  "unit": "DCE-003",
+  "additionalUnit": "DCE-008",
+  "scope": "endpoint-only RFC 9420 native/Wasm protocol integration; private application paths disabled",
+  "observedAt": "2026-11-10T03:22:13.698704+00:00",
+  "sourceFiles": {
+    "crypto/mls-endpoint/Cargo.toml": "0ce3105f75b3e462213667c646ecdbc61a7c4693cb8b2ae4444eacc05d1e3817",
+    "crypto/mls-endpoint/Cargo.lock": "91e173531d622bc1fe4efed5aefb7f3e76c6610826706fe79dbbd06fa50c0ecc",
+    "crypto/mls-endpoint/src/lib.rs": "b4d33a3afd14151a9c6fcdc2b0aa452fdaa56be7fb4ca9e27fc9e78f0efb3617",
+    "crypto/mls-endpoint/src/browser.rs": "9ab2a74ab6d7e2729b8be691dda1d859ef41f669f15026de955008a734397cd2",
+    "crypto/mls-endpoint/tests/protocol.rs": "34ea9682fe7c13457c42ac05ad78d64845b14becbfc84f67ddc246f8af252a7b",
+    "scripts/install-mls-tools.py": "3839d8826a3bbc31891578ef26f26375435fb489e57461ffb1518328ff2ace54",
+    "scripts/verify-mls-build.mjs": "03804e49e97d0f756fe4adece26a40184fa06b4ac4e6e828bad9020f3c004fff",
+    "scripts/build-mls.mjs": "68b1d00e54ed1b9b8f3d0d88bc4f083b083bed2170624f97fbddb31a3c059fbf",
+    "tests/mls-endpoint.integration.mjs": "a0a6f24d5b915aeddc7d0c80bc3172122b862322347e31bcce9011156ae3182e",
+    "tests/support/mls-fixture.mjs": "2a17fd341b07969027e0a578162b5c1ff2237ee5cdf3e6699f7d3d27b6bd43e2",
+    ".github/workflows/verify.yml": "aec9f04737cbf0495e9d480433504a0feeb01c5f477c0756b371f5f7734ea9b9",
+    ".github/workflows/publish-candidates.yml": "b42e26752127de1cd3c4268a03e3b7e5427cae8bc1f71a30e2b2e433b8de241c",
+    "scripts/verify-publication-source.mjs": "b50eb2f0c3ebd0cf5e945008fa3d62ecdf47a746b8266fdaec55d9b218bf212b"
+  },
+  "upstream": {
+    "repository": "https://github.com/openmls/openmls",
+    "revision": "28369d5b48608bef4ddf8371d91503b0f3852bb3",
+    "releaseStatus": "pinned post-release maintenance source, not a new stable release claim",
+    "rust": "1.94.0",
+    "wasmBindgen": "0.2.130",
+    "suite": "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519"
+  },
+  "localChecks": {
+    "engineUnitTests": 261,
+    "engineGeneratedCases": 2000,
+    "nativeProtocolTests": 8,
+    "malformedWireCorpusInputs": 2048,
+    "isolatedBrowserContexts": 3,
+    "browserProtocolJourneys": 1,
+    "browser": "Chromium 156.0.8078.79",
+    "nativeClippyWarningsDenied": true,
+    "wasmClippyWarningsDenied": true,
+    "lockedNativeAndWasmBuilds": true,
+    "upstreamToolArchiveHashesVerified": true,
+    "cargoAudit": {
+      "version": "0.22.2",
+      "database": {
+        "advisory-count": 1430,
+        "last-commit": "d9cb059f3217db87aeccd190b81eaffe8cc29cb9",
+        "last-updated": "2026-11-09T17:13:08+01:00"
+      },
+      "vulnerabilities": 0,
+      "informationalWarnings": [
+        "RUSTSEC-2026-0173: proc-macro-error2 build macro unmaintained"
+      ],
+      "exclusions": []
+    }
+  },
+  "securityReview": {
+    "type": "author source review, not independent cryptographic review",
+    "boundaries": [
+      "client-pinned full roster/group scope and signed key-package binding",
+      "standard upstream protocol, ciphertext authentication, sender identity, replay and removal rotation",
+      "transactional private receive/Welcome state promotion after successful protocol and roster validation",
+      "private-state/key non-export, bounded inputs, fixed suite, no draft/sensitive-logging/test features",
+      "endpoint-owned group handles and local explicit pending commit delivery/merge",
+      "old vulnerable registry crypto graph rejected, maintained upstream fix retested"
+    ],
+    "blockingFindings": []
+  },
+  "ciVerified": false,
+  "productionDeployment": false,
+  "privateApplicationEnabled": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Ephemeral endpoint state; encrypted crash-safe persistence, anti-rollback, device/pin verification, backups and recovery remain incomplete",
+    "No server/private editor/ledger activation or paid infrastructure",
+    "No cross-implementation, physical-device, full E2EE, forward-secrecy/PCS, memory-erasure, compromised-service authorization or conformance acceptance",
+    "Unmaintained build-macro advisory retained without exclusion; production assessment remains pending"
+  ]
+}

@@ -10,6 +10,7 @@ import {validateTextSelection} from '../src/text-selections.mjs';
 import {editorSchema,editorToLegal,commands,identityPlugin} from './model.mjs';
 import {findTextMatches,findNextText} from './search.mjs';
 import {moveTableCell} from './tables.mjs';
+import {fixedNumberingMetadata} from './numbering.mjs';
 
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const binary=(code,bytes)=>{const out=new Uint8Array(bytes.length+1);out[0]=code;out.set(bytes,1);return out;};
@@ -77,7 +78,7 @@ export async function mountPublicRealtimeEditor(element,initial,{
   const {doc,mapping}=initProseMirrorDoc(type,editorSchema);
   current=editorToLegal(doc,base);
   state=EditorState.create({schema:editorSchema,doc,plugins:[
-   identityPlugin(base),ySyncPlugin(type,{mapping}),yUndoPlugin(),
+   fixedNumberingMetadata(),identityPlugin(base),ySyncPlugin(type,{mapping}),yUndoPlugin(),
    keymap({'Mod-z':yUndo,'Mod-y':yRedo,'Mod-Shift-z':yRedo,
     'Mod-b':toggleMark(editorSchema.marks.bold),
     'Mod-i':toggleMark(editorSchema.marks.italic),

@@ -27,3 +27,7 @@ This is browser evidence for the current Chromium/fixture-provider/PostgreSQL pa
 ## Table editing and concurrent text
 
 See [Table editing](TABLE_EDITING.md) for limits, structural commands, stable-ID behavior, read-only enforcement and authenticated two-browser WSS evidence. The contextual controls stay in the side panel so selecting a cell does not move the editor under the pointer. Narrow-layout and print behavior remain covered by the browser journey.
+
+## Legal numbering settings
+
+[Previewed numbering settings](NUMBERING_EDITOR.md) adds profile, scoped starting ordinals and reserved numbers to the ordinary draft editor, with reference-impact preview and one-step undo/redo. Settings use the existing authenticated save/version path and remain disabled in live and immutable editors.

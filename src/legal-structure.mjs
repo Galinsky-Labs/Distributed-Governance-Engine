@@ -264,10 +264,10 @@ export function legalOutline(document) {
 }
 
 /** Preview only: never alters document source, ballots, or adopted editions. */
-export function previewLegalNumbering(document,numberingRules) {
+export function previewLegalNumbering(document,numberingRules,{numberingProfile}={}) {
  const doc=validateLegalDocument(document);
  const before=legalOutline(doc);
- const candidate=validateLegalDocument({...structuredClone(doc),metadata:{...structuredClone(doc.metadata),numberingRules}});
+ const candidate=validateLegalDocument({...structuredClone(doc),metadata:{...structuredClone(doc.metadata),numberingRules,...(numberingProfile===undefined?{}:{numberingProfile})}});
  const after=legalOutline(candidate);
  const original=new Map(before.map(item=>[item.id,item]));
  const changed=after.filter(item=>original.get(item.id)?.label!==item.label).map(item=>({
@@ -287,9 +287,9 @@ export function previewLegalNumbering(document,numberingRules) {
 }
 
 /** Replace draft numbering preferences without modifying any semantic IDs or text. */
-export function applyLegalNumberingRules(document,numberingRules) {
+export function applyLegalNumberingRules(document,numberingRules,{numberingProfile}={}) {
  const doc=validateLegalDocument(document);requireDraft(doc);
- const next={...structuredClone(doc),revision:doc.revision+1,metadata:{...structuredClone(doc.metadata),numberingRules}};
+ const next={...structuredClone(doc),revision:doc.revision+1,metadata:{...structuredClone(doc.metadata),numberingRules,...(numberingProfile===undefined?{}:{numberingProfile})}};
  const result=validateLegalDocument(next);
  legalOutline(result); // Reject styles, ordinals and reservations that cannot render.
  return result;

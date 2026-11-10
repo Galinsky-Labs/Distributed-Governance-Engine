@@ -9,12 +9,13 @@ import {validateLegalDocument,legalOutline,normalizeExternalUrl,normalizeCitatio
 import {findNextText,findTextMatches} from './search.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
 import {moveTableCell} from './tables.mjs';
+import {numberingCapability,prepareNumbering,applyPreparedNumbering} from './numbering.mjs';
 
 const attrs={id:{default:null}};
 const blockAttrs=node=>({'data-block-id':node.attrs.id});
 export const editorSchema=new Schema({
  nodes:{
-  doc:{content:'block+'},
+  doc:{content:'block+',attrs:{numberingProfile:{default:null},numberingRules:{default:null},numberingRulesPresent:{default:null}}},
   text:{group:'inline'},
   paragraph:{group:'block',content:'inline*',attrs,parseDOM:[{tag:'p'}],toDOM:node=>['p',blockAttrs(node),0]},
   section:{group:'block',content:'(section|paragraph|legal_list|table|definition|exhibit)+',attrs:{...attrs,title:{default:'Section'},numberLabel:{default:''}},defining:true,toDOM:node=>['section',blockAttrs(node),['h2',{contenteditable:'false'},(node.attrs.numberLabel?node.attrs.numberLabel+' ':'')+node.attrs.title],['div',{'data-section-content':'true'},0]]},
@@ -59,10 +60,15 @@ function fromNode(node) {
  const children=[];node.forEach(child=>children.push(fromNode(child)));
  return {...base,...(['paragraph','definition','footnote'].includes(kind)?{inlines:children}:{children})};
 }
-export function legalToEditor(document) {const doc=validateLegalDocument(document),labels=new Map(legalOutline(doc).map(x=>[x.id,x.label]));return editorSchema.nodes.doc.createChecked(null,doc.content.map(node=>toNode(node,labels)));}
+export function legalToEditor(document) {const doc=validateLegalDocument(document),labels=new Map(legalOutline(doc).map(x=>[x.id,x.label]));return editorSchema.nodes.doc.createChecked({numberingProfile:doc.metadata.numberingProfile,numberingRules:doc.metadata.numberingRules??[],numberingRulesPresent:Object.hasOwn(doc.metadata,'numberingRules')},doc.content.map(node=>toNode(node,labels)));}
 export function editorToLegal(doc,base,{increment=false}={}) {
  const content=[];doc.forEach(node=>content.push(fromNode(node)));
- return validateLegalDocument({...structuredClone(base),revision:base.revision+(increment?1:0),content});
+ const metadata={...structuredClone(base.metadata)};
+ if(doc.attrs.numberingProfile!==null)metadata.numberingProfile=doc.attrs.numberingProfile;
+ if(doc.attrs.numberingRulesPresent===false)delete metadata.numberingRules;
+ else if(doc.attrs.numberingRulesPresent===true)metadata.numberingRules=structuredClone(doc.attrs.numberingRules);
+ else if(doc.attrs.numberingRules!==null)metadata.numberingRules=structuredClone(doc.attrs.numberingRules);
+ return validateLegalDocument({...structuredClone(base),metadata,revision:base.revision+(increment?1:0),content});
 }
 export const canDirectlyEdit=document=>document.mode==='collaboration'&&document.lifecycle==='draft';
 export function identityPlugin(baseDocument) {
@@ -78,7 +84,7 @@ export function identityPlugin(baseDocument) {
 export function createLegalEditorState(document,{readOnly=false}={}) {
  const editable=canDirectlyEdit(document)&&!readOnly;
  return EditorState.create({schema:editorSchema,doc:legalToEditor(document),plugins:[
-  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),identityPlugin(document),history(),
+  new Plugin({filterTransaction:tr=>editable||!tr.docChanged}),numberingCapability(editable),identityPlugin(document),history(),
   keymap({'Mod-z':undo,'Mod-y':redo,'Mod-Shift-z':redo,'Mod-b':toggleMark(editorSchema.marks.bold),'Mod-i':toggleMark(editorSchema.marks.italic),'Mod-u':toggleMark(editorSchema.marks.underline),'Enter':splitListItem(editorSchema.nodes.list_item),'Tab':moveTableCell({grow:editable}),'Shift-Tab':moveTableCell({backward:true})}),keymap(baseKeymap)
  ]});
 }
@@ -94,6 +100,8 @@ export function mountLegalEditor(element,initial,{onChange=()=>{},onError=()=>{}
  }});
  onSelectionChange(view.state);
  return {view,getDocument:()=>current,
+ previewNumbering:options=>prepareNumbering(view.state,current,options),
+ applyNumbering(preview){return this.command(applyPreparedNumbering(preview));},
  getTextSelection(){
   const native=element.ownerDocument.defaultView.getSelection();
   let selection=view.state.selection;

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "unit": "DCE-019",
+  "kind": "partial local source evidence",
+  "observedAt": "2026-11-10",
+  "sourceDigests": {
+    "src/revision-comparison.mjs": "37544a0e58b80756831db1f9ebf8b14b9ab6615bbd574e0c42712614b57629af",
+    "web/revision-comparison.jsx": "8cb499d9ac44759eb707279cc42641ec8d8216025c9758d6f53532f23c849210",
+    "web/app.jsx": "05c74f49a03076088295b32036ad010d0f6ca01600209099d2bc19e3e0254711",
+    "web/style.css": "211a39cae77cb588a8b35b294c9f0c20b8f34da5dbd34a0603156daa91d34653",
+    "tests/revision-comparison.test.mjs": "de94f5ec836924f8a18ab11e0c82413284c06ee7f9a954576d98e3854a29a3e4",
+    "tests/revision-comparison.browser.mjs": "017c3aae87e164a0aeafe806f59c3b9105628dc09b50ad916a79b96eab3154a2"
+  },
+  "localChecks": {
+    "engineUnitTests": 347,
+    "engineGeneratedCases": 2000,
+    "comparisonModelTests": 19,
+    "authenticatedAndAnonymousBrowserJourney": 1,
+    "browser": "Chromium 156.0.8078.79",
+    "exactSnapshotAndHistoryContentChecksums": true,
+    "stableIdAndLinearithmicSiblingComparison": true,
+    "formatAndDerivedReferenceChanges": true,
+    "tenThousandSiblingBoundary": true,
+    "unicodeSafeExactReconstruction": true,
+    "downloadedVersionAndDigestBoundReport": true,
+    "unchangedEditorAndZeroComparisonWrites": true,
+    "delayedResponseCannotRestoreOldSelection": true,
+    "alteredChecksumRejectedBeforeDisplayOrDownload": true,
+    "nativeModalEscapeFocusReturn": true,
+    "viewportCssPixels": 320,
+    "changeOrderIndependentOfSourceObjectKeyOrder": true
+  },
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "authorityChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "One contiguous replacement per node; not a word-minimal or page-layout redline",
+    "Checksums do not authenticate the publisher or independent anchors/signatures",
+    "Public source only; report retains prior wording and is not a redaction tool",
+    "Restoration, branches, attribution, private history and hosted acceptance remain outstanding"
+  ]
+}

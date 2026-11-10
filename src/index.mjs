@@ -1,6 +1,7 @@
 export * from './integrity.mjs';
 export * from './governance.mjs';
 export * from './vote-policy-settings.mjs';
+export * from './revision-comparison.mjs';
 export * from './governance-snapshots.mjs';
 export * from './decision-verification.mjs';
 export * from './documents.mjs';

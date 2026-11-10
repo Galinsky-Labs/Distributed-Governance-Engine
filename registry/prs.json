@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 28,
+  "roadmapVersion": 29,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T05:17:10Z",
+  "observedAt": "2026-11-10T05:42:24Z",
   "units": [
     {
       "id": "DCE-001",
@@ -150,7 +150,8 @@
         44,
         58,
         60,
-        61
+        61,
+        62
       ]
     },
     {
@@ -238,7 +239,8 @@
         57,
         58,
         59,
-        60
+        60,
+        62
       ]
     },
     {
@@ -1866,16 +1868,31 @@
       "id": 5236248526,
       "number": 61,
       "title": "DCE-006: Preview and apply section hierarchy moves",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/61",
       "createdAt": "2026-11-10T05:16:46Z",
-      "updatedAt": "2026-11-10T05:16:46Z",
+      "updatedAt": "2026-11-10T05:36:14Z",
+      "mergedAt": "2026-11-10T05:36:14Z",
+      "closedAt": "2026-11-10T05:36:14Z",
+      "draft": false,
+      "headSha": "e0558a2c2c457078f7ed11bb776c11b631d62a57",
+      "baseRef": "main",
+      "mergeCommitSha": "7eeed72fa93ab9ec3a96e9dec2778ed62da9006e"
+    },
+    {
+      "id": 5236471312,
+      "number": 62,
+      "title": "DCE-008: Confirm and coalesce public live edits before sending more",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/62",
+      "createdAt": "2026-11-10T05:42:13Z",
+      "updatedAt": "2026-11-10T05:42:13Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "16476ac772ed8663f3239ec2d5507e0ef3fed4ce",
+      "headSha": "78b35a25cd5b53e040f4731a4cf3fbe038d3d853",
       "baseRef": "main",
-      "mergeCommitSha": "b96fb8409b6e93f48d80a576ef6c3bc6461a4e11"
+      "mergeCommitSha": "a6a96558c97f89b18809b8bc390add7a691d7378"
     }
   ]
 }

@@ -1,0 +1,36 @@
+{
+  "unit": "DCE-008",
+  "scope": "serialized bounded authenticated public room admission and concurrent initialization limits",
+  "observedAt": "2026-11-10T04:54:55.269984+00:00",
+  "sourceFiles": {
+    "server/public-collaboration-hub.mjs": "af72bde9430a2d404fd329e53910c03e6c4f299deea47c57e1230e3eec5420f0",
+    "tests/public-collaboration-hub.test.mjs": "0ac129f0a53ac49d5d888f06028c2645e0de93d88bfbd67ed5b3f1b9e00aa082"
+  },
+  "localChecks": {
+    "engineUnitTests": 279,
+    "engineGeneratedCases": 2000,
+    "publicHubTests": 12,
+    "actualTlsWebSockets": true,
+    "deterministicColdRoomHistoryRaceReproducedBeforeFix": true,
+    "differentDocumentRoomBudgetRaceReproducedBeforeFix": true,
+    "queuedRevocation": true,
+    "initializationFailureReleasesTurn": true,
+    "pendingCapacityRetry": true,
+    "shutdownWhileInitializing": true,
+    "authenticatedTableBrowserJourneys": 2,
+    "browser": "Chromium 156.0.8078.79"
+  },
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "privateApplicationEnabled": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "In-process admission serialization and budgets only; multiple replicas/fleet limits remain unimplemented",
+    "Admission cannot cancel a database operation already in progress; existing configured database timeouts still apply",
+    "Native real-TLS WebSockets use fixture document authorization for deterministic race scheduling; browser regression uses real application store with signed fixture OIDC/PGlite",
+    "No private device authority, key rotation, reconnect or high-load acceptance"
+  ]
+}

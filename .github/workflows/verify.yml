@@ -47,6 +47,37 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  identity-provider:
+    name: Verify real OIDC identity provider
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DGE_BROWSER_EXECUTABLE: ${{ github.workspace }}/.browser-cache/chrome-headless-shell/linux-155.0.8059.84/chrome-headless-shell-linux64/chrome-headless-shell
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .browser-cache
+          key: chrome-headless-shell-linux-155.0.8059.84
+      - name: Build actual engine client and install pinned browser
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          node_modules/.bin/browsers install chrome-headless-shell@155.0.8059.84 --path .browser-cache
+          chmod u+x "$DGE_BROWSER_EXECUTABLE"
+      - name: Verify real provider TLS, password and OTP through the engine
+        env:
+          DGE_IDENTITY_TEST_STATE: ${{ runner.temp }}/quill-identity-state.json
+        run: |
+          set -euo pipefail
+          trap 'python3 scripts/identity-provider-fixture.py --state "$DGE_IDENTITY_TEST_STATE" --stop' EXIT
+          python3 scripts/identity-provider-fixture.py --state "$DGE_IDENTITY_TEST_STATE"
+          node scripts/run-identity-provider-test.mjs
+
   image:
     name: Build actual governance runtime
     runs-on: ubuntu-latest

@@ -10,6 +10,7 @@ Reusable legal-document drafting, proposal, deliberation and governance engine.
 - [Private ciphertext store](docs/PRIVATE_CIPHERTEXT_STORE.md), [encrypted update ledger](docs/PRIVATE_UPDATE_LEDGER.md), [private WebSocket relay](docs/PRIVATE_COLLABORATION_WSS.md) and [client encryption frames](docs/PRIVATE_COLLABORATION_FRAMES.md)
 - [Operations and credential requirements](docs/OPERATIONS.md), [candidate production runbook](docs/PRODUCTION_RUNBOOK.md), and [public decision receipt verification](docs/DECISION_RECEIPT.md)
 - [Identity and organization access](docs/IDENTITY_FOUNDATION.md), [account HTTP/UI](docs/ACCOUNT_HTTP.md)
+- [New TLS-only Keycloak provider candidate](docs/IDENTITY_PROVIDER.md) and [native passkeys](docs/PASSKEY_VERIFIER.md)
 - [Saved public documents and failure recovery](docs/PUBLIC_DOCUMENTS.md)
 - [Exact text proposals](docs/TEXT_PROPOSALS.md) and [structured discussion/rating](docs/STRUCTURED_DISCUSSION.md)
 - [Repository agent instructions](AGENTS.md)

@@ -1,0 +1,71 @@
+{
+  "unit": "DCE-003",
+  "additionalUnit": "DCE-008",
+  "scope": "endpoint-only encrypted MLS state with transactional continuity and durable inbox/outbox",
+  "observedAt": "2026-11-10T04:03:15.902227+00:00",
+  "sourceFiles": {
+    "crypto/mls-endpoint/Cargo.toml": "e83953525be6d82cfec1dd15b185cf4e1f19484ca7d4b5b5b921a555b844a622",
+    "crypto/mls-endpoint/Cargo.lock": "e3985884fbcf65c960d98d0be0277c92f756af5fa5c00214951a30e3f1b5543c",
+    "crypto/mls-endpoint/src/lib.rs": "8543fc68a3b8a7434f02f15efda66002d1d552cc11cc3c5e53ca8adca084736c",
+    "crypto/mls-endpoint/src/state.rs": "c03234c9d29f7dc102999b768df078cacd2cb0482ee9930b51b90ffebfd23ca0",
+    "crypto/mls-endpoint/src/browser.rs": "c9d876e1a498fc77c6ee6eeeca79e9d56751988b344fe679b5c61f3e525a33b1",
+    "crypto/mls-endpoint/src/browser/vault.rs": "d6560554b65adcbbad4efe9e2ae93edcf820de55d384ad4e4751b1b5cc07368c",
+    "web/mls-state-vault.mjs": "09737918f87ebe6215023bf91e0947c42d2ea837b66a4d8c081d30d80535b940",
+    "tests/mls-endpoint.integration.mjs": "a0ba09489294f9a87160827129961397efb997a2f53b05b3419e08e97ed09824",
+    "tests/support/mls-fixture.mjs": "881b7551305bb4cb09ed91ef017982c48727a98c4b3337cb7a9fc264a994452c"
+  },
+  "localChecks": {
+    "engineUnitTests": 261,
+    "engineGeneratedCases": 2000,
+    "nativeStateTests": 2,
+    "nativeProtocolTests": 8,
+    "malformedWireCorpusInputs": 2048,
+    "browserJourneys": 3,
+    "browser": "Chromium 156.0.8078.79",
+    "actualIndexedDBTransactions": true,
+    "browserContextLoss": true,
+    "twoTabWriterRace": true,
+    "closedDatabaseFailure": true,
+    "staleCiphertextAndRelabelledGenerationRejected": true,
+    "queuedInputAndRosterSnapshots": true,
+    "nativeClippyWarningsDenied": true,
+    "wasmClippyWarningsDenied": true,
+    "cargoAudit": {
+      "version": "0.22.2",
+      "database": {
+        "advisory-count": 1430,
+        "last-commit": "d9cb059f3217db87aeccd190b81eaffe8cc29cb9",
+        "last-updated": "2026-11-09T17:13:08+01:00"
+      },
+      "vulnerabilities": 0,
+      "informationalWarnings": [
+        "RUSTSEC-2026-0173: proc-macro-error2 build macro unmaintained"
+      ],
+      "exclusions": []
+    }
+  },
+  "securityReview": {
+    "type": "author source review, not independent cryptographic review",
+    "boundaries": [
+      "scope/generation/device-bound nonextractable WebCrypto wrapping; no raw private snapshot export",
+      "version/upstream/identity/signature-private-public validation and atomic restored endpoint creation",
+      "same-transaction continuity/checkpoint compare-and-swap; losing writers cannot release wire",
+      "advanced ratchet + outgoing frames + incoming plaintext queues committed before exposing results",
+      "stable event/frame IDs and explicit transport/application acknowledgments; pending merge blocked before outgoing acknowledgment",
+      "synchronous raw endpoint ownership transfer, serialized input/roster snapshots and lock on uncertain storage/unexpected protocol failure",
+      "counter exhaustion, bounds and stale-record rejection without local reset or lost-marker fallback"
+    ],
+    "blockingFindings": []
+  },
+  "ciVerified": false,
+  "productionDeployment": false,
+  "privateApplicationEnabled": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Wrapping-key/device unlock and pin authority remain external verified-client prerequisites; native key cloning in fixtures is not production device assurance",
+    "No entire-profile rollback detection, copied-device prevention, stale live-sender backup restore or independent continuity witness",
+    "No private server/relay/Yjs activation, recovery/backup drill, hosted acceptance or paid infrastructure",
+    "Delivery is at-least-once with caller durability/transport acknowledgments, not independent recipient proof or exactly-once UI",
+    "No hardware/physical-erasure, full forward secrecy/PCS, independent review or E2EESA conformance claim"
+  ]
+}

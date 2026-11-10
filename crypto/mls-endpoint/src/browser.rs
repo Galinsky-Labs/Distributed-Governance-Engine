@@ -1,4 +1,5 @@
 //! Narrow browser bindings: protocol state and private keys never cross this API.
+mod vault;
 use crate::{Endpoint, Group, MemberPin, Received};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
@@ -188,6 +189,30 @@ impl BrowserEndpoint {
                 bytes: vec![],
             }),
         }
+    }
+    #[wasm_bindgen(js_name=groupInventory)]
+    pub fn group_inventory(&self) -> Result<String, JsValue> {
+        #[derive(serde::Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Metadata {
+            handle: u32,
+            id: Vec<u8>,
+            epoch: String,
+            active: bool,
+            pending_commit: bool,
+        }
+        let items: Vec<_> = self
+            .groups
+            .iter()
+            .map(|(handle, group)| Metadata {
+                handle: *handle,
+                id: group.0.group_id().as_slice().to_vec(),
+                epoch: group.epoch().to_string(),
+                active: group.active(),
+                pending_commit: group.0.pending_commit().is_some(),
+            })
+            .collect();
+        serde_json::to_string(&items).map_err(|_| invalid())
     }
     pub fn epoch(&self, id: u32) -> Result<u64, JsValue> {
         Ok(self.groups.get(&id).ok_or_else(invalid)?.epoch())

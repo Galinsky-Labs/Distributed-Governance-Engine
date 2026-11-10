@@ -30,3 +30,10 @@ complete client-pinned rosters and member-removal rotation natively and in isola
 browsers. See MLS_ENDPOINT.md for actual scope and integration gates. Production
 private paths, durable encrypted state, device/pin distribution, recovery and
 complete DCE-003/DCE-008 acceptance remain unverified.
+
+The encrypted-state contribution adds version/device/scope-bound WebCrypto
+checkpoints, real IndexedDB compare-and-swap continuity, durable outgoing frames
+and incoming events, and serialization before exposing wire/plaintext results.
+See MLS_STATE_VAULT.md for the actual browser/crash/race scope and whole-profile
+rollback limitation. Production unlock/device binding, recovery/witness, relay and
+private application acceptance remain unfinished; no planned unit is completed.

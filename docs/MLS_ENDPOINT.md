@@ -86,15 +86,16 @@ its keys or accept plaintext from it. The standalone CI artifact/source inventor
 must not be presented as a deployed private-workspace product.
 
 Still required: authenticated device/pin distribution and verification UI; MLS
-membership commits bound to authoritative membership history; durable encrypted
-client-state storage with crash-safe anti-rollback/commit acknowledgments; recovery,
+membership commits bound to authoritative membership history; production device-unlock/continuity integration and crash/backup recovery drills; recovery,
 backup and endpoint rejoin policy; ciphertext-only attachments/snapshots/Yjs relay
 integration; cross-instance fanout; independent implementation interop, load,
 service-compromise and deployed recovery drills. No key export, plaintext key
 backup, server recovery root or automatic lost-device override is supplied.
 
-Secrets are ephemeral in the current adapter. Reload/free loses access and does
-not prove physical memory erasure or secure hardware confinement. Live endpoint,
+The raw adapter is ephemeral; reload/free loses its state. The optional encrypted
+checkpoint/durable coordinator is described in MLS_STATE_VAULT.md and requires a
+separately verified unlock key and retained local continuity metadata. Neither
+path proves physical memory erasure or secure hardware confinement. Live endpoint,
 software-update or approved-roster compromise is outside the local test result.
 No general forward-secrecy, post-compromise-healing, backup, metadata-confidentiality,
 compromised-service authorization or E2EESA conformance claim follows from MLS alone.

@@ -44,3 +44,10 @@ Hosted recovery drills, physical devices, private-content
 recovery and full DCE-002 acceptance remain unverified. No new deployment
 credential is required beyond the configured issuer/client, independent session
 and state keys, database/TLS credentials and explicit passkey policy.
+
+The optional MLS state coordinator requires an endpoint-owned, independently
+verified/unlocked nonextractable AES-256-GCM CryptoKey. It is never a server
+environment credential. See MLS_STATE_VAULT.md for local continuity, durable
+inbox/outbox and forbidden stale-sender backup restoration. The underlying
+state format is pinned to its upstream revision; upgrades require a validated
+client migration or verified rejoin. No new server migration is introduced.

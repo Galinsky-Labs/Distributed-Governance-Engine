@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 import { accountFixture } from "./support/account-fixture.mjs";
-import {openSelectedSavedDocument} from "./support/editor-browser.mjs";
+import {openSelectedSavedDocument,withEditorReplacement} from "./support/editor-browser.mjs";
 const binary = process.env.DGE_BROWSER_EXECUTABLE;
 if (!binary) throw Error("DGE_BROWSER_EXECUTABLE is required");
 async function click(page, label) {
@@ -34,7 +34,7 @@ async function openCurrent(page) {
 }
 async function prepend(page, text) {
   await page.bringToFront();
-  await page.click(".ProseMirror p");
+  await page.locator(".ProseMirror p").click();
   await page.keyboard.press("Home");
   await page.keyboard.type(text);
 }
@@ -84,7 +84,7 @@ test(
       owner.setDefaultTimeout(15000);
       await owner.setViewport({ width: 1440, height: 1050 });
       await owner.goto(fixture.origin + "/account");
-      await owner.click('a[href="/auth/start"]');
+      await owner.locator('a[href="/auth/start"]').click();
       await owner.waitForSelector('input[name="subject"]');
       await owner.type('input[name="subject"]', "author");
       await click(owner, "Continue fixture login");
@@ -109,7 +109,7 @@ test(
         "Community Reporting Act — reviewed",
         "Background document loading must not drop title keystrokes.",
       );
-      await owner.click('.public-create input[type="checkbox"]');
+      await owner.locator('.public-create input[type="checkbox"]').click();
       await click(owner, "Publish current text");
       await saved(owner, 1);
       assert.deepEqual(
@@ -158,7 +158,7 @@ test(
       );
 
       const composed = "法令🧑🏽‍⚖️ é ";
-      await owner.click(".ProseMirror p");
+      await owner.locator(".ProseMirror p").click();
       await owner.keyboard.press("Home");
       await owner.evaluate(() =>
         document.activeElement.dispatchEvent(
@@ -299,8 +299,8 @@ test(
         "The document must reflow at 320 CSS pixels without page-level horizontal scrolling.",
       );
       await owner.setViewport({ width: 1440, height: 1050 });
-      await owner.click('.side-panel section input[type="checkbox"]');
-      await click(owner, "Freeze source for public input");
+      await owner.locator('.side-panel section input[type="checkbox"]').click();
+      await withEditorReplacement(owner,()=>click(owner, "Freeze source for public input"));
       await owner.waitForFunction(() =>
         document
           .querySelector(".edition")
@@ -366,7 +366,7 @@ test(
         "More frequent reporting improves accountability.",
         "Background loading must not disable the rationale field.",
       );
-      await owner.click('.proposal-composer input[type="checkbox"]');
+      await owner.locator('.proposal-composer input[type="checkbox"]').click();
       await click(owner, "Publish suggestion");
       await owner.waitForFunction(() =>
         document

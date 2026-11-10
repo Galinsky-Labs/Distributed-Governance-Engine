@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 25,
+  "roadmapVersion": 26,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T04:43:51Z",
+  "observedAt": "2026-11-10T04:55:08Z",
   "units": [
     {
       "id": "DCE-001",
@@ -232,7 +232,8 @@
         36,
         56,
         57,
-        58
+        58,
+        59
       ]
     },
     {
@@ -1815,16 +1816,31 @@
       "id": 5235936983,
       "number": 58,
       "title": "DCE-005: Edit bounded tables and preserve concurrent public text",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/58",
       "createdAt": "2026-11-10T04:43:42Z",
-      "updatedAt": "2026-11-10T04:43:42Z",
+      "updatedAt": "2026-11-10T04:50:48Z",
+      "mergedAt": "2026-11-10T04:50:48Z",
+      "closedAt": "2026-11-10T04:50:48Z",
+      "draft": false,
+      "headSha": "4ae74388a81ae61b42a76fb6f8bdd297cc87ee66",
+      "baseRef": "main",
+      "mergeCommitSha": "a2b2e20d50d3c5713954c51a2fa8cfcd3bb77cc4"
+    },
+    {
+      "id": 5236034097,
+      "number": 59,
+      "title": "DCE-008: Serialize public room admission and bound initialization",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/59",
+      "createdAt": "2026-11-10T04:54:58Z",
+      "updatedAt": "2026-11-10T04:54:58Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "aa845f962cd176d59feb4445f3aa42c4f7323fc7",
+      "headSha": "13f4ebbb01d4a467cb6692ea13e38b577acc9895",
       "baseRef": "main",
-      "mergeCommitSha": "7a189324e0618f2265f222b3bbfcc024b2deb272"
+      "mergeCommitSha": "af2ca590c88c6923348f601520a13733c27cf7b7"
     }
   ]
 }

@@ -110,3 +110,5 @@ rollback limitation. Production unlock/device binding, recovery/witness, relay a
 private application acceptance remain unfinished; no planned unit is completed.
 
 DCE-010 now exposes bounded per-vote frozen account quorum, exact approval denominators/tie rules and publication-relative deliberation time through the durable API and form. See VOTE_POLICY_SETTINGS.md. Recent provider authentication is required to freeze a policy; no new credential or migration is required. Public-input immutability is preserved. This is partial source work; reusable policy administration, finality/challenge windows, open-public/verified-person/corporate eligibility and deployment remain outstanding.
+
+The DCE-019 comparison contribution checks exact saved-edition content digests, compares stable semantic IDs/fields and derived references, and downloads a version/digest-bound report without editing the open document. See REVISION_COMPARISON.md. Restoration, attribution, branches, advanced redlines, private history/signing and operational acceptance remain outstanding. No credential or migration changes.

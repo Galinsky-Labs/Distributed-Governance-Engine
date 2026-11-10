@@ -32,6 +32,7 @@ import { SearchTools } from "./search-tools.jsx";
 import { AccountPanel } from "./account-panel.jsx";
 import { GovernanceHome } from "./governance-home.jsx";
 import { DocumentLibrary } from "./document-library.jsx";
+import {RevisionComparison} from './revision-comparison.jsx';
 import { ProposalPanel } from "./proposal-panel.jsx";
 import { createAccountAPI } from "./account-api.mjs";
 import { createDocumentSession } from "../editor/document-session.mjs";
@@ -972,6 +973,7 @@ function App() {
               <button disabled={historyBusy} onClick={() => loadHistory()}>
                 Load version history
               </button>
+              <RevisionComparison key={doc.id} documentId={doc.id} tenantId={doc.tenantId} versions={history??[]}/>
               {history && (
                 <ol>
                   {history.map((item) => (

@@ -103,3 +103,17 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 .ProseMirror .internal-reference-unresolved{color:#8b3027;background:#fff0e7;text-decoration:underline wavy;text-underline-offset:3px;padding:0 2px}
 
 .reference-tools label{display:block;font-size:12px;margin:8px 0}.reference-tools input,.reference-tools select,.reference-tools textarea{display:block;width:100%;min-width:0;padding:6px;border:1px solid var(--border);border-radius:4px;font:inherit}.reference-tools textarea{resize:vertical}
+.revision-comparison{width:min(1000px,94vw);max-height:90vh;padding:1.25rem;overflow:auto;border:1px solid #777;border-radius:8px;box-sizing:border-box;overflow-wrap:anywhere}
+.revision-comparison::backdrop{background:#0008}
+.revision-comparison-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.revision-comparison-heading h2{margin:0}
+.revision-comparison-selectors,.revision-comparison-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.revision-comparison label,.revision-comparison select{display:block;width:100%;box-sizing:border-box}
+.revision-comparison pre,.revision-text-change{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit}
+.revision-comparison code{white-space:normal;overflow-wrap:anywhere}
+.revision-comparison del{background:#ffe4e4;color:#7d1313;text-decoration:line-through}
+.revision-comparison ins{background:#ddf4e3;color:#164d25;text-decoration:underline}
+.revision-node-changes{padding-left:1.5rem}
+.revision-node-changes>li,.revision-metadata-change{border-top:1px solid #ccc;padding:.75rem 0}
+.revision-node-changes h3{font-size:1rem}
+@media(max-width:650px){.revision-comparison-selectors,.revision-comparison-columns{grid-template-columns:minmax(0,1fr)}.revision-comparison-heading{align-items:flex-start;flex-direction:column}}

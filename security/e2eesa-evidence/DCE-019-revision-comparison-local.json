@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "unit": "DCE-019",
+  "kind": "partial local source evidence",
+  "observedAt": "2026-11-10",
+  "sourceDigests": {
+    "src/revision-comparison.mjs": "67fae8d4a9807b9a8470fc9e1d85240fbb0400fb41a5f5ca7b6af6b7e930c776",
+    "web/revision-comparison.jsx": "8cb499d9ac44759eb707279cc42641ec8d8216025c9758d6f53532f23c849210",
+    "web/app.jsx": "05c74f49a03076088295b32036ad010d0f6ca01600209099d2bc19e3e0254711",
+    "web/style.css": "211a39cae77cb588a8b35b294c9f0c20b8f34da5dbd34a0603156daa91d34653",
+    "tests/revision-comparison.test.mjs": "1135815a92dd8a30cbabc60e8cdc38893fc50362327bc0bbd5dfd9b9891805db",
+    "tests/revision-comparison.browser.mjs": "017c3aae87e164a0aeafe806f59c3b9105628dc09b50ad916a79b96eab3154a2"
+  },
+  "localChecks": {
+    "engineUnitTests": 346,
+    "engineGeneratedCases": 2000,
+    "comparisonModelTests": 18,
+    "authenticatedAndAnonymousBrowserJourney": 1,
+    "browser": "Chromium 156.0.8078.79",
+    "exactSnapshotAndHistoryContentChecksums": true,
+    "stableIdAndLinearithmicSiblingComparison": true,
+    "formatAndDerivedReferenceChanges": true,
+    "tenThousandSiblingBoundary": true,
+    "unicodeSafeExactReconstruction": true,
+    "downloadedVersionAndDigestBoundReport": true,
+    "unchangedEditorAndZeroComparisonWrites": true,
+    "delayedResponseCannotRestoreOldSelection": true,
+    "alteredChecksumRejectedBeforeDisplayOrDownload": true,
+    "nativeModalEscapeFocusReturn": true,
+    "viewportCssPixels": 320
+  },
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "authorityChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "One contiguous replacement per node; not a word-minimal or page-layout redline",
+    "Checksums do not authenticate the publisher or independent anchors/signatures",
+    "Public source only; report retains prior wording and is not a redaction tool",
+    "Restoration, branches, attribution, private history and hosted acceptance remain outstanding"
+  ]
+}

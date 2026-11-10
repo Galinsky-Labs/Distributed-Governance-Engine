@@ -4,7 +4,7 @@
   "roadmapVersion": 32,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T07:20:47Z",
+  "observedAt": "2026-11-10T07:46:47Z",
   "units": [
     {
       "id": "DCE-001",
@@ -505,7 +505,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        67
+        67,
+        68
       ]
     },
     {
@@ -1968,16 +1969,31 @@
       "id": 5237425059,
       "number": 67,
       "title": "DCE-019: Compare exact saved editions without changing the open document",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/67",
       "createdAt": "2026-11-10T07:20:47Z",
-      "updatedAt": "2026-11-10T07:20:47Z",
+      "updatedAt": "2026-11-10T07:27:11Z",
+      "mergedAt": "2026-11-10T07:27:11Z",
+      "closedAt": "2026-11-10T07:27:11Z",
+      "draft": false,
+      "headSha": "2ebca940869535b742cfe58ab39dfc6b4ed380ed",
+      "baseRef": "main",
+      "mergeCommitSha": "f38db8238803835a89ab4c3587656a1ffa194e7c"
+    },
+    {
+      "id": 5237694312,
+      "number": 68,
+      "title": "DCE-019: Restore saved content as a new fenced public working revision",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/68",
+      "createdAt": "2026-11-10T07:46:47Z",
+      "updatedAt": "2026-11-10T07:46:47Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "c355c1522ca7817646b6e669f7034897ef3e71b9",
+      "headSha": "0b55791c392841f711d60912612f4dcb6bd2cbcb",
       "baseRef": "main",
-      "mergeCommitSha": "766f80417b78ea9971941c9f8359b6ca4c1ec893"
+      "mergeCommitSha": "1cf6b673d33f8f86f7bc03830f90ce659a8ba304"
     }
   ]
 }

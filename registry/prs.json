@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 23,
+  "roadmapVersion": 24,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T03:23:09Z",
+  "observedAt": "2026-11-10T04:06:48Z",
   "units": [
     {
       "id": "DCE-001",
@@ -88,7 +88,8 @@
         30,
         32,
         33,
-        56
+        56,
+        57
       ]
     },
     {
@@ -228,7 +229,8 @@
         34,
         35,
         36,
-        56
+        56,
+        57
       ]
     },
     {
@@ -1781,16 +1783,31 @@
       "id": 5235221161,
       "number": 56,
       "title": "DCE-003: integrate pinned MLS endpoint protocol with authorized rosters",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/56",
       "createdAt": "2026-11-10T03:22:49Z",
-      "updatedAt": "2026-11-10T03:22:49Z",
+      "updatedAt": "2026-11-10T03:26:36Z",
+      "mergedAt": "2026-11-10T03:26:36Z",
+      "closedAt": "2026-11-10T03:26:36Z",
+      "draft": false,
+      "headSha": "b8b15c257f74f5458098eb483a47896425075a56",
+      "baseRef": "main",
+      "mergeCommitSha": "688be12c20f17d25d3b29477c141e23af0016816"
+    },
+    {
+      "id": 5235595957,
+      "number": 57,
+      "title": "DCE-003: persist encrypted endpoint state before releasing protocol results",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/57",
+      "createdAt": "2026-11-10T04:03:41Z",
+      "updatedAt": "2026-11-10T04:03:41Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "f144e490be238e946b0cf26518230f2bc4729dbe",
+      "headSha": "5d225d415da3d7daabf8ef3f1f0fef06e1378727",
       "baseRef": "main",
-      "mergeCommitSha": "99bdff84a490c7d8086afc211e502ca842b3e650"
+      "mergeCommitSha": "6aa396ded39332363bb928b515f593504efc3315"
     }
   ]
 }

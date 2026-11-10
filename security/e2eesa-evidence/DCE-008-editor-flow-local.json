@@ -1,0 +1,47 @@
+{
+  "unit": "DCE-008",
+  "additionalUnit": "DCE-005",
+  "scope": "one outstanding acknowledged public editor update with coalescing and truthful pending-save state",
+  "observedAt": "2026-11-10T05:41:25.718171+00:00",
+  "sourceFiles": {
+    "editor/realtime-editor.mjs": "dee65b8167f10239c9c696710e58dfec9e3bcea0b8bb4584ecfe18f51e579fa8",
+    "web/app.jsx": "8d243a45ce84ecd69fe5015c43b5b10a54e0755ec1c2fb4cf93a65181e51358d",
+    "tests/realtime-editor.test.mjs": "20ad511c9ca0e998f7d0215503ac8b981e16a7dca8096e1bf4282e96f316fe32",
+    "tests/realtime-flow.browser.mjs": "35f9532845979e2efdad3bc3a8697540aa36e0b6bdf31ad550d9b0d135f880c9",
+    "tests/support/account-fixture.mjs": "fdf2ed0fb160b840a35fed172253ca959de47e7a845651d94a9ab03db020ffbe"
+  },
+  "localChecks": {
+    "engineUnitTests": 304,
+    "engineGeneratedCases": 2000,
+    "realtimeEditorModelTests": 8,
+    "editorBrowserRegressionJourneys": 6,
+    "browser": "Chromium 156.0.8078.79",
+    "actualAuthenticatedWssAndDocumentStore": true,
+    "slowActualSaveMilliseconds": 100,
+    "rapidTypingDisconnectReproducedBeforeFix": true,
+    "completeBurstDurablySavedAfterFix": true,
+    "maximumUnacknowledgedUpdatesObserved": 1,
+    "deleteOnlyConfirmationWithoutLoop": true,
+    "remoteInterleavePreservesQueuedLocalText": true,
+    "historicalNormalizationClocksRetained": true,
+    "acknowledgmentTimeoutPreservesText": true,
+    "lateUnsolicitedAndRegressingAcknowledgmentsRefused": true,
+    "separateConnectionReadiness": true
+  },
+  "dependenciesChanged": false,
+  "semanticSchemaChanged": false,
+  "databaseMigration": false,
+  "credentialRequirementsChanged": false,
+  "ciVerified": false,
+  "productionDeployment": false,
+  "privateApplicationEnabled": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Confirmed Yjs copy is in-memory only; no durable browser outbox or automatic reconnect/replay",
+    "Connection loss after commit but before confirmation remains uncertain; export and explicit reopen are required",
+    "Server bounds remain unchanged; accumulated updates above 64 KiB pause instead of silently splitting or dropping edits",
+    "Public server confirmation is not independent delivery proof or private MLS/device authority",
+    "Signed fixture OIDC/PGlite/local TLS browser evidence does not establish cloud production or fleet-scale acceptance",
+    "Managed local Chrome blocks standalone file URLs; pinned CI must still pass the complete browser suite"
+  ]
+}

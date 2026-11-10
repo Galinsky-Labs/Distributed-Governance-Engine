@@ -336,9 +336,9 @@ function App() {
         onStatus(message) {
           if (!active) return;
           setLiveStatus(message);
-          setLiveReady(message.includes("connected") || message.includes("acknowledged"));
           setStatus(message);
         },
+        onConnectionChange(ready) { if (active) setLiveReady(ready); },
         onAcknowledged(version) {
           if (active) setRecord((prior) => prior ? { ...prior, version } : prior);
         },

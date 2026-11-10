@@ -29,23 +29,25 @@ function verifyUpdate(doc,update,base) {
  * authorization and persistence; no plaintext private-workspace fallback.
  */
 export async function mountPublicRealtimeEditor(element,initial,{
- classification,origin,readOnly=false,onChange=()=>{},onStatus=()=>{},onError=()=>{},onAcknowledged=()=>{},onSelectionChange=()=>{},
- WebSocketCtor=globalThis.WebSocket,timeoutMs=10000
+ classification,origin,readOnly=false,onChange=()=>{},onStatus=()=>{},onError=()=>{},onAcknowledged=()=>{},onSelectionChange=()=>{},onConnectionChange=()=>{},
+ WebSocketCtor=globalThis.WebSocket,timeoutMs=10000,acknowledgementTimeoutMs=15000
 }={}) {
  const base=validateLegalDocument(initial);
  const site=new URL(origin);
  if(classification!=='public'||base.mode!=='collaboration'||base.lifecycle!=='draft'||
     !UUID.test(base.tenantId)||!UUID.test(base.id)||site.protocol!=='https:'||
     site.origin!==origin||!element?.ownerDocument||typeof WebSocketCtor!=='function'||
-    !Number.isSafeInteger(timeoutMs)||timeoutMs<100||timeoutMs>60000)
+    !Number.isSafeInteger(timeoutMs)||timeoutMs<100||timeoutMs>60000||
+    !Number.isSafeInteger(acknowledgementTimeoutMs)||acknowledgementTimeoutMs<100||acknowledgementTimeoutMs>60000)
   throw Error('Authorized public collaboration editor required');
  const socket=new WebSocketCtor('wss://'+site.host+'/ws/public/'+base.tenantId+'/'+base.id,'dge-public-v1');
  socket.binaryType='arraybuffer';
- let view=null,ydoc=null,closed=false,connected=false,sendPending=false,state=null,current=base,lastVector;
+ let view=null,ydoc=null,acknowledged=null,closed=false,connected=false,sendPending=false,state=null,current=base,inFlight=null,ackTimer,lastAcknowledgedVersion=0;
  const stop=(message)=>{
-  if(closed)return;
-  connected=false;
+  if(closed||!connected)return;
+  connected=false;clearTimeout(ackTimer);
   if(view)view.setProps({editable:()=>false});
+  onConnectionChange(false);
   onStatus(message);
  };
  const initialState=await new Promise((resolve,reject)=>{
@@ -74,6 +76,10 @@ export async function mountPublicRealtimeEditor(element,initial,{
  try {
   ydoc=new Y.Doc();
   Y.applyUpdate(ydoc,initialState,'remote');
+  // Keep only server-confirmed history here, including the initial wire state
+  // before any local editor normalization creates new Yjs clock entries.
+  acknowledged=new Y.Doc();
+  Y.applyUpdate(acknowledged,initialState,'remote');
   const type=ydoc.getXmlFragment('prosemirror');
   const {doc,mapping}=initProseMirrorDoc(type,editorSchema);
   current=editorToLegal(doc,base);
@@ -100,36 +106,59 @@ export async function mountPublicRealtimeEditor(element,initial,{
   });
   if(state!==view.state)view.updateState(state);
   onSelectionChange(view.state);
-  lastVector=Y.encodeStateVector(ydoc);
-  ydoc.on('update',(_update,source)=>{
-   if(source==='remote'||!connected||readOnly||sendPending)return;
+  const remaining=()=>{
+   // State vectors alone omit delete-set confirmation. Yjs snapshots compare
+   // both clocks and deletion ranges, avoiding repeated already-saved deletes.
+   if(Y.equalSnapshots(Y.snapshot(ydoc),Y.snapshot(acknowledged)))return null;
+   return Y.encodeStateAsUpdate(ydoc,Y.encodeStateVector(acknowledged));
+  };
+  const schedule=()=>{
+   if(sendPending||closed||!connected||readOnly)return;
    sendPending=true;
    queueMicrotask(()=>{
     sendPending=false;
-    if(closed||!connected||socket.readyState!==1)return;
+    if(closed||!connected||inFlight||socket.readyState!==1)return;
     try {
-     const update=Y.encodeStateAsUpdate(ydoc,lastVector);
+     const update=remaining();
+     if(!update)return;
      if(update.byteLength>65535)throw Error('Realtime update exceeds 64 KiB');
-     if(update.byteLength>2)socket.send(binary(2,update));
-     lastVector=Y.encodeStateVector(ydoc);
+     if(update.byteLength<=2)return;
+     inFlight=update;
+     ackTimer=setTimeout(()=>{
+      if(closed||!connected||!inFlight)return;
+      stop('Save acknowledgement timed out. Export unsaved text before reopening.');socket.close();
+     },acknowledgementTimeoutMs);
+     socket.send(binary(2,update));
     }catch(error){onError(error.message);stop('Realtime updates paused; preserve a local export.');socket.close();}
    });
+  };
+  ydoc.on('update',(_update,source)=>{
+   if(source==='remote'||!connected||readOnly)return;
+   onStatus('Saving live edits; waiting for server confirmation.');
+   schedule();
   });
   const receive=event=>{
+   if(closed||!connected)return;
    try {
     const data=asBytes(event.data);
     if(data[0]===4) {
      if(data.length!==5)throw Error('Invalid collaboration save acknowledgement');
      const version=new DataView(data.buffer,data.byteOffset+1,4).getUint32(0);
-     if(version<1||version>1000000)throw Error('Invalid acknowledged version');
+     if(version<1||version>1000000||version<lastAcknowledgedVersion||!inFlight)throw Error('Invalid acknowledged version');
+     clearTimeout(ackTimer);
+     Y.applyUpdate(acknowledged,inFlight,'confirmed');inFlight=null;lastAcknowledgedVersion=version;
      onAcknowledged(version);
-     onStatus('Live edit acknowledged and saved as public version '+version+'.');
+     if(remaining()){
+      onStatus('Saving remaining live edits after public version '+version+'.');
+      schedule();
+     }else onStatus('Live edit acknowledged and saved as public version '+version+'.');
      return;
     }
     if(data.length<3||data.length>3000001||![1,2].includes(data[0]))
      throw Error('Unexpected public collaboration frame');
     const update=data.slice(1);
     verifyUpdate(ydoc,update,base);
+    Y.applyUpdate(acknowledged,update,'remote');
     Y.applyUpdate(ydoc,update,'remote');
    }catch(error){onError(error.message);stop('Invalid collaboration update; reopen source.');socket.close();}
   };
@@ -141,6 +170,7 @@ export async function mountPublicRealtimeEditor(element,initial,{
   // EditorView computes contenteditable when props/state change; the closure
   // alone does not refresh the DOM after the handshake has completed.
   view.setProps({editable:()=>connected&&!readOnly});
+  onConnectionChange(true);
   onStatus('Public collaboration connected; server save acknowledgement is pending.');
   return Object.freeze({
    view,getDocument:()=>current,
@@ -166,17 +196,20 @@ export async function mountPublicRealtimeEditor(element,initial,{
     return !!changed;
    },
    destroy() {
-    if(closed)return;closed=true;connected=false;
+    if(closed)return;closed=true;connected=false;clearTimeout(ackTimer);
     socket.removeEventListener('message',receive);
     socket.removeEventListener('error',failed);
     socket.removeEventListener('close',failed);
     if(socket.readyState<2)socket.close();
-    view.destroy();ydoc.destroy();
+    view.destroy();ydoc.destroy();acknowledged.destroy();
+    onConnectionChange(false);
    }
   });
  }catch(error){
   if(view)view.destroy();
   if(ydoc)ydoc.destroy();
+  if(acknowledged)acknowledged.destroy();
+  clearTimeout(ackTimer);
   if(socket.readyState<2)socket.close();
   throw error;
  }

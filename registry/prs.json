@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "repository": "neophilism/Distributed-Governance-Engine",
-  "roadmapVersion": 20,
+  "repository": "Galinsky-Labs/Distributed-Governance-Engine",
+  "roadmapVersion": 21,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-10-18T21:55:04Z",
+  "observedAt": "2026-11-10T01:33:10.723Z",
   "units": [
     {
       "id": "DCE-001",
@@ -56,7 +56,9 @@
         13,
         19,
         20,
-        21
+        21,
+        39,
+        53
       ]
     },
     {
@@ -82,6 +84,7 @@
       "contributingPrs": [
         24,
         30,
+        32,
         33
       ]
     },
@@ -136,7 +139,11 @@
         15,
         16,
         17,
-        18
+        18,
+        38,
+        41,
+        42,
+        44
       ]
     },
     {
@@ -242,7 +249,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        9
+        9,
+        23
       ]
     },
     {
@@ -264,7 +272,10 @@
       ],
       "specification": "docs/prs/DCE-010.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        43
+      ]
     },
     {
       "id": "DCE-011",
@@ -307,7 +318,11 @@
       ],
       "specification": "docs/prs/DCE-012.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        46,
+        52
+      ]
     },
     {
       "id": "DCE-013",
@@ -349,7 +364,10 @@
       ],
       "specification": "docs/prs/DCE-014.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        48
+      ]
     },
     {
       "id": "DCE-015",
@@ -483,7 +501,10 @@
       ],
       "specification": "docs/prs/DCE-020.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        49
+      ]
     },
     {
       "id": "DCE-021",
@@ -546,7 +567,10 @@
       ],
       "specification": "docs/prs/DCE-023.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        49
+      ]
     },
     {
       "id": "DCE-024",
@@ -722,7 +746,11 @@
       ],
       "specification": "docs/prs/DCE-031.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        45,
+        47
+      ]
     },
     {
       "id": "DCE-032",
@@ -744,7 +772,10 @@
       ],
       "specification": "docs/prs/DCE-032.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        50
+      ]
     },
     {
       "id": "DCE-033",
@@ -812,7 +843,10 @@
       ],
       "specification": "docs/prs/DCE-035.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        51
+      ]
     },
     {
       "id": "DCE-036",
@@ -904,7 +938,10 @@
       ],
       "specification": "docs/prs/DCE-039.md",
       "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        51
+      ]
     }
   ],
   "pullRequests": [
@@ -913,7 +950,7 @@
       "number": 1,
       "title": "DCE-001: Establish the shared governance engine and Quill product foundation",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/1",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/1",
       "createdAt": "2026-10-17T02:49:38Z",
       "updatedAt": "2026-10-17T02:53:14Z",
       "mergedAt": "2026-10-17T02:53:14Z",
@@ -928,7 +965,7 @@
       "number": 2,
       "title": "DCE-004: Add stable legal structure, references and immutable editions",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/2",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/2",
       "createdAt": "2026-10-17T02:57:19Z",
       "updatedAt": "2026-10-17T03:03:17Z",
       "mergedAt": "2026-10-17T03:03:16Z",
@@ -943,7 +980,7 @@
       "number": 3,
       "title": "DCE-005: Add shared Quill legal editor foundation (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/3",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/3",
       "createdAt": "2026-10-17T03:10:53Z",
       "updatedAt": "2026-10-17T03:13:59Z",
       "mergedAt": "2026-10-17T03:13:59Z",
@@ -958,7 +995,7 @@
       "number": 4,
       "title": "DCE-002: Add persisted identity and organization access foundation (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/4",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/4",
       "createdAt": "2026-10-17T05:37:14Z",
       "updatedAt": "2026-10-17T05:39:16Z",
       "mergedAt": "2026-10-17T05:39:16Z",
@@ -973,7 +1010,7 @@
       "number": 5,
       "title": "DCE-005: Add bounded body-text find and replace (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/5",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/5",
       "createdAt": "2026-10-17T05:42:38Z",
       "updatedAt": "2026-10-17T05:46:06Z",
       "mergedAt": "2026-10-17T05:46:06Z",
@@ -988,7 +1025,7 @@
       "number": 6,
       "title": "DCE-002: Use actual provider login time for sensitive actions (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/6",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/6",
       "createdAt": "2026-10-17T05:47:27Z",
       "updatedAt": "2026-10-17T05:49:44Z",
       "mergedAt": "2026-10-17T05:49:44Z",
@@ -1003,7 +1040,7 @@
       "number": 7,
       "title": "DCE-002: Connect secure account routes and workspace UI (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/7",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/7",
       "createdAt": "2026-10-17T12:29:20Z",
       "updatedAt": "2026-10-17T12:31:41Z",
       "mergedAt": "2026-10-17T12:31:41Z",
@@ -1018,7 +1055,7 @@
       "number": 8,
       "title": "DCE-005: Save public documents, preserve versions and freeze feedback sources (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/8",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/8",
       "createdAt": "2026-10-17T12:44:52Z",
       "updatedAt": "2026-10-17T12:49:13Z",
       "mergedAt": "2026-10-17T12:49:13Z",
@@ -1033,7 +1070,7 @@
       "number": 9,
       "title": "DCE-009: Publish exact-version text suggestions in the shared Quill panel (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/9",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/9",
       "createdAt": "2026-10-17T13:00:04Z",
       "updatedAt": "2026-10-17T13:04:32Z",
       "mergedAt": "2026-10-17T13:04:32Z",
@@ -1048,7 +1085,7 @@
       "number": 10,
       "title": "DCE-015: Add structured debate and independent point voting (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/10",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/10",
       "createdAt": "2026-10-17T13:29:05Z",
       "updatedAt": "2026-10-17T21:08:41Z",
       "mergedAt": "2026-10-17T21:08:41Z",
@@ -1063,7 +1100,7 @@
       "number": 11,
       "title": "DCE-002: Add restricted account recovery (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/11",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/11",
       "createdAt": "2026-10-17T21:11:57Z",
       "updatedAt": "2026-10-17T21:16:38Z",
       "mergedAt": "2026-10-17T21:16:38Z",
@@ -1078,7 +1115,7 @@
       "number": 12,
       "title": "DCE-002: Require provider assurance for recovery issuance (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/12",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/12",
       "createdAt": "2026-10-17T21:28:15Z",
       "updatedAt": "2026-10-17T21:32:36Z",
       "mergedAt": "2026-10-17T21:32:35Z",
@@ -1093,7 +1130,7 @@
       "number": 13,
       "title": "DCE-002: Add passkey step-up and device authorization (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/13",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/13",
       "createdAt": "2026-10-17T22:11:52Z",
       "updatedAt": "2026-10-17T22:16:29Z",
       "mergedAt": "2026-10-17T22:16:28Z",
@@ -1108,7 +1145,7 @@
       "number": 14,
       "title": "DCE-005: Add versioned inline links and citations (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/14",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/14",
       "createdAt": "2026-10-17T22:36:15Z",
       "updatedAt": "2026-10-17T22:45:15Z",
       "mergedAt": "2026-10-17T22:45:15Z",
@@ -1123,7 +1160,7 @@
       "number": 15,
       "title": "DCE-005: Edit and remove external inline sources (partial)",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/15",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/15",
       "createdAt": "2026-10-17T22:48:08Z",
       "updatedAt": "2026-10-17T22:52:50Z",
       "mergedAt": "2026-10-17T22:52:50Z",
@@ -1138,9 +1175,9 @@
       "number": 16,
       "title": "DCE-005: Verify IME input and interrupted save recovery",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/16",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/16",
       "createdAt": "2026-10-17T23:27:22Z",
-      "updatedAt": "2026-10-17T23:31:26Z",
+      "updatedAt": "2026-10-17T23:31:27Z",
       "mergedAt": "2026-10-17T23:31:26Z",
       "closedAt": "2026-10-17T23:31:26Z",
       "draft": false,
@@ -1153,7 +1190,7 @@
       "number": 17,
       "title": "DCE-005: Add structured citation metadata",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/17",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/17",
       "createdAt": "2026-10-17T23:34:36Z",
       "updatedAt": "2026-10-17T23:39:22Z",
       "mergedAt": "2026-10-17T23:39:22Z",
@@ -1168,7 +1205,7 @@
       "number": 18,
       "title": "DCE-005: Verify keyboard focus and narrow reflow",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/18",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/18",
       "createdAt": "2026-10-17T23:43:17Z",
       "updatedAt": "2026-10-17T23:45:44Z",
       "mergedAt": "2026-10-17T23:45:44Z",
@@ -1179,11 +1216,41 @@
       "mergeCommitSha": "82200441ad11ee5fe75e72df88e123c7afb56dfa"
     },
     {
+      "id": 4905179141,
+      "number": 19,
+      "title": "DCE-002: Enforce passkey attestation policy evidence",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/19",
+      "createdAt": "2026-10-18T00:34:44Z",
+      "updatedAt": "2026-10-18T00:39:06Z",
+      "mergedAt": "2026-10-18T00:39:06Z",
+      "closedAt": "2026-10-18T00:39:06Z",
+      "draft": false,
+      "headSha": "0876bd018ff7f8e620d86d41fc97b020267c60b0",
+      "baseRef": "main",
+      "mergeCommitSha": "dd2ffd2369f12b1af2571ca99e7cc243c74bc488"
+    },
+    {
+      "id": 4905223889,
+      "number": 20,
+      "title": "DCE-002: Revoke passkeys and linked device authority",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/20",
+      "createdAt": "2026-10-18T00:43:32Z",
+      "updatedAt": "2026-10-18T00:47:00Z",
+      "mergedAt": "2026-10-18T00:46:54Z",
+      "closedAt": "2026-10-18T00:46:54Z",
+      "draft": false,
+      "headSha": "77e86307b2a6f4d6d8b04dff5e18bfbd3250b07e",
+      "baseRef": "main",
+      "mergeCommitSha": "67c57220c2b5ff7c833e52fe88cfa3b6ba9dffcb"
+    },
+    {
       "id": 4905226162,
       "number": 21,
       "title": "DCE-002: Require recovery and passkey proof for provider restoration",
       "state": "closed",
-      "url": "https://github.com/neophilism/Distributed-Governance-Engine/pull/21",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/21",
       "createdAt": "2026-10-18T00:43:59Z",
       "updatedAt": "2026-10-18T00:52:25Z",
       "mergedAt": "2026-10-18T00:52:25Z",
@@ -1192,6 +1259,486 @@
       "headSha": "7f9812b9081cc09868030ae1330c1f98053fffd1",
       "baseRef": "main",
       "mergeCommitSha": "1a259cb882e5f0d66abe1b3cd76f5d68bc08be18"
+    },
+    {
+      "id": 4909322543,
+      "number": 22,
+      "title": "DCE-006: Add numbering rules, previews and section moves (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/22",
+      "createdAt": "2026-10-18T13:05:34Z",
+      "updatedAt": "2026-10-18T17:04:22Z",
+      "mergedAt": "2026-10-18T17:04:21Z",
+      "closedAt": "2026-10-18T17:04:21Z",
+      "draft": false,
+      "headSha": "af58966b60b261b821c856020d026f55b295ded7",
+      "baseRef": "main",
+      "mergeCommitSha": "be9fb478340431f5a64239fe077cf50bffea3166"
+    },
+    {
+      "id": 4909336179,
+      "number": 23,
+      "title": "DCE-009: Serialize concurrent proposal quota checks",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/23",
+      "createdAt": "2026-10-18T13:07:43Z",
+      "updatedAt": "2026-10-18T21:32:18Z",
+      "mergedAt": "2026-10-18T21:32:18Z",
+      "closedAt": "2026-10-18T21:32:18Z",
+      "draft": false,
+      "headSha": "7bd4a07df3a12c73db1d181abdfb9d32562ecb85",
+      "baseRef": "main",
+      "mergeCommitSha": "9a279fbb41c0302d67262f1f0920bef676e86c7e"
+    },
+    {
+      "id": 4911068609,
+      "number": 24,
+      "title": "DCE-003: Add authenticated private local draft cache (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/24",
+      "createdAt": "2026-10-18T17:07:45Z",
+      "updatedAt": "2026-10-18T17:11:23Z",
+      "mergedAt": "2026-10-18T17:11:22Z",
+      "closedAt": "2026-10-18T17:11:22Z",
+      "draft": false,
+      "headSha": "874a6828623123a9d6d9d944bc348f02d986363b",
+      "baseRef": "main",
+      "mergeCommitSha": "95c367ae30828633f0b0a32a6cd3f93cdd5866e4"
+    },
+    {
+      "id": 4911092232,
+      "number": 25,
+      "title": "DCE-007: Detect ambiguous definitions, cycles and moved-reference impact (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/25",
+      "createdAt": "2026-10-18T17:11:00Z",
+      "updatedAt": "2026-10-18T17:13:21Z",
+      "mergedAt": "2026-10-18T17:13:21Z",
+      "closedAt": "2026-10-18T17:13:21Z",
+      "draft": false,
+      "headSha": "75bfa840dee4ebdf50119bba785f1b15e346ed0b",
+      "baseRef": "main",
+      "mergeCommitSha": "23782571ca2ece021829c958a4ce243568a4448f"
+    },
+    {
+      "id": 4911115902,
+      "number": 26,
+      "title": "DCE-008: Add public Yjs draft convergence and pinned dependencies (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/26",
+      "createdAt": "2026-10-18T17:14:16Z",
+      "updatedAt": "2026-10-18T17:21:55Z",
+      "mergedAt": "2026-10-18T17:21:55Z",
+      "closedAt": "2026-10-18T17:21:55Z",
+      "draft": false,
+      "headSha": "d5f1983fa6d47ad35df1912eb938b4d1fff35670",
+      "baseRef": "main",
+      "mergeCommitSha": "c9b80feb2d5e6a664feee1552caab1dc87261c6a"
+    },
+    {
+      "id": 4911210433,
+      "number": 27,
+      "title": "DCE-008: Add authorized public Yjs WebSocket relay (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/27",
+      "createdAt": "2026-10-18T17:27:26Z",
+      "updatedAt": "2026-10-18T17:28:52Z",
+      "mergedAt": "2026-10-18T17:28:52Z",
+      "closedAt": "2026-10-18T17:28:52Z",
+      "draft": false,
+      "headSha": "0080e0ac8c395b996e49edc5cac96385c3a7b33f",
+      "baseRef": "main",
+      "mergeCommitSha": "fa69b10ec2a8ed14b0e97a088ec4464ec080d9e7"
+    },
+    {
+      "id": 4911251688,
+      "number": 28,
+      "title": "DCE-008: Wire opt-in live Quill editor to Yjs WebSocket (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/28",
+      "createdAt": "2026-10-18T17:33:12Z",
+      "updatedAt": "2026-10-18T17:36:20Z",
+      "mergedAt": "2026-10-18T17:36:20Z",
+      "closedAt": "2026-10-18T17:36:20Z",
+      "draft": false,
+      "headSha": "ba6d01134a8150c256a4af3422a7ad4d1585dccc",
+      "baseRef": "main",
+      "mergeCommitSha": "be45b3691534308b7d1d2b00d5ca2412e471e252"
+    },
+    {
+      "id": 4911302571,
+      "number": 29,
+      "title": "DCE-008: Persist Yjs state atomically with public document revisions (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/29",
+      "createdAt": "2026-10-18T17:40:18Z",
+      "updatedAt": "2026-10-18T17:42:56Z",
+      "mergedAt": "2026-10-18T17:42:56Z",
+      "closedAt": "2026-10-18T17:42:56Z",
+      "draft": false,
+      "headSha": "668e1a7847e6f09845eb7afe4b98935d8a455eb3",
+      "baseRef": "main",
+      "mergeCommitSha": "4ea6e37539d6ceec37440188d08f213305fd4dc5"
+    },
+    {
+      "id": 4912954115,
+      "number": 30,
+      "title": "DCE-003/008: Add authenticated private Yjs update frames (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/30",
+      "createdAt": "2026-10-18T21:26:50Z",
+      "updatedAt": "2026-10-18T21:28:58Z",
+      "mergedAt": "2026-10-18T21:28:58Z",
+      "closedAt": "2026-10-18T21:28:58Z",
+      "draft": false,
+      "headSha": "a0ba11825279d7e7ec62ddcf81586bc8ace1d229",
+      "baseRef": "main",
+      "mergeCommitSha": "8911cdb8db1063a194699d9d049cf48e21fe02ef"
+    },
+    {
+      "id": 4912989610,
+      "number": 31,
+      "title": "Registry: Map merged partial work and add authenticated GitHub snapshot reconciler",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/31",
+      "createdAt": "2026-10-18T21:32:28Z",
+      "updatedAt": "2026-10-18T21:37:25Z",
+      "mergedAt": "2026-10-18T21:37:24Z",
+      "closedAt": "2026-10-18T21:37:25Z",
+      "draft": false,
+      "headSha": "9a824876f2f6551c9bce024261afb72edb93a969",
+      "baseRef": "main",
+      "mergeCommitSha": "753f0a8ad7cfd7f0ff46352b8817c2ad8706aa75"
+    },
+    {
+      "id": 4913023526,
+      "number": 32,
+      "title": "DCE-003: Add gated ciphertext-only private document persistence (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/32",
+      "createdAt": "2026-10-18T21:37:37Z",
+      "updatedAt": "2026-10-18T21:39:22Z",
+      "mergedAt": null,
+      "closedAt": "2026-10-18T21:39:22Z",
+      "draft": false,
+      "headSha": "62914ac7924c1cd496d6bafd3cef4185400c081e",
+      "baseRef": "main",
+      "mergeCommitSha": null
+    },
+    {
+      "id": 4913034027,
+      "number": 33,
+      "title": "DCE-003: Gate private encrypted document persistence behind verified device authority (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/33",
+      "createdAt": "2026-10-18T21:39:05Z",
+      "updatedAt": "2026-10-18T21:42:10Z",
+      "mergedAt": "2026-10-18T21:42:10Z",
+      "closedAt": "2026-10-18T21:42:10Z",
+      "draft": false,
+      "headSha": "368533104861abd88ca1d6706e250762154f9b70",
+      "baseRef": "main",
+      "mergeCommitSha": "dad60be4def3f513e006c89f06682b16154ecc3d"
+    },
+    {
+      "id": 4913086093,
+      "number": 34,
+      "title": "DCE-008: Persist and paginate private encrypted Yjs updates (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/34",
+      "createdAt": "2026-10-18T21:46:03Z",
+      "updatedAt": "2026-10-18T21:47:26Z",
+      "mergedAt": "2026-10-18T21:47:25Z",
+      "closedAt": "2026-10-18T21:47:26Z",
+      "draft": false,
+      "headSha": "fdef00d8472907fc448df8988c2e35e68a3fdf47",
+      "baseRef": "main",
+      "mergeCommitSha": "a82439cb99e73548d66473eb34501aeb0bc6663b"
+    },
+    {
+      "id": 4913120897,
+      "number": 35,
+      "title": "DCE-008: Add dedicated authenticated private ciphertext WebSocket relay (partial)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/35",
+      "createdAt": "2026-10-18T21:50:25Z",
+      "updatedAt": "2026-10-18T21:52:01Z",
+      "mergedAt": "2026-10-18T21:52:01Z",
+      "closedAt": "2026-10-18T21:52:01Z",
+      "draft": false,
+      "headSha": "723be58d19bc44329502597bec0386e5c651e6db",
+      "baseRef": "main",
+      "mergeCommitSha": "82610d81d3c142f5320a5a0f8259c6d6ed185af4"
+    },
+    {
+      "id": 4913144195,
+      "number": 36,
+      "title": "DCE-008: Verify encrypted Yjs over TLS, identity, database and revocation end-to-end",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/36",
+      "createdAt": "2026-10-18T21:53:34Z",
+      "updatedAt": "2026-10-18T21:55:04Z",
+      "mergedAt": "2026-10-18T21:55:04Z",
+      "closedAt": "2026-10-18T21:55:04Z",
+      "draft": false,
+      "headSha": "d0b009fb125ba6bcb016d20bc099a5187bbb704e",
+      "baseRef": "main",
+      "mergeCommitSha": "5ca8ec3dcc623e2fadf615018bbffa1f52cc8e24"
+    },
+    {
+      "id": 4913168732,
+      "number": 37,
+      "title": "DCE: Reconcile private collaboration PR mappings and accurate operational status",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/37",
+      "createdAt": "2026-10-18T21:56:58Z",
+      "updatedAt": "2026-10-18T21:58:55Z",
+      "mergedAt": "2026-10-18T21:58:55Z",
+      "closedAt": "2026-10-18T21:58:55Z",
+      "draft": false,
+      "headSha": "bf92ad41a7ab5b75b5a62e7461c5a005a922244c",
+      "baseRef": "main",
+      "mergeCommitSha": "a557cd0043fb5ceb99a644ee659e023e7351899b"
+    },
+    {
+      "id": 4913371559,
+      "number": 38,
+      "title": "DCE-005: Editor shell and essential formatting",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/38",
+      "createdAt": "2026-10-18T22:26:32Z",
+      "updatedAt": "2026-11-01T23:12:26Z",
+      "mergedAt": "2026-11-01T23:12:26Z",
+      "closedAt": "2026-11-01T23:12:26Z",
+      "draft": false,
+      "headSha": "1f36e372f4d14553adde91512c30ee4605969c04",
+      "baseRef": "main",
+      "mergeCommitSha": "cb5e96402a1ca87d65b436b9bf6829661676dee2"
+    },
+    {
+      "id": 4913933878,
+      "number": 39,
+      "title": "DCE-002: Identity, tenants and membership lifecycle",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/39",
+      "createdAt": "2026-10-18T23:56:50Z",
+      "updatedAt": "2026-11-01T23:12:38Z",
+      "mergedAt": "2026-11-01T23:12:38Z",
+      "closedAt": "2026-11-01T23:12:38Z",
+      "draft": false,
+      "headSha": "1bc4aa202963a063d98d95fbf2fe22b696e2919e",
+      "baseRef": "main",
+      "mergeCommitSha": "ea326e1e17aa1e6c00482679447986b5e14babc9"
+    },
+    {
+      "id": 4941672918,
+      "number": 40,
+      "title": "Integrate Development Deployment Monitor (inventory-only)",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/40",
+      "createdAt": "2026-10-20T19:59:33Z",
+      "updatedAt": "2026-10-20T23:02:34Z",
+      "mergedAt": "2026-10-20T23:02:34Z",
+      "closedAt": "2026-10-20T23:02:34Z",
+      "draft": false,
+      "headSha": "16a346585475def128bac775daae153ca4d7076d",
+      "baseRef": "main",
+      "mergeCommitSha": "2b8aa13f76ef85c4a2111c2ac1c87050a1b7144a"
+    },
+    {
+      "id": 5112477121,
+      "number": 41,
+      "title": "DCE-005: enable local public draft creation and JSON import for Quill editor",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/41",
+      "createdAt": "2026-11-01T23:04:19Z",
+      "updatedAt": "2026-11-01T23:06:11Z",
+      "mergedAt": "2026-11-01T23:06:10Z",
+      "closedAt": "2026-11-01T23:06:11Z",
+      "draft": false,
+      "headSha": "67cd8c583e80b2acf5f19d779f12441b90773650",
+      "baseRef": "main",
+      "mergeCommitSha": "226f7c19fa3461f06de00f79ae62b470d4514adf"
+    },
+    {
+      "id": 5112499471,
+      "number": 42,
+      "title": "DCE-005: publish real-browser-verified offline CivicQuill and CharterQuill editors",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/42",
+      "createdAt": "2026-11-01T23:07:24Z",
+      "updatedAt": "2026-11-01T23:14:32Z",
+      "mergedAt": "2026-11-01T23:14:32Z",
+      "closedAt": "2026-11-01T23:14:32Z",
+      "draft": false,
+      "headSha": "ad43905af0643817ee52b590192d41352f0f2540",
+      "baseRef": "main",
+      "mergeCommitSha": "3a6adc1355001daf8b4b6abfd3dd02d673d655bd"
+    },
+    {
+      "id": 5112543463,
+      "number": 43,
+      "title": "DCE-010: immutable version-bound governance snapshot and ballot contracts",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/43",
+      "createdAt": "2026-11-01T23:13:09Z",
+      "updatedAt": "2026-11-01T23:14:50Z",
+      "mergedAt": "2026-11-01T23:14:50Z",
+      "closedAt": "2026-11-01T23:14:50Z",
+      "draft": false,
+      "headSha": "37213d4e9aff2fc495a22fcadda5726583e6b071",
+      "baseRef": "main",
+      "mergeCommitSha": "784874f45026125401059798e27c32042f3ac63f"
+    },
+    {
+      "id": 5112561209,
+      "number": 44,
+      "title": "DCE-005: publish verified Quill offline previews as permanent release downloads",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/44",
+      "createdAt": "2026-11-01T23:15:38Z",
+      "updatedAt": "2026-11-01T23:17:10Z",
+      "mergedAt": "2026-11-01T23:17:10Z",
+      "closedAt": "2026-11-01T23:17:10Z",
+      "draft": false,
+      "headSha": "eb0d1201b36dda2f118abe1bf0bd47e05bfff369",
+      "baseRef": "main",
+      "mergeCommitSha": "28537e82567abbe70b49c475cc38d67d37988a7e"
+    },
+    {
+      "id": 5112908158,
+      "number": 45,
+      "title": "DCE-031: ship actual authenticated governance workspaces with amendments and argument deliberation",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/45",
+      "createdAt": "2026-11-02T00:05:11Z",
+      "updatedAt": "2026-11-02T00:08:53Z",
+      "mergedAt": "2026-11-02T00:08:53Z",
+      "closedAt": "2026-11-02T00:08:53Z",
+      "draft": false,
+      "headSha": "339dd350c5688b5c338ef61adede758ab3e186b0",
+      "baseRef": "main",
+      "mergeCommitSha": "7f1a3d3f0fc26152792c33131d6a46dcbb8489c1"
+    },
+    {
+      "id": 5112931947,
+      "number": 46,
+      "title": "DCE-012: durable authenticated votes on frozen proposal electorates with closure receipts",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/46",
+      "createdAt": "2026-11-02T00:08:19Z",
+      "updatedAt": "2026-11-02T00:12:34Z",
+      "mergedAt": "2026-11-02T00:12:34Z",
+      "closedAt": "2026-11-02T00:12:34Z",
+      "draft": false,
+      "headSha": "725888fe5100ee52430664e1df8bf03056b66235",
+      "baseRef": "main",
+      "mergeCommitSha": "679559ed7861b1fdc4eafdf46d1168423ac96636"
+    },
+    {
+      "id": 5112973259,
+      "number": 47,
+      "title": "DCE-031: connect persistent voting to real multiuser governance interface",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/47",
+      "createdAt": "2026-11-02T00:13:31Z",
+      "updatedAt": "2026-11-02T00:19:58Z",
+      "mergedAt": "2026-11-02T00:19:58Z",
+      "closedAt": "2026-11-02T00:19:58Z",
+      "draft": false,
+      "headSha": "892d18ceb8c748415be0eb6e2040d984cdd6c972",
+      "baseRef": "main",
+      "mergeCommitSha": "e3f321f628e48db35694233f510ac7867b76d542"
+    },
+    {
+      "id": 5112997637,
+      "number": 48,
+      "title": "DCE-014: atomically apply passed, unchanged proposal text to public draft on decision closure",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/48",
+      "createdAt": "2026-11-02T00:16:30Z",
+      "updatedAt": "2026-11-02T00:18:10Z",
+      "mergedAt": "2026-11-02T00:18:10Z",
+      "closedAt": "2026-11-02T00:18:10Z",
+      "draft": false,
+      "headSha": "d40d8a2d0758138d79019bca9f60a6589d0d88a6",
+      "baseRef": "main",
+      "mergeCommitSha": "3505c9bab5d69e645b01fdfbd616b2ee528fe9c7"
+    },
+    {
+      "id": 5113036667,
+      "number": 49,
+      "title": "DCE-020/023: publish redacted decision receipts with offline integrity verification",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/49",
+      "createdAt": "2026-11-02T00:21:18Z",
+      "updatedAt": "2026-11-02T00:24:02Z",
+      "mergedAt": "2026-11-02T00:24:02Z",
+      "closedAt": "2026-11-02T00:24:02Z",
+      "draft": false,
+      "headSha": "458571a3fa0d2ed3ae6ea86f6ac82c89086d0dd2",
+      "baseRef": "main",
+      "mergeCommitSha": "b88bc5832b6be9f22ac82ce33bdc8a403f7afdb6"
+    },
+    {
+      "id": 5113064334,
+      "number": 50,
+      "title": "DCE-032: public document discovery, guest amendment browsing and paginated catalog",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/50",
+      "createdAt": "2026-11-02T00:24:41Z",
+      "updatedAt": "2026-11-02T00:36:02Z",
+      "mergedAt": "2026-11-02T00:36:02Z",
+      "closedAt": "2026-11-02T00:36:02Z",
+      "draft": false,
+      "headSha": "857c9fca1038c13593e0d4f2821abbf564508df1",
+      "baseRef": "main",
+      "mergeCommitSha": "31fe7cba9af4719e5be943c50b6547facebc6685"
+    },
+    {
+      "id": 5113097580,
+      "number": 51,
+      "title": "DCE-035/039: test and package the real authenticated governance application runtime",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/51",
+      "createdAt": "2026-11-02T00:28:46Z",
+      "updatedAt": "2026-11-02T00:32:40Z",
+      "mergedAt": "2026-11-02T00:32:40Z",
+      "closedAt": "2026-11-02T00:32:40Z",
+      "draft": false,
+      "headSha": "4d596fc4493e0f6456f85acc8e75d71665b0890e",
+      "baseRef": "main",
+      "mergeCommitSha": "fc3b911b23903fe4713f3ce734a6602d877e3aad"
+    },
+    {
+      "id": 5113159052,
+      "number": 52,
+      "title": "DCE-012: protect published close certificates against small-electorate ballot enumeration",
+      "state": "closed",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/52",
+      "createdAt": "2026-11-02T00:36:38Z",
+      "updatedAt": "2026-11-02T00:38:33Z",
+      "mergedAt": "2026-11-02T00:38:33Z",
+      "closedAt": "2026-11-02T00:38:33Z",
+      "draft": false,
+      "headSha": "01bb1797ab39c51674c79f97368168f1f00d38e2",
+      "baseRef": "main",
+      "mergeCommitSha": "113ced3e05b388017110e8f561e565fa4b997db4"
+    },
+    {
+      "id": 5234151879,
+      "number": 53,
+      "title": "DCE-002: verify native passkeys and add account security controls",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/53",
+      "createdAt": "2026-11-10T01:31:27Z",
+      "updatedAt": "2026-11-10T01:31:27Z",
+      "mergedAt": null,
+      "closedAt": null,
+      "draft": false,
+      "headSha": "05a524a3dd01f29e4d897c000082abd61989bbac",
+      "baseRef": "main",
+      "mergeCommitSha": "255eed1a999766932f8a52d4b681d92a816f50e0"
     }
   ]
 }

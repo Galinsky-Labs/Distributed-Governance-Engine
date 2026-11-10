@@ -2,7 +2,7 @@
   "unit": "DCE-006",
   "additionalUnit": "DCE-005",
   "scope": "ordinary-draft section indent/outdent with destination, numbering/reference preview and undo",
-  "observedAt": "2026-11-10T05:16:42.387915+00:00",
+  "observedAt": "2026-11-10T05:23:52.992896+00:00",
   "sourceFiles": {
     "editor/model.mjs": "465df7e6d7f928964c760a31d113f8c3db57cf8f74b1c0ddbd06e95172f4d5da",
     "editor/sections.mjs": "ff2b33e6b8c4beceac3664180cdbb789cc6177a3a2bb9d6f0c5afcc101d0412e",
@@ -10,7 +10,9 @@
     "web/app.jsx": "02c8e2e662454c832f1335064e35bf54f946798162a81c56475bb4818df4f691",
     "web/style.css": "344d91e60c2cfd1297547825a153c3d8532ae185ccaa310733f5e18faecde3ab",
     "tests/editor-sections.test.mjs": "cfbb3f8aa84902c37cf4470d0455b5516493a190cb98572e577e4bcdea52c3b5",
-    "tests/sections.browser.mjs": "581266657375a3bde7b8e2b1972db318f3aec4705c0127e20b6ee9fbf3548af7"
+    "tests/sections.browser.mjs": "581266657375a3bde7b8e2b1972db318f3aec4705c0127e20b6ee9fbf3548af7",
+    "scripts/github-test-reporter.mjs": "039c6b2e5efb92f6bcf8341b2415ac1257c21cee5deab0ce7296cca79b8b346a",
+    ".github/workflows/verify.yml": "73f3778fceb7b690637811d6d3de97a318fb405ccd5b32be79af0463c097939f"
   },
   "localChecks": {
     "engineUnitTests": 298,
@@ -26,7 +28,8 @@
     "emptyParentAndExcessiveDepthRefusal": true,
     "exhibitDestination": true,
     "liveAndImmutableDisabled": true,
-    "narrowViewportCssPixels": 320
+    "narrowViewportCssPixels": 320,
+    "ciAnnotationReporterControlledFailure": "Preserved exit code 1 and emitted only test name/type/location metadata; no assertion values or stack contents."
   },
   "dependenciesChanged": false,
   "semanticSchemaChanged": false,
@@ -41,6 +44,7 @@
     "Deleted-section reservation/tombstone workflows, additional jurisdiction profiles and typed package migration remain separate work",
     "Explicit reference labels retain their wording and require review",
     "Signed fixture OIDC/PGlite/local TLS evidence is not hosted, production-provider or assistive-technology acceptance",
-    "Managed local Chrome blocks standalone file URLs; pinned CI browser must pass standalone tests"
+    "Managed local Chrome blocks standalone file URLs; pinned CI browser must pass standalone tests",
+    "A browser failure on the earlier PR mapping head is under diagnosis; final exact-head CI must pass with all assertions retained."
   ]
 }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "repository": "Galinsky-Labs/Distributed-Governance-Engine",
-  "roadmapVersion": 31,
+  "roadmapVersion": 32,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T06:26:50Z",
+  "observedAt": "2026-11-10T06:34:51Z",
   "units": [
     {
       "id": "DCE-001",
@@ -153,7 +153,8 @@
         61,
         62,
         63,
-        64
+        64,
+        65
       ]
     },
     {
@@ -179,7 +180,8 @@
       "contributingPrs": [
         22,
         60,
-        61
+        61,
+        65
       ]
     },
     {
@@ -203,7 +205,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        25
+        25,
+        65
       ]
     },
     {
@@ -242,7 +245,8 @@
         58,
         59,
         60,
-        62
+        62,
+        65
       ]
     },
     {
@@ -1915,16 +1919,31 @@
       "id": 5236875815,
       "number": 64,
       "title": "DCE-005: Distinguish pending safety locks from completed editor transitions",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/64",
       "createdAt": "2026-11-10T06:25:40Z",
-      "updatedAt": "2026-11-10T06:25:40Z",
+      "updatedAt": "2026-11-10T06:31:05Z",
+      "mergedAt": "2026-11-10T06:31:05Z",
+      "closedAt": "2026-11-10T06:31:05Z",
+      "draft": false,
+      "headSha": "8e8b1f8828e0de55cbfdc65a2dce523502408d82",
+      "baseRef": "main",
+      "mergeCommitSha": "2031f7f81e8885b3f18a7c2d2e727afb42dc054a"
+    },
+    {
+      "id": 5236958452,
+      "number": 65,
+      "title": "DCE-007: Maintain stable internal references, definitions and footnotes",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/65",
+      "createdAt": "2026-11-10T06:34:13Z",
+      "updatedAt": "2026-11-10T06:34:13Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "16164c6b0d944907cac6041348157ea99eee7e59",
+      "headSha": "43ea7b1420d24c095477e4f62155b96cf06a601e",
       "baseRef": "main",
-      "mergeCommitSha": "3a9e3cc291e91e5969a8e8cb1f9ebd77e1aee870"
+      "mergeCommitSha": "298070aaa6ded52306f6719b7e8ac97bd64fc95f"
     }
   ]
 }

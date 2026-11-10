@@ -48,7 +48,8 @@
     "./private-document-http": "./server/private-document-http.mjs",
     "./private-update-ledger": "./server/private-update-ledger.mjs",
     "./private-update-http": "./server/private-update-http.mjs",
-    "./private-collaboration-hub": "./server/private-collaboration-hub.mjs"
+    "./private-collaboration-hub": "./server/private-collaboration-hub.mjs",
+    "./mls-state-vault": "./web/mls-state-vault.mjs"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

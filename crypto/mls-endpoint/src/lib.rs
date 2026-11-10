@@ -2,6 +2,8 @@
 //! Credential/account authorization is a separate verified-device boundary.
 #[cfg(target_arch = "wasm32")]
 mod browser;
+#[cfg(any(test, target_arch = "wasm32"))]
+mod state;
 use openmls::prelude::*;
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;

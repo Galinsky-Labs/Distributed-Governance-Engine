@@ -74,7 +74,7 @@ jobs:
           cp -R dist server src editor web migrations scripts deploy "$RUNNER_TEMP/quill-governance/"
           cp package.json package-lock.json Dockerfile .dockerignore "$RUNNER_TEMP/quill-governance/"
           mkdir -p "$RUNNER_TEMP/quill-governance/docs"
-          cp docs/PRODUCTION_RUNBOOK.md docs/IDENTITY_PROVIDER.md docs/PASSKEY_VERIFIER.md docs/PROVIDER_RESTORATION.md docs/MLS_ENDPOINT.md "$RUNNER_TEMP/quill-governance/docs/"
+          cp docs/PRODUCTION_RUNBOOK.md docs/IDENTITY_PROVIDER.md docs/PASSKEY_VERIFIER.md docs/PROVIDER_RESTORATION.md docs/MLS_ENDPOINT.md docs/MLS_STATE_VAULT.md "$RUNNER_TEMP/quill-governance/docs/"
           mkdir -p "$RUNNER_TEMP/quill-governance/crypto/mls-endpoint"
           cp crypto/mls-endpoint/Cargo.toml crypto/mls-endpoint/Cargo.lock "$RUNNER_TEMP/quill-governance/crypto/mls-endpoint/"
           cp -R crypto/mls-endpoint/src crypto/mls-endpoint/tests "$RUNNER_TEMP/quill-governance/crypto/mls-endpoint/"

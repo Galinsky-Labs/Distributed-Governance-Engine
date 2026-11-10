@@ -15,6 +15,7 @@ export async function mlsFixture(){
   const files=new Map([
    ['/',{type:'text/html',body:'<!doctype html><meta charset="utf-8"><title>Endpoint protocol test</title>'}],
    ['/quill_mls.js',{type:'text/javascript',body:js}],
+   ['/mls-state-vault.mjs',{type:'text/javascript',body:await readFile(new URL('../../web/mls-state-vault.mjs',import.meta.url))}],
    ['/quill_mls_bg.wasm',{type:'application/wasm',body:wasm}],
   ]);
   server=createServer({key,cert,minVersion:'TLSv1.3',maxVersion:'TLSv1.3'},(request,response)=>{

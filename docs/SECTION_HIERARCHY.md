@@ -13,3 +13,5 @@ Model tests cover label/reference and destination previews, exact domain-model e
 No credentials, dependencies, semantic schema fields or database migrations change. The source metadata and numbering reservations remain intact. Deleted-section reservation/tombstone workflows, additional jurisdiction profiles, typed package migration and full operational acceptance remain separate DCE-006 work.
 
 CI runs the same complete browser glob with Node's spec reporter and an additional annotation reporter. Failure annotations contain only the test name, exception type and source-file location; they omit assertion values, stack contents, fixture data and document text. The original job logs retain their existing access controls. A failed test still exits nonzero; no assertions or required checks are skipped.
+
+Reference impact also includes changed parent paths through `referenceChanges`: a moved `(a)` remains a heading `(a)` but its reference can change from `SEC. 1(a)` to `SEC. 2(a)`. The preview shows that change without changing the target ID.

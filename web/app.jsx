@@ -25,6 +25,8 @@ import { TableTools } from "./table-tools.jsx";
 import { NumberingTools } from "./numbering-tools.jsx";
 import { SectionTools } from "./section-tools.jsx";
 import { selectedSection } from "../editor/sections.mjs";
+import {ReferenceTools,DefinitionTools,FootnoteTools} from "./reference-tools.jsx";
+import {selectedInternalReference,selectedDefinition,insertInternalReference,updateInternalReference,appendDefinition,renameDefinition,insertFootnote} from "../editor/model.mjs";
 import { selectedTable } from "../editor/tables.mjs";
 import { SearchTools } from "./search-tools.jsx";
 import { AccountPanel } from "./account-panel.jsx";
@@ -270,6 +272,9 @@ function App() {
     [title, setTitle] = useState(""),
     [tableSelection, setTableSelection] = useState(null),
     [sectionSelection, setSectionSelection] = useState(null),
+    [referenceSelection,setReferenceSelection] = useState(null),
+    [definitionSelection,setDefinitionSelection] = useState(null),
+    [referenceMode,setReferenceMode] = useState(null),
     [status, setStatus] = useState(
       "Changes stay on this page unless you choose device recovery.",
     ),
@@ -302,12 +307,16 @@ function App() {
     setTableSelection(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
     const section = selectedSection(state);
     setSectionSelection(previous => JSON.stringify(previous) === JSON.stringify(section) ? previous : section);
+    const reference=selectedInternalReference(state),definition=selectedDefinition(state);
+    setReferenceSelection(previous=>JSON.stringify(previous)===JSON.stringify(reference)?previous:reference);
+    setDefinitionSelection(previous=>JSON.stringify(previous)===JSON.stringify(definition)?previous:definition);
   }
   useEffect(() => {
     document.title = brand.name + " — " + doc.metadata.title;
     document.documentElement.style.setProperty("--accent", brand.color);
     setTableSelection(null);
     setSectionSelection(null);
+    setReferenceSelection(null);setDefinitionSelection(null);setReferenceMode(null);
     saveEnabled.current = false;
     setSave(false);
     setFreezeConfirmed(false);
@@ -530,7 +539,9 @@ function App() {
     } catch { setStatus("Import rejected. Use a valid public working-copy JSON export from this Quill product."); }
   }
   function run(command, unavailable = "Place the cursor in a suitable paragraph to use this control.") {
-    if (!controller.current?.command(command)) setStatus(unavailable);
+    const applied=controller.current?.command(command)??false;
+    if (!applied) setStatus(unavailable);
+    return applied;
   }
   function citationDetails(current = {}) {
     const title = window.prompt("Optional source title", current.title ?? "");
@@ -823,6 +834,9 @@ function App() {
             <button disabled={!editable} onMouseDown={(e) => e.preventDefault()} onClick={() => run(removeExternalInline)}>
               Remove link
             </button>
+            <button onClick={()=>setReferenceMode(mode=>mode==='reference'?null:'reference')}>Reference</button>
+            <button disabled={!editable} onClick={()=>setReferenceMode(mode=>mode==='definition'?null:'definition')}>Definition</button>
+            <button disabled={!editable} onClick={()=>setReferenceMode(mode=>mode==='footnote'?null:'footnote')}>Footnote</button>
             <button disabled={!editable} onClick={() => run(appendTable())}>
               Table
             </button>
@@ -893,6 +907,9 @@ function App() {
         </section>
         <aside className="side-panel">
           <TableTools selection={tableSelection} editable={editable} run={run} />
+          {referenceMode==='reference'&&<ReferenceTools document={doc} selected={referenceSelection} editable={editable} insert={options=>run(insertInternalReference(options),'Choose a valid target and place the cursor within one paragraph.')} update={options=>run(updateInternalReference(options),'Select a reference and choose a valid target.')} remove={()=>{const applied=controller.current?.removeReference()??false;if(!applied)setStatus('Select a reference before removing it.');return applied;}} navigate={()=>{if(controller.current?.goToReference())setStatus('Reference target opened.');else setStatus('The reference target is unavailable.');}} close={()=>setReferenceMode(null)} />}
+          {referenceMode==='definition'&&<DefinitionTools selected={definitionSelection} editable={editable} add={(term,meaning)=>run(appendDefinition(term,meaning),'Enter a term and its definition text.')} rename={term=>run(renameDefinition(term),'Place the cursor inside the definition to rename it.')} close={()=>setReferenceMode(null)} />}
+          {referenceMode==='footnote'&&<FootnoteTools editable={editable} add={text=>run(insertFootnote(text),'Enter footnote text and select a position within one paragraph.')} close={()=>setReferenceMode(null)} />}
           <NumberingTools document={doc} editable={editable} live={live} prepare={options=>{if(!controller.current?.previewNumbering)throw Error("Open an editable document before previewing numbering.");return controller.current.previewNumbering(options);}} apply={preview=>controller.current?.applyNumbering(preview)??false} />
           <SectionTools selection={sectionSelection} document={doc} editable={editable} live={live} prepare={direction=>{if(!controller.current?.previewSectionMove)throw Error("Open an editable document before moving sections.");return controller.current.previewSectionMove(direction);}} apply={preview=>controller.current?.applySectionMove(preview)??false} />
           <p className="eyebrow">EDITION CONTROLS</p>

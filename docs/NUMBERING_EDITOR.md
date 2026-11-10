@@ -15,3 +15,5 @@ Tests cover detached preview/affected-reference output, stable content, one-step
 No new credentials, dependencies or migrations are required. This is a partial DCE-006 contribution; deleted-section workflows, broader jurisdiction profiles, live metadata synchronization, typed package migration and complete production/assistive-technology acceptance remain separate work.
 
 [Section hierarchy](SECTION_HIERARCHY.md) supplies the separate previewed indent/outdent controls for ordinary drafts.
+
+The additional `referenceChanges` preview field tracks complete reference paths, including a changed parent whose child keeps the same local label. The UI uses these impacts; existing local-heading preview fields remain available. See [Internal references](INTERNAL_REFERENCES_EDITOR.md).

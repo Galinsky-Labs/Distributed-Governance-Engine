@@ -212,7 +212,7 @@ export function previewLegalNodeMove(document,nodeId,parentId,index) {
  const affectedReferences=[];
  for(const [id,labels] of changed)for(const ref of backlinks.get(id)??[])
   affectedReferences.push({sourceId:ref.sourceId,targetId:id,from:labels.from,to:labels.to});
- return {renamed,affectedReferences,issues:documentIssues(afterDoc),preview:after};
+ return {renamed,affectedReferences,referenceChanges:referenceLabelChanges(doc,afterDoc),issues:documentIssues(afterDoc),preview:after};
 }
 export function createLegalDocument({id,tenantId,title,locale='en-US',mode='collaboration'}) {
  return validateLegalDocument({schemaVersion:LEGAL_SCHEMA_VERSION,id,tenantId,mode,lifecycle:'draft',revision:0,metadata:{title,locale,numberingProfile:'us-federal-v1'},content:[{kind:'paragraph',id:id+':p1',inlines:[{kind:'text',text:''}]}]});
@@ -283,7 +283,7 @@ export function previewLegalNumbering(document,numberingRules,{numberingProfile}
   for(const child of node.children??[])scan(child);
  }
  doc.content.forEach(scan);
- return {before,after,changed,affectedReferences};
+ return {before,after,changed,affectedReferences,referenceChanges:referenceLabelChanges(doc,candidate)};
 }
 
 /** Replace draft numbering preferences without modifying any semantic IDs or text. */
@@ -323,9 +323,46 @@ export function outdentLegalSection(document,sectionId) {
  const siblings=grandparent===doc?doc.content:grandparent.children;
  return moveLegalNode(doc,sectionId,grandparent.id,siblings.indexOf(location.parent)+1);
 }
+/** Derived labels only; never writes presentation text into stable-ID references. */
+export function legalReferenceLabels(document) {
+ const doc=validateLegalDocument(document),numbers=new Map(legalOutline(doc).map(row=>[row.id,row.label]));
+ const labels=new Map([[doc.id,Object.freeze({kind:'document',text:doc.metadata.title})]]);let footnote=0;
+ function pathText(parts,exhibits){
+  const path=parts.map((label,index)=>index<parts.length-1?label.replace(/\.$/,''):label).join('');
+  let context=exhibits.join(' — ');if(!context)return path;
+  const budget=1000-path.length-3;
+  if(context.length>budget){let end=budget-1;const unit=context.charCodeAt(end-1);if(unit>=0xD800&&unit<=0xDBFF)end--;context=context.slice(0,end)+'…';}
+  return context+' — '+path;
+ }
+ function walk(nodes,ancestors=[],exhibits=[]){for(const node of nodes){
+  let text=null,ordinal=null,next=ancestors,contexts=exhibits;
+  if(node.kind==='section'){next=[...ancestors,numbers.get(node.id)];text=pathText(next,exhibits);}
+  else if(node.kind==='definition')text=node.term.trim()?node.term:null;
+  else if(node.kind==='exhibit'){text=node.title;contexts=[...exhibits,node.title];}
+  else if(node.kind==='footnote'){ordinal=String(++footnote);text='Footnote '+ordinal;}
+  labels.set(node.id,Object.freeze({kind:node.kind,text,ordinal}));
+  if(node.children)walk(node.children,next,contexts);
+ }}
+ walk(doc.content);return labels;
+}
+/** Complete derived reference changes, including changed parent paths. */
+function referenceLabelChanges(before,after){
+ const previous=legalReferenceLabels(before),next=legalReferenceLabels(after),result=[];
+ for(const [id,refs]of legalReferenceAnalysis(after).backlinks)for(const ref of refs){
+  const from=legalReferenceText({kind:ref.kind,targetId:id},previous),to=legalReferenceText({kind:ref.kind,targetId:id},next);
+  if(from!==to)result.push({sourceId:ref.sourceId,targetId:id,from,to});
+ }
+ return result;
+}
+export function legalReferenceText(run,labels) {
+ if(run.label!==undefined&&run.label!==null)return run.label;
+ const target=labels.get(run.targetId);
+ return (run.kind==='footnote-reference'?target?.kind==='footnote'?target.ordinal:null:target?.text)??'['+run.targetId+']';
+}
+
 export function legalPlainText(document) {
- const doc=validateLegalDocument(document),labels=new Map(legalOutline(doc).map(x=>[x.id,x.label]));
- const inline=r=>{if(r.kind==='text')return r.text;if(!['link','citation'].includes(r.kind))return r.label??labels.get(r.targetId)??'['+r.targetId+']';const metadata=r.citationMetadata?['publisher','publishedOn','pinpoint','accessedOn'].filter(key=>r.citationMetadata[key]!==undefined).map(key=>r.citationMetadata[key]).join('; '):'';return r.label+' <'+r.targetUrl+'>'+(metadata?' ['+metadata+']':'');};
+ const doc=validateLegalDocument(document),labels=new Map(legalOutline(doc).map(x=>[x.id,x.label])),referenceLabels=legalReferenceLabels(doc);
+ const inline=r=>{if(r.kind==='text')return r.text;if(!['link','citation'].includes(r.kind))return legalReferenceText(r,referenceLabels);const metadata=r.citationMetadata?['publisher','publishedOn','pinpoint','accessedOn'].filter(key=>r.citationMetadata[key]!==undefined).map(key=>r.citationMetadata[key]).join('; '):'';return r.label+' <'+r.targetUrl+'>'+(metadata?' ['+metadata+']':'');};
  function render(node){if(node.inlines)return (node.term?node.term+'—':'')+node.inlines.map(inline).join('');return (node.title?(labels.get(node.id)??'EXHIBIT')+' '+node.title+'\n':'')+node.children.map(render).join(node.kind==='table-row'?'\t':'\n');}
  return doc.content.map(render).join('\n\n');
 }

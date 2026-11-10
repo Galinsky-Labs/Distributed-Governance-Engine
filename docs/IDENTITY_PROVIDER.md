@@ -69,7 +69,7 @@ report the exact configured issuer.
 
 ## Reproducible local acceptance
 
-This test runs the real upstream provider, not a synthetic token issuer. It creates
+Run these commands from a full source checkout. This test runs the real upstream provider, not a synthetic token issuer. It creates
 only disposable Docker resources with random credentials, a private local CA,
 separate certificate-verified TLS 1.3 PostgreSQL sessions, and one local integration
 user. Private files remain outside the checkout and containers carry ownership

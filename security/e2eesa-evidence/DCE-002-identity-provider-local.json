@@ -10,7 +10,8 @@
     "scripts/run-identity-provider-test.mjs": "15226415b5f3cb0b1df3525b29264a81190ac26d0f59d6d322eb45f393750a4a",
     "tests/identity-provider.test.mjs": "f4a00cd2e6364554774557007ba2685508088b807084b0bf41362c303fa0cda6",
     "tests/identity-provider.integration.mjs": "7d237541cc3ef7a2ed5747ab60508e3620f79583fe9ea4698d5a5b00662cb1fc",
-    ".github/workflows/verify.yml": "c7249c713ea66580de07a3be4084001b38a170237a14772b7f95f1b75fc1b954"
+    ".github/workflows/verify.yml": "c7249c713ea66580de07a3be4084001b38a170237a14772b7f95f1b75fc1b954",
+    ".github/workflows/publish-candidates.yml": "15fffc294296bc8e0c60e605b330ae259fa43e5c5dcc61c39e199fcecc7de693"
   },
   "localChecks": {
     "engineTests": 248,

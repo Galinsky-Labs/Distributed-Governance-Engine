@@ -22,6 +22,7 @@ import {
 import { createPublicDraftCache } from "../editor/draft-cache.mjs";
 import "./style.css";
 import { TableTools } from "./table-tools.jsx";
+import { NumberingTools } from "./numbering-tools.jsx";
 import { selectedTable } from "../editor/tables.mjs";
 import { SearchTools } from "./search-tools.jsx";
 import { AccountPanel } from "./account-panel.jsx";
@@ -886,6 +887,7 @@ function App() {
         </section>
         <aside className="side-panel">
           <TableTools selection={tableSelection} editable={editable} run={run} />
+          <NumberingTools document={doc} editable={editable} live={live} prepare={options=>{if(!controller.current?.previewNumbering)throw Error("Open an editable document before previewing numbering.");return controller.current.previewNumbering(options);}} apply={preview=>controller.current?.applyNumbering(preview)??false} />
           <p className="eyebrow">EDITION CONTROLS</p>
           <h2>From language to decisions</h2>
           <p>

@@ -11,6 +11,7 @@ import * as Y from 'yjs';
 import {createLegalDocument} from '../src/legal-structure.mjs';
 import {createPublicSharedDraft} from '../editor/shared-legal-draft.mjs';
 import {attachPublicCollaborationHub} from '../server/public-collaboration-hub.mjs';
+import {canonicalize} from '../src/integrity-values.mjs';
 
 const sessionA='A'.repeat(43),sessionB='B'.repeat(43),sessionC='D'.repeat(43);
 const csrf='C'.repeat(43);
@@ -28,7 +29,7 @@ function firstText(ydoc) {
  }
  return scan(ydoc.getXmlFragment('prosemirror'));
 }
-async function fixture() {
+async function fixture({jsonbOrder=false,emptySource=false}={}) {
  const temp=mkdtempSync(join(tmpdir(),'dge-wss-test-'));
  try {
   const result=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes',
@@ -43,7 +44,7 @@ async function fixture() {
   const origin='https://127.0.0.1:'+server.address().port;
   const tenantId=randomUUID(),documentId=randomUUID();
   let document=structuredClone(createLegalDocument({id:documentId,tenantId,title:'Public project'}));
-  document.content[0].inlines=[{kind:'text',text:'Seed'}];
+  document.content[0].inlines=[{kind:'text',text:emptySource?'':'Seed'}];
   let version=1,saveCount=0,visibility='public',persistedCrdt=null;
   const roles=new Map([[sessionA,'editor'],[sessionB,'viewer'],[sessionC,'editor']]);
   const check=(credentials,write=false)=>{
@@ -55,7 +56,7 @@ async function fixture() {
    async read(credentials,tenant,doc) {
     const role=check(credentials);
     if(tenant!==tenantId||doc!==documentId)throw Error('WRONG_DOCUMENT');
-    return {document:structuredClone(document),viewerRole:role,version,visibility};
+    return {document:jsonbOrder?JSON.parse(canonicalize(document)):structuredClone(document),viewerRole:role,version,visibility};
    },
    async collaborationState(credentials,tenant,doc) {
     check(credentials);
@@ -92,6 +93,7 @@ async function fixture() {
    freeze:()=>{visibility='private';},
    getSaveCount:()=>saveCount,
    getDocument:()=>document,
+   setPersistedState:state=>{persistedCrdt={version,state};},
    close:async()=>{
     hub.close();for(const ws of sockets)ws.terminate();
     await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});
@@ -151,4 +153,21 @@ test('private source is not admitted to public collaboration and no fallback rel
   assert.notEqual(client.ws.readyState,WebSocket.OPEN);
   assert.equal(fx.hub.stats().rooms,0);
  }finally{await fx.close();}
+});
+
+test('JSONB-style object key ordering cannot reject semantically identical collaboration content',{timeout:15000},async()=>{
+ const fx=await fixture({jsonbOrder:true});
+ try{const author=await fx.connect(sessionA);await until(()=>author.frames.some(frame=>frame[0]===1));assert.equal(fx.hub.stats().connections,1);}
+ finally{await fx.close();}
+});
+
+test('an empty source projects for read-only viewing without rewriting stored source',{timeout:15000},async()=>{
+ const fx=await fixture({jsonbOrder:true,emptySource:true});
+ try{const original=structuredClone(fx.getDocument()),viewer=await fx.connect(sessionB);await until(()=>viewer.frames.some(frame=>frame[0]===1));assert.deepEqual(fx.getDocument(),original);assert.equal(fx.getSaveCount(),0);}
+ finally{await fx.close();}
+});
+test('a persisted CRDT with different text is still refused after projection normalization',{timeout:15000},async()=>{
+ const fx=await fixture({jsonbOrder:true});let forged;
+ try{const changed=structuredClone(fx.getDocument());changed.content[0].inlines=[{kind:'text',text:'Unapproved source substitution'}];forged=createPublicSharedDraft({document:changed,classification:'public'});fx.setPersistedState(Buffer.from(forged.encodeState()).toString('base64url'));const client=await fx.connect(sessionA);assert.equal(client.ws.readyState,WebSocket.CLOSED);assert.equal(fx.hub.stats().connections,0);assert.equal(fx.getSaveCount(),0);}
+ finally{forged?.close();await fx.close();}
 });

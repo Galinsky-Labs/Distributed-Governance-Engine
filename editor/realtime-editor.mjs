@@ -9,6 +9,7 @@ import {validateLegalDocument} from '../src/legal-structure.mjs';
 import {validateTextSelection} from '../src/text-selections.mjs';
 import {editorSchema,editorToLegal,commands,identityPlugin} from './model.mjs';
 import {findTextMatches,findNextText} from './search.mjs';
+import {moveTableCell} from './tables.mjs';
 
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const binary=(code,bytes)=>{const out=new Uint8Array(bytes.length+1);out[0]=code;out.set(bytes,1);return out;};
@@ -27,7 +28,7 @@ function verifyUpdate(doc,update,base) {
  * authorization and persistence; no plaintext private-workspace fallback.
  */
 export async function mountPublicRealtimeEditor(element,initial,{
- classification,origin,readOnly=false,onChange=()=>{},onStatus=()=>{},onError=()=>{},onAcknowledged=()=>{},
+ classification,origin,readOnly=false,onChange=()=>{},onStatus=()=>{},onError=()=>{},onAcknowledged=()=>{},onSelectionChange=()=>{},
  WebSocketCtor=globalThis.WebSocket,timeoutMs=10000
 }={}) {
  const base=validateLegalDocument(initial);
@@ -81,7 +82,7 @@ export async function mountPublicRealtimeEditor(element,initial,{
     'Mod-b':toggleMark(editorSchema.marks.bold),
     'Mod-i':toggleMark(editorSchema.marks.italic),
     'Mod-u':toggleMark(editorSchema.marks.underline),
-    'Enter':splitListItem(editorSchema.nodes.list_item)}),
+    'Enter':splitListItem(editorSchema.nodes.list_item),'Tab':moveTableCell({grow:()=>connected&&!readOnly}),'Shift-Tab':moveTableCell({backward:true})}),
    keymap(baseKeymap)
   ]});
   view=new EditorView(element,{state,editable:()=>connected&&!readOnly,
@@ -91,12 +92,13 @@ export async function mountPublicRealtimeEditor(element,initial,{
      const applied=state.applyTransaction(transaction),next=applied.state;
      const changed=applied.transactions.some(tr=>tr.docChanged);
      const legal=changed?editorToLegal(next.doc,base,{increment:true}):current;
-     state=next;view?.updateState(next);
+     state=next;view?.updateState(next);if(view)onSelectionChange(view.state);
      if(changed){current=legal;onChange(current);}
     }catch(error){onError(error.message);}
    }
   });
   if(state!==view.state)view.updateState(state);
+  onSelectionChange(view.state);
   lastVector=Y.encodeStateVector(ydoc);
   ydoc.on('update',(_update,source)=>{
    if(source==='remote'||!connected||readOnly||sendPending)return;
@@ -135,6 +137,9 @@ export async function mountPublicRealtimeEditor(element,initial,{
   socket.addEventListener('error',failed);
   socket.addEventListener('close',failed);
   connected=true;
+  // EditorView computes contenteditable when props/state change; the closure
+  // alone does not refresh the DOM after the handshake has completed.
+  view.setProps({editable:()=>connected&&!readOnly});
   onStatus('Public collaboration connected; server save acknowledgement is pending.');
   return Object.freeze({
    view,getDocument:()=>current,

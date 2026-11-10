@@ -31,3 +31,7 @@ Migration 013 adds an append-only, tenant-scoped PostgreSQL Yjs state table keye
 The server now replies to the sending socket with a version acknowledgement *after* commit. The browser displays the acknowledged public version; a transmission alone does not count as a persisted save.
 
 The implementation remains public-only. State across multiple concurrently running app instances, distributed room fanout, websocket reconnect replay, high-load compaction, stale clients with unsent edits, and encrypted private-group key rotation remain incomplete. Public document history and Yjs history are distinct: both must stay consistent and cannot be reconstructed solely from semantic JSON. Production acceptance and independent security review remain pending.
+
+## Table editing and admission normalization
+
+The current [table contribution](TABLE_EDITING.md) adds a real two-browser authenticated public WSS journey with delayed peer updates, durable acknowledgments and saved reopen. Surviving Yjs cells retain concurrent peer text when another editor inserts a row. Room admission compares canonical editor-projected content rather than raw JSON serialization, so PostgreSQL JSONB key order and empty text normalization cannot reject equivalent source. Genuine projected-content mismatches still fail closed. The connected editor refreshes its editable DOM property immediately after handshake. These checks do not complete reconnect, multi-instance fanout, private device authority or production acceptance.

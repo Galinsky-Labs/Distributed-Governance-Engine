@@ -94,3 +94,5 @@ select:focus-visible,textarea:focus-visible{outline:3px solid #9d8425;outline-of
 .governance-guest-voting a{color:var(--accent);font-weight:700}
 .governance-pagination{display:flex;gap:10px;flex-wrap:wrap}
 .governance-pagination button{flex:1;font-size:12px}
+
+.table-tools p{flex-basis:100%;margin:0;font-size:12px}.ProseMirror table{table-layout:fixed}.ProseMirror td{min-width:0;overflow-wrap:anywhere}

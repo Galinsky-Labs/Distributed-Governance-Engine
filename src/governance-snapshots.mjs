@@ -4,8 +4,8 @@ import {
 import { validatePolicy, evaluateDecision } from "./governance.mjs";
 
 function immutableCopy(value) {
+  canonicalize(value);
   const copy = structuredClone(value);
-  canonicalize(copy);
   const freeze = (node) => {
     if (node && typeof node === "object") {
       for (const item of Object.values(node)) freeze(item);

@@ -108,3 +108,5 @@ and incoming events, and serialization before exposing wire/plaintext results.
 See MLS_STATE_VAULT.md for the actual browser/crash/race scope and whole-profile
 rollback limitation. Production unlock/device binding, recovery/witness, relay and
 private application acceptance remain unfinished; no planned unit is completed.
+
+DCE-010 now exposes bounded per-vote frozen account quorum, exact approval denominators/tie rules and publication-relative deliberation time through the durable API and form. See VOTE_POLICY_SETTINGS.md. Recent provider authentication is required to freeze a policy; no new credential or migration is required. Public-input immutability is preserved. This is partial source work; reusable policy administration, finality/challenge windows, open-public/verified-person/corporate eligibility and deployment remain outstanding.

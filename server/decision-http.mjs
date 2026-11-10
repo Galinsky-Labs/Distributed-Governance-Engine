@@ -23,7 +23,7 @@ export function createDecisionRoutes({decisions}){
         method(["GET","POST"]);
         if(request.method==="GET")return await decisions.read(credentials,tenantId,documentId,proposalId);
         write();
-        const body=await boundedJson(request,["hours","commandId"]);
+        const body=await boundedJson(request,["hours","commandId","policySettings"],["hours","commandId"]);
         return await decisions.open(credentials,tenantId,documentId,proposalId,body);
       }
       if(operation==="ballots"){

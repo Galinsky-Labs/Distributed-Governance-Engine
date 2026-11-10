@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "unit": "DCE-010",
+  "kind": "partial local source evidence",
+  "observedAt": "2026-11-10",
+  "sourceDigests": {
+    "src/vote-policy-settings.mjs": "ada3d7048edd3716ad9600088a840b172b2fb7805b4baf56f02bc3281fd12e1d",
+    "src/governance.mjs": "6cc77c26e6975d0cb3f38f7f6831c71b61493534eaa0985c8bf93d0ae950fed7",
+    "src/governance-snapshots.mjs": "91a8318aacd8e39989b939ed854d19e4973d720f5aff1391e385ba8e44bb4224",
+    "server/decision-store.mjs": "0320a7339055c2e57db24a9f085f8a6654fea8354ccf7ccd63098d0c7336ee84",
+    "server/decision-http.mjs": "0bdf58e7d6e8e35411c0ce4d0b07d03971e3013aac3f3b3be7d405190e50069d",
+    "web/decision-panel.jsx": "1dd4b72ed80547c8e7f8d75c44e1ea564d764138c33eaf1d634c672aed8ea706",
+    "tests/vote-policy-settings.test.mjs": "4807d5b48c95846ba7c011b93357124bfbcaf23cf31883086114c9355b35b44e",
+    "tests/decision-store.test.mjs": "a101077f5c8fc3db94b1b005ad835ae41558c8264ed2ac317c6b7897f7bea6a4",
+    "tests/decision-adoption.test.mjs": "3097be434ee3991a94343fcb0b94ef87ff65ec6a5ed3de5fa3173afb512a669f",
+    "tests/governance.browser.mjs": "c462d464fde6799f39c263d3c68bcea04c7f2c62ca0a06d4d57ab360a707282b"
+  },
+  "localChecks": {
+    "engineUnitTests": 328,
+    "engineGeneratedCases": 2000,
+    "authenticatedTwoMemberBrowserJourneys": 1,
+    "browser": "Chromium 156.0.8078.79",
+    "strictAndInclusiveThresholdAbstentionMatrix": true,
+    "scheduledOpeningAndExclusiveDeadline": true,
+    "frozenMembershipAndChangedCommandRejection": true,
+    "tenantCsrfAndRecentProviderAuthentication": true,
+    "publicInputPreservesActualFrozenSource": true,
+    "realCommitLostResponseSameCommandRecovery": true
+  },
+  "dependenciesChanged": false,
+  "databaseMigration": false,
+  "newCredentialsRequired": false,
+  "authorityChanged": "Opening votes additionally requires actual recent primary OIDC authentication; existing manager/tenant/CSRF fences remain",
+  "ciVerified": false,
+  "productionDeployment": false,
+  "independentHumanReview": false,
+  "limitations": [
+    "Equal member accounts are not verified unique people or shareholder rights",
+    "No reusable policy templates, public electorate safeguards, finality or challenge implementation",
+    "Local fixture identity/PGlite/TLS is not hosted acceptance",
+    "Private encrypted application remains gated"
+  ]
+}

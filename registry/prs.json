@@ -4,7 +4,7 @@
   "roadmapVersion": 32,
   "planVerified": true,
   "plannedPrCount": 39,
-  "observedAt": "2026-11-10T06:34:51Z",
+  "observedAt": "2026-11-10T07:04:54Z",
   "units": [
     {
       "id": "DCE-001",
@@ -293,10 +293,11 @@
         "Boundary tables for strict majority vs at-least supermajority, abstentions, empty electorate, timezone cutoffs and all mode mutation paths."
       ],
       "specification": "docs/prs/DCE-010.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        43
+        43,
+        66
       ]
     },
     {
@@ -1934,16 +1935,31 @@
       "id": 5236958452,
       "number": 65,
       "title": "DCE-007: Maintain stable internal references, definitions and footnotes",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/65",
       "createdAt": "2026-11-10T06:34:13Z",
-      "updatedAt": "2026-11-10T06:34:13Z",
+      "updatedAt": "2026-11-10T06:43:30Z",
+      "mergedAt": "2026-11-10T06:43:30Z",
+      "closedAt": "2026-11-10T06:43:30Z",
+      "draft": false,
+      "headSha": "9f814430533330740525fb037f65f965ee25a606",
+      "baseRef": "main",
+      "mergeCommitSha": "8a0735f74fddf59d270af48dd3fa69c000335451"
+    },
+    {
+      "id": 5237266384,
+      "number": 66,
+      "title": "DCE-010: Freeze configurable account voting rules and deliberation windows",
+      "state": "open",
+      "url": "https://github.com/Galinsky-Labs/Distributed-Governance-Engine/pull/66",
+      "createdAt": "2026-11-10T07:04:54Z",
+      "updatedAt": "2026-11-10T07:04:54Z",
       "mergedAt": null,
       "closedAt": null,
       "draft": false,
-      "headSha": "43ea7b1420d24c095477e4f62155b96cf06a601e",
+      "headSha": "74c6a7eb5137716ce5971e9fac4463dc19ae16ec",
       "baseRef": "main",
-      "mergeCommitSha": "298070aaa6ded52306f6719b7e8ac97bd64fc95f"
+      "mergeCommitSha": "bb4211c14bf103bcb60acfcf065b0b78e085eb87"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import {randomUUID,randomBytes} from "node:crypto";
+import {normalizeVotePolicySettings,describeVotePolicy} from "../src/vote-policy-settings.mjs";
 import {digest} from "../src/integrity.mjs";
 import {
   createGovernanceSnapshot, validateGovernanceSnapshot,
@@ -32,10 +33,11 @@ const publicState = (row,ballots,clock,own) => {
     eligibleCount:snapshot.electorate.members.length,weighting:"equal",
     opensAt:new Date(snapshot.policy.opensAt).toISOString(),
     closesAt:new Date(snapshot.policy.closesAt).toISOString(),
-    rule:{quorum:"At least half of the frozen electorate",approval:"Strict majority of yes/no votes",minYes:1},
+    rule:describeVotePolicy(snapshot.policy),
+    policyId:snapshot.policy.id,policyDigest:snapshot.policyDigest,
     state:row.state,
     outcome:{
-      status:row.state==="closed" ? result.status : clock>=snapshot.policy.closesAt ? "awaiting-closure" : "open",
+      status:row.state==="closed" ? result.status : clock<snapshot.policy.opensAt ? "not-open" : clock>=snapshot.policy.closesAt ? "awaiting-closure" : "open",
       yes:result.weights.yes,no:result.weights.no,abstain:result.weights.abstain,
       participating:result.counts.participating,eligible:result.counts.eligible,
       quorumMet:row.state==="closed" ? result.quorumMet : null,
@@ -97,11 +99,12 @@ export function createDecisionStore({
     return eventDigest;
   }
   return Object.freeze({
-    async open(credentials,tenantId,documentId,proposalId,{hours,commandId}) {
+    async open(credentials,tenantId,documentId,proposalId,{hours,commandId,policySettings}) {
       ids(tenantId,documentId,proposalId);
       check(uuid(commandId)&&Number.isSafeInteger(hours)&&hours>=1&&hours<=720,"INVALID_VOTE_WINDOW");
-      return scoped(credentials,tenantId,managerialRoles,true,async(db,actor)=>{
-        const requestDigest=digest("decision-open-command-v1",{tenantId,documentId,proposalId,hours,actorId:actor.accountId});
+      let settings;try{settings=normalizeVotePolicySettings(policySettings);}catch{throw new DocumentError("INVALID_VOTE_POLICY",400);}
+      return identity.withTenant(credentials,tenantId,{roles:managerialRoles,write:true,recent:true},async(db,actor)=>{
+        const requestDigest=digest("decision-open-command-v1",{tenantId,documentId,proposalId,hours,actorId:actor.accountId,...(policySettings===undefined?{}:{policySettings:settings})});
         const prior=(await db.query(
           "SELECT * FROM dge_decisions.decisions WHERE tenant_id=$1 AND command_id=$2",
           [tenantId,commandId])).rows[0];
@@ -115,7 +118,7 @@ export function createDecisionStore({
           [tenantId,documentId])).rows[0];
         check(source,"DOCUMENT_NOT_FOUND",404);
         const proposal=(await db.query(
-          "SELECT base_version,proposal,digest FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
+          "SELECT base_version,proposal,digest,created_at FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
           [tenantId,documentId,proposalId])).rows[0];
         check(proposal,"PROPOSAL_NOT_FOUND",404);
         check(textProposalDigest(proposal.proposal)===proposal.digest,"PROPOSAL_INTEGRITY_ERROR",503);
@@ -128,15 +131,19 @@ export function createDecisionStore({
           "SELECT account_id FROM dge_identity.memberships WHERE tenant_id=$1 AND active=true AND role IN ('owner','admin','editor','participant') ORDER BY account_id",
           [tenantId])).rows;
         check(members.length>0&&members.length<=maxElectors,"ELECTORATE_LIMIT_REACHED",429);
-        const at=new Date(now()),decisionId=randomUUID(),closeMs=at.getTime()+hours*3600000;
+        check(BigInt(settings.minYes)<=BigInt(members.length)&&(settings.quorum.kind!=="count"||BigInt(settings.quorum.minimum)<=BigInt(members.length)),"UNATTAINABLE_VOTE_POLICY",400);
+        const at=new Date(now()),decisionId=randomUUID(),publishedAt=new Date(proposal.created_at).getTime();
+        check(Number.isSafeInteger(publishedAt)&&publishedAt>=0,"PROPOSAL_INTEGRITY_ERROR",503);
+        const opensMs=policySettings===undefined?at.getTime():Math.max(at.getTime(),publishedAt+settings.minimumDeliberationHours*3600000),closeMs=opensMs+hours*3600000;
+        check(Number.isSafeInteger(opensMs)&&Number.isSafeInteger(closeMs),"INVALID_VOTE_WINDOW");
         const snapshot=createGovernanceSnapshot({
           id:decisionId,tenantId,documentId,mode:source.current.mode,proposalDigest:proposal.digest,
           createdAt:at.getTime(),
           electorate:{id:"electorate-"+decisionId,kind:"frozen",members:members.map(m=>({principalId:m.account_id,weight:"1"}))},
           policy:{id:"policy-"+decisionId,weighting:"equal",allowEarlyClose:false,
-            opensAt:at.getTime(),closesAt:closeMs,minYes:"1",
-            quorum:{kind:"fraction-count",numerator:"1",denominator:"2"},
-            approval:{basis:"decisive",comparison:"gt",numerator:"1",denominator:"2"}}
+            opensAt:opensMs,closesAt:closeMs,minYes:settings.minYes,
+            quorum:settings.quorum,approval:settings.approval,
+            ...(policySettings===undefined?{}:{minimumDeliberationHours:settings.minimumDeliberationHours,proposalPublishedAt:publishedAt})}
         });
         await db.query(
           "INSERT INTO dge_decisions.decisions(tenant_id,id,document_id,proposal_id,base_version,snapshot,snapshot_digest,created_by,created_at,closes_at,command_id,request_digest) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",

@@ -113,3 +113,24 @@ test("editing source before voting ends does not silently rebase passed amendmen
   assert.equal(current.document.content[0].inlines[0].text,"An unrelated draft edit.");
   assert.equal((await documents.history(source.id)).items.length,2);
 });
+
+test("custom account policy cannot turn public-input into draft adoption",async()=>{
+  const frozen=await documents.freezeForInput(owner,tenantId,source.id,{commandId:randomUUID(),expectedVersion:1});
+  const advisory=frozen.document;
+  const suggested=await proposals.create(member,tenantId,advisory.id,{
+    baseVersion:2,selection:{blockId:advisory.content[0].id,start:7,end:15,quote:"annually"},
+    replacement:"quarterly",rationale:"Consultation only.",commandId:randomUUID(),disclosure:"publish-proposal-v1"
+  });
+  clock=Date.now();
+  const opened=await decisions.open(owner,tenantId,advisory.id,suggested.proposal.id,{
+    hours:1,commandId:randomUUID(),policySettings:{quorum:{kind:"count",minimum:"1"},
+      approval:{basis:"participating",comparison:"gte",numerator:"1",denominator:"2"}}
+  });
+  await decisions.cast(owner,tenantId,advisory.id,suggested.proposal.id,{choice:"yes",expectedVersion:0,commandId:randomUUID()});
+  clock=new Date(opened.closesAt).getTime();
+  const {certificate}=await decisions.close(owner,tenantId,advisory.id,suggested.proposal.id);
+  assert.equal(certificate.outcome.status,"advisory");
+  assert.equal(certificate.appliedVersion,null);assert.equal(certificate.canAdopt,false);
+  const preserved=await documents.read(owner,tenantId,advisory.id);
+  assert.equal(preserved.version,2);assert.deepEqual(preserved.document,advisory);
+});

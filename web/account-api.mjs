@@ -81,3 +81,19 @@ export function readInvitationPackage(value) {
     throw Error("Invalid invitation code");
   return result;
 }
+
+// Recovery starts without an existing session or CSRF cookie. The server requires
+// the browser's exact Origin and a single-use code; keep both inputs out of URLs.
+export async function recoverWithCode(accountId, recoveryCode, fetcher = (...args) => fetch(...args)) {
+  if (typeof accountId !== 'string' || typeof recoveryCode !== 'string' ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(accountId) ||
+      !/^[A-Za-z0-9_-]{43}$/.test(recoveryCode))
+    throw new AccountAPIError('RECOVERY_NOT_ACCEPTED', 403);
+  const response = await fetcher('/api/recovery-session', {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: {accept: 'application/json', 'content-type': 'application/json'},
+    body: JSON.stringify({accountId, recoveryCode}),
+  });
+  if (!response.ok) throw new AccountAPIError(
+    response.status === 429 ? 'RATE_LIMITED' : response.status >= 500 ? 'SERVICE_UNAVAILABLE' : 'RECOVERY_NOT_ACCEPTED', response.status);
+}

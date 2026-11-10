@@ -74,7 +74,7 @@ jobs:
           cp -R dist server src editor web migrations scripts deploy "$RUNNER_TEMP/quill-governance/"
           cp package.json package-lock.json Dockerfile .dockerignore "$RUNNER_TEMP/quill-governance/"
           mkdir -p "$RUNNER_TEMP/quill-governance/docs"
-          cp docs/PRODUCTION_RUNBOOK.md docs/IDENTITY_PROVIDER.md docs/PASSKEY_VERIFIER.md "$RUNNER_TEMP/quill-governance/docs/"
+          cp docs/PRODUCTION_RUNBOOK.md docs/IDENTITY_PROVIDER.md docs/PASSKEY_VERIFIER.md docs/PROVIDER_RESTORATION.md "$RUNNER_TEMP/quill-governance/docs/"
           tar -czf Quill-Governance-Engine.tgz -C "$RUNNER_TEMP/quill-governance" .
       - name: Publish permanent integrated-app prerelease
         env:

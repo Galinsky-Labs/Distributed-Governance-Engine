@@ -122,6 +122,16 @@ export function createIdentityStore({transaction,sessionKey,stateKey,origin,cloc
       AND purpose=$5 AND consumed_at IS NULL AND expires_at>$4 RETURNING challenge_digest`,[digest('passkey-challenge',challenge),actor.id,actor.token_digest,usedAt,purpose])).rows[0];
     deny(row,'PASSKEY_CHALLENGE_INVALID');return {actor,usedAt};
   }
+  async function restorationSession(db,credentials) {
+    const restoredAt=now(),actor=await session(db,credentials,true,false,true);
+    deny(actor.authentication_method==='recovery','RECOVERY_SESSION_REQUIRED');
+    const verifiedAt=date(actor.passkey_verified_at);
+    deny(actor.passkey_credential_id&&Number.isFinite(verifiedAt)&&verifiedAt<=restoredAt.getTime()&&
+      verifiedAt>restoredAt.getTime()-300000,'PASSKEY_STEP_UP_REQUIRED');
+    const active=(await db.query('SELECT id FROM dge_identity.passkey_credentials WHERE id=$1 AND account_id=$2 AND revoked_at IS NULL FOR SHARE',[actor.passkey_credential_id,actor.id])).rows[0];
+    deny(active,'PASSKEY_STEP_UP_REQUIRED');
+    return {actor,restoredAt};
+  }
   return Object.freeze({
     // Call only with claims authenticated by the configured OIDC adapter. Never link by email.
     establishSession:({issuer,subject,authenticatedAt,authenticationMethods=[]})=>transaction(async db=>{
@@ -238,10 +248,12 @@ export function createIdentityStore({transaction,sessionKey,stateKey,origin,cloc
       await securityEvent(db,actor.id,'passkey-revoked',revokedAt);
       return {revoked:true,devicesRevoked:devices.rows.length};
     }),
+    providerRestorationContext:credentials=>transaction(async db=>{
+      const {actor}=await restorationSession(db,credentials);
+      return {accountId:actor.id,sessionBinding:actor.token_digest};
+    }),
     restoreProviderIdentity:(credentials,{issuer,subject,authenticatedAt,authenticationMethods=[]})=>transaction(async db=>{
-      const restoredAt=now(),actor=await session(db,credentials,true,false,true);
-      deny(actor.authentication_method==='recovery','RECOVERY_SESSION_REQUIRED');
-      deny(actor.passkey_credential_id&&actor.passkey_verified_at&&date(actor.passkey_verified_at)>restoredAt.getTime()-300000,'PASSKEY_STEP_UP_REQUIRED');
+      const {actor,restoredAt}=await restorationSession(db,credentials);
       deny(Array.isArray(authenticationMethods)&&authenticationMethods.length<=16&&authenticationMethods.every(value=>typeof value==='string'&&value.length>0&&value.length<=64&&!value.includes('\0')));
       const authenticationAssurance=authenticationMethods.includes('hwk')?'hardware-bound':authenticationMethods.includes('mfa')?'multifactor':'primary';
       deny(Number.isSafeInteger(authenticatedAt)&&authenticatedAt>=restoredAt.getTime()-300000&&authenticatedAt<=restoredAt.getTime()+30000);

@@ -266,7 +266,7 @@ function provider(scenario={}) {
   const config=new oidc.Configuration({issuer,authorization_endpoint:issuer+'/authorize',token_endpoint:issuer+'/token',jwks_uri:issuer+'/jwks',id_token_signing_alg_values_supported:['RS256'],response_types_supported:['code']},clientId,'fixture-client-secret');
   config[oidc.customFetch]=async(url,init)=>{
     if(String(url)===issuer+'/jwks')return Response.json({keys:[{...keys.publicKey.export({format:'jwk'}),kid:'fixture-key',alg:'RS256',use:'sig'}]});
-    assert.equal(String(url),issuer+'/token');const form=new URLSearchParams(init.body);
+    assert.equal(String(url),issuer+'/token');await scenario.beforeToken?.();const form=new URLSearchParams(init.body);
     assert.equal(form.get('code'),'test-code');assert.equal(createHash('sha256').update(form.get('code_verifier')).digest('base64url'),authorization.searchParams.get('code_challenge'));
     const now=Math.floor(Date.now()/1000),payload={iss:issuer,sub:'verified-user',aud:clientId,iat:now,exp:now+300,auth_time:now,nonce:authorization.searchParams.get('nonce'),amr:['pwd','mfa'],...scenario.claims};
     const unsigned=Buffer.from(JSON.stringify({alg:'RS256',kid:'fixture-key'})).toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -274,7 +274,7 @@ function provider(scenario={}) {
     return Response.json({access_token:'unused-fixture-access-token',token_type:'Bearer',expires_in:300,id_token:unsigned+'.'+(scenario.badSignature?'invalid-signature':signature)});
   };
   const login=createOIDCLogin({store,configuration:config,redirectUri:origin+'/auth/callback'});
-  return {login,async start(){const result=await login.start();authorization=new URL(result.authorizationUrl);return {state:authorization.searchParams.get('state'),browser:result.cookie.match(/^__Host-dge_login=([^;]+)/)[1],authorization};}};
+  return {login,async start(credentials){const result=credentials?await login.startRestoration(credentials):await login.start();authorization=new URL(result.authorizationUrl);return {state:authorization.searchParams.get('state'),browser:result.cookie.match(/^__Host-dge_login=([^;]+)/)[1],authorization};}};
 }
 test('OIDC rejects ambiguous callbacks before consuming browser-bound login state',async()=>{
   const {login,start}=provider(),pending=await start();
@@ -313,4 +313,69 @@ for(const [name,scenario] of Object.entries({nonce:{claims:{nonce:'wrong'}},issu
 test('OIDC callback cannot change configured origin/path or repeat state parameters',async()=>{
   const {login,start}=provider(),p=await start();
   for(const callback of ['not-a-url','https://attacker.example/auth/callback?state='+p.state,origin+'/elsewhere?state='+p.state,origin+'/auth/callback?state='+p.state+'&state='+p.state])await denied(login.complete(callback,p.browser));
+});
+
+async function restorationFixture() {
+  const who=await account('lost-provider'), {tenantId}=await store.createTenant(who);
+  const credentialId=randomBytes(32).toString('base64url'), enrollment=await store.beginPasskeyEnrollment(who);
+  await store.finishPasskeyEnrollment(who,enrollment.challenge,{accepted:true,credentialId});
+  const codes=await store.issueRecoveryCodes(who);
+  const recovery={...await store.recoverAccount(who.accountId,codes.recoveryCodes[0]),origin};
+  const verify=async()=>{
+    const challenge=await store.beginPasskeyAuthentication(recovery);
+    await store.finishPasskeyAuthentication(recovery,challenge.challenge,{accepted:true,userVerified:true,credentialId,newCounter:1});
+  };
+  return {who,tenantId,recovery,codes,verify};
+}
+test('restoration start requires exact CSRF/origin, recovery session and existing passkey proof',async()=>{
+  const {who,recovery,verify}=await restorationFixture(), {start}=provider();
+  for(const bad of [who,recovery,{...recovery,origin:'https://attacker.example'}]) await denied(start(bad));
+  assert.equal((await db.query('SELECT count(*)::int n FROM dge_identity.login_challenges')).rows[0].n,0);
+  await verify();
+  await denied(start({...recovery,csrfToken:randomBytes(32).toString('base64url')}));
+  const pending=await start(recovery);
+  assert.equal(pending.authorization.searchParams.get('prompt'),'login');
+  const snapshot=JSON.stringify((await db.query('SELECT * FROM dge_identity.login_challenges')).rows);
+  assert.ok(!snapshot.includes(recovery.sessionToken));assert.ok(!snapshot.includes(recovery.csrfToken));
+});
+test('real OIDC restoration preserves account and workspace and uses only verified provider assurance',async()=>{
+  const {who,tenantId,recovery,verify}=await restorationFixture();await verify();
+  const {login,start}=provider({claims:{sub:'replacement-user',amr:['pwd']}}),pending=await start(recovery);
+  const callback=origin+'/auth/callback?code=test-code&state='+pending.state;
+  const restored=await login.complete(callback,pending.browser,recovery.sessionToken);
+  assert.equal(restored.accountId,who.accountId);assert.equal(restored.authenticationAssurance,'primary');
+  assert.equal((await store.sessionInfo(restored.sessionToken)).passkeyStepUpExpiresAt,null);
+  assert.equal((await store.organizations({sessionToken:restored.sessionToken})).items[0].tenantId,tenantId);
+  await denied(store.account(recovery.sessionToken));await denied(login.complete(callback,pending.browser,recovery.sessionToken));
+  assert.deepEqual((await db.query('SELECT issuer,subject FROM dge_identity.accounts WHERE id=$1',[who.accountId])).rows,[{issuer:'https://provider.example',subject:'replacement-user'}]);
+});
+for(const failure of ['missing-cookie','different-account','replacement-session','expired-proof','future-proof','revoked-credential']) {
+  test('OIDC restoration rejects '+failure+' without rebinding or creating an account',async()=>{
+    const {who,recovery,codes,verify}=await restorationFixture();await verify();
+    const {login,start}=provider(),pending=await start(recovery);
+    let token=recovery.sessionToken;
+    if(failure==='missing-cookie')token=undefined;
+    if(failure==='different-account')token=(await account('attacker')).sessionToken;
+    if(failure==='replacement-session')token=(await store.recoverAccount(who.accountId,codes.recoveryCodes[1])).sessionToken;
+    if(failure==='expired-proof')time+=300000;
+    if(failure==='future-proof')time-=1;
+    if(failure==='revoked-credential')await db.query('UPDATE dge_identity.passkey_credentials SET revoked_at=$1 WHERE account_id=$2',[new Date(time),who.accountId]);
+    const count=(await db.query('SELECT count(*)::int n FROM dge_identity.accounts')).rows[0].n;
+    await denied(login.complete(origin+'/auth/callback?code=test-code&state='+pending.state,pending.browser,token));
+    assert.equal((await db.query('SELECT count(*)::int n FROM dge_identity.accounts')).rows[0].n,count);
+    assert.equal((await db.query('SELECT subject FROM dge_identity.accounts WHERE id=$1',[who.accountId])).rows[0].subject,'lost-provider');
+  });
+}
+
+test('restoration rechecks proof freshness after a successful provider token exchange',async()=>{
+  const {who,recovery,verify}=await restorationFixture();await verify();
+  const {login,start}=provider({beforeToken:()=>{time+=300000;}}),pending=await start(recovery);
+  await denied(login.complete(origin+'/auth/callback?code=test-code&state='+pending.state,pending.browser,recovery.sessionToken));
+  assert.equal((await db.query('SELECT subject FROM dge_identity.accounts WHERE id=$1',[who.accountId])).rows[0].subject,'lost-provider');
+});
+test('sealed unknown login purpose cannot fall back to ordinary account creation',async()=>{
+  const {login}=provider(),state=randomBytes(32).toString('base64url'),browser=randomBytes(32).toString('base64url');
+  await store.putLogin(state,browser,{issuer:'https://provider.example',redirectUri:origin+'/auth/callback',purpose:'unrecognized'});
+  await denied(login.complete(origin+'/auth/callback?code=test-code&state='+state,browser));
+  assert.equal((await db.query('SELECT count(*)::int n FROM dge_identity.accounts')).rows[0].n,0);
 });

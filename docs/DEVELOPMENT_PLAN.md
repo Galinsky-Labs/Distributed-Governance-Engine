@@ -54,9 +54,9 @@ DCE-004 is implemented in actual merged PR #2. The editor foundation contributes
 
 DCE-002 has a partial server implementation for OIDC login, persisted sessions, membership/invitations, scoped database permissions and audit events. See IDENTITY_FOUNDATION.md and decisions/0002-low-cost-identity.md. Recovery, passkey/device assurance and deployment acceptance remain planned. HTTP/account UI integration now has a TLS browser test with a synthetic provider, pending production acceptance. No hosted service or paid resource is created for this contribution.
 
-The recovery contribution adds rotating, single-use recovery codes, atomic session invalidation, a short read-only recovery session and minimal security-event evidence. It deliberately does not treat recovery as recent OIDC authentication or encrypted-device enrollment. Full provider-loss restoration, passkeys/device assurance and production acceptance remain planned.
+The recovery contribution adds rotating, single-use recovery codes, atomic session invalidation, a short read-only recovery session and minimal security-event evidence. It deliberately does not treat recovery as recent OIDC authentication or encrypted-device enrollment. Physical passkey/device assurance and production recovery acceptance remain planned.
 
-The passkey/device-assurance contribution adds verifier-backed, session-bound WebAuthn ceremony state, credential/counter persistence, fresh local step-up and separately revocable device public-key thumbprints. Migration 010 adds immutable attestation-policy evidence, migration 011 adds credential/device revocation containment, and migration 012 adds a server-only provider-restoration transaction requiring both a restricted recovery session and an already-enrolled passkey before fresh verified OIDC claims can replace the provider binding. It deliberately does not ship custom attestation cryptography, content keys, a browser recovery route or a private-workspace authorization claim. Real browser/authenticator interoperability, production verifier/allowlist selection, callback/UI restoration, membership rekeying and production acceptance remain planned.
+The passkey/device-assurance contribution adds verifier-backed, session-bound WebAuthn ceremony state, credential/counter persistence, fresh local step-up and separately revocable device public-key thumbprints. Migration 010 adds immutable attestation-policy evidence, migration 011 adds credential/device revocation containment, and migration 012 adds a server-only provider-restoration transaction requiring both a restricted recovery session and an already-enrolled passkey before fresh verified OIDC claims can replace the provider binding. It deliberately does not ship custom attestation cryptography, content keys or a private-workspace authorization claim. Physical-authenticator interoperability, production allowlist selection, membership rekeying and production acceptance remain planned.
 
 DCE-005 also includes literal body-text find/replace, bounded replace-all with one-step undo, Unicode-aware positions, safe failures and readonly search. Schema v2 and the editor now preserve canonical HTTPS link/citation atoms with an explicit v1 migration; selected atoms can be edited or unlinked without losing visible text. Citations now support bounded publisher, publication-date, pinpoint and access-date metadata through the schema, editor and deterministic plain-text export. Citation import/resolution against DCE-007, broader IME/accessibility coverage and production integration remain unfinished. A real-Chrome authenticated document journey covers composed Unicode input, an interrupted-save retry, named editor/toolbar semantics, visible keyboard focus and 320-pixel reflow without treating that fixture as production or cross-platform acceptance. Automated browser checks do not establish manual screen-reader or assistive-technology interoperability.
 
@@ -77,7 +77,7 @@ The source must not be represented as usable private end-to-end-encrypted collab
 
 DCE-002 (passkey verifier and provider restoration), DCE-005 (editor/browser/accessibility acceptance), DCE-006/007 (configuration UI and complete reference workflows) remain partial despite tested advances. Do not infer acceptance from contribution PR counts.
 
-The DCE-002 concrete-verifier contribution pins SimpleWebAuthn, adds account add/verify/revoke controls, and verifies native browser ceremonies with a virtual authenticator. See PASSKEY_VERIFIER.md. Production attestation-policy selection, provider restoration UI, real hardware/provider evidence and deployment acceptance remain outstanding. No unit acceptance or PR mapping is invented.
+The DCE-002 concrete-verifier contribution pins SimpleWebAuthn, adds account add/verify/revoke controls, and verifies native browser ceremonies with a virtual authenticator. See PASSKEY_VERIFIER.md. Production attestation-policy selection, real hardware/hosted-provider evidence and deployment acceptance remain outstanding. No unit acceptance or PR mapping is invented.
 
 The owner-requested new identity-provider candidate uses pinned Keycloak with
 TLS-only endpoints, a separate verified-TLS PostgreSQL database, exact confidential
@@ -87,3 +87,11 @@ enrollment and only a fresh verified MFA login permits recovery-code issuance.
 See IDENTITY_PROVIDER.md for tested local setup and explicit production inputs.
 Public hosting, operator recovery, physical-device assurance and full DCE-002
 acceptance remain outstanding; this does not begin downstream application work.
+
+The browser provider-restoration contribution now connects limited code redemption,
+already-enrolled passkey verification and a purpose/session-bound fresh OIDC
+callback. See PROVIDER_RESTORATION.md for current behavior, rollback and evidence.
+Hosted recovery drills, physical devices, private-content
+recovery and full DCE-002 acceptance remain unverified. No new deployment
+credential is required beyond the configured issuer/client, independent session
+and state keys, database/TLS credentials and explicit passkey policy.

@@ -163,12 +163,15 @@ def start(state_path):
                '--entrypoint', '/bin/sh', POSTGRES_IMAGE, '-c', postgres_start)
         for _ in range(60):
             try:
-                docker('exec', base + '-db', 'pg_isready', '-U', 'postgres')
+                # The entrypoint's initialization server accepts Unix-socket
+                # connections before restarting. Only the final server listens on TCP.
+                docker('exec', base + '-db', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres')
                 break
             except subprocess.CalledProcessError:
                 time.sleep(1)
         else:
             raise RuntimeError('Local TLS PostgreSQL did not become ready')
+        phase('isolated TLS PostgreSQL role provisioning')
         sql = (f"CREATE ROLE keycloak LOGIN PASSWORD '{credentials['database']}' NOSUPERUSER NOCREATEDB "
                "NOCREATEROLE NOREPLICATION NOBYPASSRLS;\nCREATE DATABASE keycloak OWNER keycloak;\n")
         docker('exec', '-i', base + '-db', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', data=sql.encode())

@@ -357,6 +357,9 @@ export function createElectorateStore({identity,clock=Date.now,personKeySecret,m
           "PROXY_GRANTEE_NOT_ELIGIBLE",409);
         // Serialize all grant changes of one grantor before reading totals.
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",["proxy-grants:"+tenantId+":"+actor.accountId]);
+        // Grants overlapping this one: same roster, same decision, or the
+        // roster a decision was frozen from.
+        const overlap={rosterId,decisionId};
         let holding;
         if(rosterId){
           await roster(db,tenantId,rosterId);
@@ -366,13 +369,14 @@ export function createElectorateStore({identity,clock=Date.now,personKeySecret,m
           check(decision,"DECISION_NOT_FOUND",404);
           check(decision.state==="open"&&decision.snapshot.schemaVersion===2,"PROXY_DECISION_NOT_OPEN",409);
           holding=decision.snapshot.electorate.members.find(m=>m.principalId===actor.accountId)?.classes;
+          overlap.rosterId=decision.snapshot.electorate.rosterId??null;
         }
         check(holding,"GRANTOR_HAS_NO_VOTING_UNITS",409);
         const reciprocal=(await db.query(
           "SELECT 1 FROM dge_electorates.proxy_grants WHERE tenant_id=$1 AND grantor_id=$2 AND grantee_id=$3 AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at>$4)",
           [tenantId,granteeId,actor.accountId,at])).rows.length;
         check(!reciprocal,"PROXY_CYCLE",409);
-        const existing=await activeGrants(db,tenantId,actor.accountId,at,{rosterId,decisionId});
+        const existing=await activeGrants(db,tenantId,actor.accountId,at,overlap);
         check(existing.length<maxActiveGrants,"PROXY_LIMIT_REACHED",429);
         check(allocationFits(holding,[...existing.map(g=>g.allocation),fixed]),"PROXY_OVER_ALLOCATION",409);
         const id=randomUUID();

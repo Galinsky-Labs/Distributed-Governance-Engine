@@ -21,6 +21,8 @@ import {attachPublicCollaborationHub} from "../../server/public-collaboration-hu
 import { nodeListener } from "../../server/application.mjs";
 import { createPlatform } from "../../server/platform.mjs";
 import { loadLogSigningKey } from "../../server/ledger.mjs";
+import { createRequestBudget } from "../../server/account-http.mjs";
+import { routeUpgrades, attachPrivateWorkspaceHub } from "../../server/private-workspace.mjs";
 
 const escape = (value) =>
   String(value).replace(
@@ -37,7 +39,10 @@ export async function accountFixture({
   hostname = '127.0.0.1',
   publicCollaboration = false,
   collaborationSaveDelayMs = 0,
+  privateWorkspaces = true,
+  perPeerBudget,
 } = {}) {
+  if (typeof privateWorkspaces !== 'boolean') throw Error('Invalid private workspace fixture setting');
   if (typeof publicCollaboration !== 'boolean') throw Error('Invalid public collaboration fixture setting');
   if (!['127.0.0.1', 'localhost'].includes(hostname)) throw Error('Loopback fixture hostname required');
   for (const delay of [proposalListDelayMs, documentListDelayMs, collaborationSaveDelayMs])
@@ -186,6 +191,8 @@ export async function accountFixture({
   const { application, bodyLimit, services } = createPlatform({
     identity: store, transaction, login, origin, logId: "quill.fixture",
     logSigningKey: loadLogSigningKey(generateKeyPairSync("ed25519").privateKey.export({ format: "der", type: "pkcs8" }).toString("base64")),
+    privateWorkspaces,
+    ...(perPeerBudget ? { budget: createRequestBudget({ perPeer: perPeerBudget }) } : {}),
   });
   listener = nodeListener({
     origin,
@@ -263,15 +270,20 @@ export async function accountFixture({
   });
   const sharedDocuments=services.documents;
   const collaborationDocuments=collaborationSaveDelayMs?{...sharedDocuments,async save(...args){await new Promise(resolve=>setTimeout(resolve,collaborationSaveDelayMs));return sharedDocuments.save(...args);}}:sharedDocuments;
-  const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:collaborationDocuments}):null;
+  const upgrades=privateWorkspaces?routeUpgrades(server):null;
+  const collaboration=publicCollaboration?attachPublicCollaborationHub({server:upgrades?.publicServer??server,origin,documents:collaborationDocuments}):null;
+  const privateRelay=privateWorkspaces?attachPrivateWorkspaceHub({server:upgrades.privateServer,origin,services:services.privateWorkspace}):null;
   return {
     origin,
     db,
     store,
     services,
     collaborationStats:()=>collaboration?.stats()??null,
+    privateRelayStats:()=>privateRelay?.stats()??null,
     close: async () => {
       collaboration?.close();
+      privateRelay?.close();
+      upgrades?.close();
       await new Promise((resolve) => {
         server.close(resolve);
         server.closeAllConnections();

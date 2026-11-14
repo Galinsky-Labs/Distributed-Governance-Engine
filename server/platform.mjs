@@ -16,6 +16,7 @@ import { createLedgerRoutes, ledgerBodyLimit } from "./ledger-http.mjs";
 import { createVerificationRoutes, verificationBodyLimit } from "./verification-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
+import { createPrivateWorkspaceServices } from "./private-workspace.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 
@@ -73,7 +74,9 @@ export function createPlatform({
   logId, logSigningKey, anchorProviders = [], anchorOptions = {},
   extensions = [], assetDirectory, readiness, release = null, budget,
   decorateDocuments = (documents) => documents,
+  privateWorkspaces = false, privateLimits = {},
 }) {
+  if (typeof privateWorkspaces !== "boolean") throw Error("Invalid private workspace setting");
   for (const extension of extensions) validateExtension(extension);
   const documents = decorateDocuments(createDocumentStore({ identity, transaction }));
   const proposals = createProposalStore({ identity, transaction });
@@ -92,6 +95,10 @@ export function createPlatform({
   ];
   routeSets.unshift({ routes: createVerificationRoutes({ transaction, ledger, decisions, clock }), bodyLimit: verificationBodyLimit });
   if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: (c) => services.isPlatformAdmin?.(c) ?? false }), bodyLimit: ledgerBodyLimit });
+  // End-to-end encrypted workspaces: ciphertext, public MLS material and an
+  // ordered handshake mailbox only. The server never holds a decryption key.
+  const privateWorkspace = privateWorkspaces ? createPrivateWorkspaceServices({ identity, clock, limits: privateLimits }) : null;
+  if (privateWorkspace) { services.privateWorkspace = privateWorkspace; routeSets.unshift(...privateWorkspace.routeSets); }
   const workers = ledger ? [{ name: "ledger", intervalMs: 5000, tick: () => ledger.tick() }] : [];
   for (const extension of extensions) {
     for (const set of extension.createRoutes?.(services) ?? []) routeSets.unshift(set);
@@ -100,7 +107,7 @@ export function createPlatform({
   // Platform routes are matched before account management, in a stable order.
   const accounts = createAccountHandler({ store: identity, login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });
   const application = createEngineApplication({
-    accounts, origin, product, readiness, release,
+    accounts, origin, product, readiness, release, privateWorkspaces,
     ...(assetDirectory ? { assetDirectory } : {}),
   });
   const bodyLimit = (path) => Math.max(...routeSets.map((s) => s.bodyLimit(path)));

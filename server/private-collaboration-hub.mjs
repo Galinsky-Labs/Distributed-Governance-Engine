@@ -52,12 +52,13 @@ function disconnect(ws,code=1008) {
  * inferred solely from a user-provided deviceId or envelope metadata.
  */
 export function attachPrivateCollaborationHub({
- server,origin,ledger,maxRooms=32,maxClientsPerRoom=12,maxPending=16
+ server,origin,ledger,maxRooms=32,maxClientsPerRoom=12,maxPending=16,transport='tls'
 }={}) {
  if(!server?.on||!server?.off||typeof server.listenerCount!=='function'||
     server.listenerCount('upgrade')!==0||
     typeof ledger?.append!=='function'||typeof ledger?.list!=='function'||
-    ![maxRooms,maxClientsPerRoom,maxPending].every(n=>Number.isSafeInteger(n)&&n>=1&&n<=100))
+    ![maxRooms,maxClientsPerRoom,maxPending].every(n=>Number.isSafeInteger(n)&&n>=1&&n<=100)||
+    !['tls','edge-tls'].includes(transport))
   throw Error('Dedicated TLS server and verified private update ledger required');
  const site=new URL(origin);
  if(site.protocol!=='https:'||site.origin!==origin)throw Error('Exact private HTTPS origin required');
@@ -113,7 +114,11 @@ export function attachPrivateCollaborationHub({
  }
  async function onUpgrade(req,socket,head) {
   try {
-   if(stopped||!req.socket.encrypted||req.socket.getProtocol?.()!=='TLSv1.3'||
+   // 'edge-tls' is the declared managed-edge boundary of createEdgeServer: the
+   // platform edge terminated public TLS and forwarded over its private network.
+   const secure=transport==='tls'?req.socket.encrypted&&req.socket.getProtocol?.()==='TLSv1.3':
+    !req.socket.encrypted&&req.headers['x-forwarded-proto']==='https';
+   if(stopped||!secure||
       req.headers.host!==expectedHost||req.headers.origin!==origin||
       req.headers['sec-websocket-protocol']!=='dge-private-v1'||
       typeof req.url!=='string'||req.url.length>300||req.url.includes('?')||

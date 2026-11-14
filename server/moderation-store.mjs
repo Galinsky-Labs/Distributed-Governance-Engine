@@ -63,8 +63,8 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
     const id=randomUUID();
     // The public event names the target, action and category, never the moderator.
     const eventDigest=digest("moderation-action-v1",{id,documentId:place.documentId,targetKind,targetId,action,reasonCategory,at:iso(at)});
-    await db.query("INSERT INTO dge_moderation.actions(tenant_id,id,target_kind,target_id,document_id,proposal_id,action,reason_category,moderator_id,appeal_id,command_id,request_digest,event_digest,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
-      [tenantId,id,targetKind,targetId,place.documentId,place.proposalId,action,reasonCategory,actorId,appealId,commandId,requestDigest,eventDigest,at]);
+    await db.query("INSERT INTO dge_moderation.actions(tenant_id,id,target_kind,target_id,document_id,proposal_id,action,target_version,reason_category,moderator_id,appeal_id,command_id,request_digest,event_digest,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)",
+      [tenantId,id,targetKind,targetId,place.documentId,place.proposalId,action,version+1,reasonCategory,actorId,appealId,commandId,requestDigest,eventDigest,at]);
     await audit(db,{tenantId,kind:action==="hide"?"hidden":"restored",subjectId:id,actorId,at,value:{targetKind,targetId,reasonCategory}});
     await appendLedgerEvent(db,{tenantId,kind:"moderation-action",subjectId:targetId,eventDigest,at});
     // Public point listings key their cursors on the content epoch.
@@ -76,9 +76,8 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
     const row=(await db.query("SELECT * FROM dge_moderation.actions WHERE tenant_id=$1 AND moderator_id=$2 AND command_id=$3",[tenantId,actorId,commandId])).rows[0];
     if(!row)return undefined;
     check(row.request_digest===requestDigest,"COMMAND_REUSED",409);
-    const version=(await db.query("SELECT count(*)::int AS n FROM dge_moderation.actions WHERE tenant_id=$1 AND target_kind=$2 AND target_id=$3 AND created_at<=$4",
-      [tenantId,row.target_kind,row.target_id,row.created_at])).rows[0].n;
-    return {actionId:row.id,targetKind:row.target_kind,targetId:row.target_id,action:row.action,reasonCategory:row.reason_category,version,createdAt:iso(row.created_at)};
+    return {actionId:row.id,targetKind:row.target_kind,targetId:row.target_id,action:row.action,reasonCategory:row.reason_category,
+      version:row.target_version,createdAt:iso(row.created_at)};
   }
   return Object.freeze({
     async report(credentials,tenantId,{targetKind,targetId,reasonCategory,note=null,commandId}){
@@ -121,7 +120,7 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
                (SELECT m.updated_at FROM dge_identity.memberships m WHERE m.tenant_id=r.tenant_id AND m.account_id=r.reporter_id)) AS joined_at
            FROM dge_moderation.reports r WHERE r.tenant_id=$1 ORDER BY r.created_at,r.id LIMIT 5000`,[tenantId])).rows;
         const actions=(await db.query(
-          "SELECT DISTINCT ON (target_kind,target_id) target_kind,target_id,id,action,reason_category,created_at FROM dge_moderation.actions WHERE tenant_id=$1 ORDER BY target_kind,target_id,created_at DESC,id",
+          "SELECT DISTINCT ON (target_kind,target_id) target_kind,target_id,id,action,reason_category,created_at FROM dge_moderation.actions WHERE tenant_id=$1 ORDER BY target_kind,target_id,target_version DESC",
           [tenantId])).rows;
         const lastAction=new Map(actions.map(a=>[a.target_kind+":"+a.target_id,a]));
         const groups=new Map();
@@ -180,7 +179,7 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
         check(action&&action.action==="hide","MODERATION_ACTION_NOT_FOUND",404);
         const place=await target(db,tenantId,action.target_kind,action.target_id);
         check(place.authorId===actor.accountId,"ONLY_AUTHOR_MAY_APPEAL",403);
-        const latest=(await db.query("SELECT id FROM dge_moderation.actions WHERE tenant_id=$1 AND target_kind=$2 AND target_id=$3 ORDER BY created_at DESC,id LIMIT 1",
+        const latest=(await db.query("SELECT id FROM dge_moderation.actions WHERE tenant_id=$1 AND target_kind=$2 AND target_id=$3 ORDER BY target_version DESC LIMIT 1",
           [tenantId,action.target_kind,action.target_id])).rows[0];
         check(latest.id===actionId,"ACTION_SUPERSEDED",409);
         check(!(await db.query("SELECT 1 FROM dge_moderation.appeals WHERE tenant_id=$1 AND action_id=$2",[tenantId,actionId])).rows.length,"APPEAL_EXISTS",409);
@@ -234,7 +233,7 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
          FROM dge_moderation.actions a LEFT JOIN dge_moderation.appeals ap ON ap.tenant_id=a.tenant_id AND ap.action_id=a.id
          WHERE a.tenant_id=$1 AND ((a.target_kind='proposal' AND EXISTS (SELECT 1 FROM dge_proposals.proposals p WHERE p.tenant_id=a.tenant_id AND p.id=a.target_id AND p.actor_id=$2))
            OR (a.target_kind='point' AND EXISTS (SELECT 1 FROM dge_discussion.points p WHERE p.tenant_id=a.tenant_id AND p.id=a.target_id AND p.actor_id=$2)))
-         ORDER BY a.created_at DESC,a.id LIMIT 200`,[tenantId,actor.accountId])).rows.map(a=>({actionId:a.id,targetKind:a.target_kind,
+         ORDER BY a.created_at DESC,a.target_version DESC,a.id LIMIT 200`,[tenantId,actor.accountId])).rows.map(a=>({actionId:a.id,targetKind:a.target_kind,
           targetId:a.target_id,documentId:a.document_id,proposalId:a.proposal_id,action:a.action,reasonCategory:a.reason_category,
           createdAt:iso(a.created_at),appeal:a.appeal_id?{id:a.appeal_id,status:a.appeal_status}:null}))}));
     },
@@ -244,7 +243,7 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
       check(typeof transaction==="function","MODERATION_SERVICE_UNAVAILABLE",503);
       return transaction(async db=>{
         await db.query("SELECT set_config('dge.public_document_id',$1,true)",[documentId]);
-        return {items:(await db.query("SELECT target_kind,target_id,action,reason_category,event_digest,created_at FROM dge_moderation.actions WHERE document_id=$1 ORDER BY created_at,id LIMIT 500",
+        return {items:(await db.query("SELECT target_kind,target_id,action,reason_category,event_digest,created_at FROM dge_moderation.actions WHERE document_id=$1 ORDER BY created_at,target_kind,target_id,target_version LIMIT 500",
           [documentId])).rows.map(a=>({targetKind:a.target_kind,targetId:a.target_id,action:a.action,reasonCategory:a.reason_category,
           eventDigest:a.event_digest,createdAt:iso(a.created_at)}))};
       });

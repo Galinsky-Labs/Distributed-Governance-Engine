@@ -101,6 +101,7 @@ CREATE TABLE dge_moderation.actions (
   document_id uuid NOT NULL,
   proposal_id uuid NOT NULL,
   action text NOT NULL CHECK (action IN ('hide','restore')),
+  target_version integer NOT NULL CHECK (target_version BETWEEN 1 AND 1000000),
   reason_category text NOT NULL CHECK (reason_category IN
     ('spam','harassment','off-topic','private-information','illegal-content','impersonation','other',
      'review-reversed','appeal-granted')),
@@ -112,6 +113,7 @@ CREATE TABLE dge_moderation.actions (
   created_at timestamptz NOT NULL,
   PRIMARY KEY (tenant_id,id),
   UNIQUE (tenant_id,moderator_id,command_id),
+  UNIQUE (tenant_id,target_kind,target_id,target_version),
   FOREIGN KEY (tenant_id,document_id,proposal_id) REFERENCES dge_proposals.proposals(tenant_id,document_id,id),
   CHECK ((action='hide')=(reason_category NOT IN ('review-reversed','appeal-granted')))
 );
@@ -209,5 +211,4 @@ GRANT UPDATE (status,resolved_by,resolved_at,resolution_note) ON dge_moderation.
 CREATE INDEX section_grants_document ON dge_moderation.section_grants(tenant_id,document_id);
 CREATE INDEX reports_target ON dge_moderation.reports(tenant_id,target_kind,target_id,created_at);
 CREATE INDEX reports_reporter ON dge_moderation.reports(tenant_id,reporter_id,created_at);
-CREATE INDEX actions_target ON dge_moderation.actions(tenant_id,target_kind,target_id,created_at);
 CREATE INDEX visibility_document ON dge_moderation.visibility(document_id,target_kind);

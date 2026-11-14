@@ -201,14 +201,13 @@ class DocumentBuilder {
  /** Convert blocks for a container whose children sit at `depth`; flattens what cannot nest. */
  blocks(blocks,depth,container) {
   const out=[];
-  for(const block of blocks) {
+  for(const block of groupListEntries(blocks)) {
    if(block.type==='paragraph'||block.type==='heading') {
     if(block.type==='heading')this.ctx.warn('HEADING_IN_CONTAINER','Headings inside lists, tables or long titles were kept as paragraphs');
     const node=this.paragraph(block.inlines);
     if(node)out.push(node);
    } else if(block.type==='list')out.push(...this.list(block,depth,container));
    else if(block.type==='table')out.push(...this.table(block,depth,container));
-   else if(block.type==='list-entry')out.push(...this.blocks(groupListEntries([block]),depth,container));
   }
   return out;
  }

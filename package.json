@@ -20,7 +20,8 @@
     "migrate": "node scripts/migrate-identity.mjs",
     "build:offline": "node scripts/build-offline.mjs",
     "build:mls": "node scripts/build-mls.mjs",
-    "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs"
+    "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs",
+    "verify": "node scripts/quill-verify.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -49,7 +50,13 @@
     "./private-update-ledger": "./server/private-update-ledger.mjs",
     "./private-update-http": "./server/private-update-http.mjs",
     "./private-collaboration-hub": "./server/private-collaboration-hub.mjs",
-    "./mls-state-vault": "./web/mls-state-vault.mjs"
+    "./mls-state-vault": "./web/mls-state-vault.mjs",
+    "./runtime": "./server/runtime.mjs",
+    "./platform": "./server/platform.mjs",
+    "./ledger": "./server/ledger.mjs",
+    "./transparency": "./src/transparency.mjs",
+    "./verification": "./src/verification-package.mjs",
+    "./opentimestamps": "./src/opentimestamps.mjs"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

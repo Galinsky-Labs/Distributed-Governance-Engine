@@ -3,7 +3,12 @@
 // several independent block sources. Every outbound request is https-only,
 // time-bounded, size-bounded and refuses redirects; proof contents are never
 // logged or echoed in errors.
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
+
+// Older calendar paths include SHA-1 and RIPEMD-160 operations; the server can
+// compute them, so it follows those paths instead of reporting them unverifiable.
+const nodeHash = (name) => (bytes) => new Uint8Array(createHash(name).update(bytes).digest());
+const SERVER_HASHERS = Object.freeze({ sha1: nodeHash("sha1"), ripemd160: nodeHash("ripemd160") });
 import {
   attachCalendarResponse, attestations, createDetachedTimestamp, fromHex,
   parseDetachedTimestamp, serializeDetachedTimestamp, toHex,
@@ -154,7 +159,7 @@ function decodeProof(proofBase64) {
     throw new AnchorProviderError("invalid-proof", "Proof must be standard base64");
   }
   try {
-    return parseDetachedTimestamp(new Uint8Array(Buffer.from(proofBase64, "base64")));
+    return parseDetachedTimestamp(new Uint8Array(Buffer.from(proofBase64, "base64")), { hashers: SERVER_HASHERS });
   } catch (error) {
     throw new AnchorProviderError("invalid-proof", `Proof is malformed (${error.code ?? "unknown"})`);
   }
@@ -214,7 +219,7 @@ export function createOpenTimestampsProvider({
       if (result.status === "rejected") return errors.push({ calendar, code: result.reason.code });
       if (result.value.status !== 200) return errors.push({ calendar, code: "http-status", status: result.value.status });
       try {
-        detached = attachCalendarResponse(detached, commitment, result.value.bytes);
+        detached = attachCalendarResponse(detached, commitment, result.value.bytes, { hashers: SERVER_HASHERS });
         accepted.push(calendar);
       } catch (error) {
         errors.push({ calendar, code: error.code ?? "invalid-response" });
@@ -230,7 +235,7 @@ export function createOpenTimestampsProvider({
   async function upgrade(proofBase64) {
     let detached = decodeProof(proofBase64);
     const before = encodeProof(detached);
-    const list = attestations(detached);
+    const list = attestations(detached, { hashers: SERVER_HASHERS });
     const complete = list.filter((a) => a.kind === "bitcoin");
     const targets = new Map();
     for (const a of list) {
@@ -253,13 +258,13 @@ export function createOpenTimestampsProvider({
       if (result.value.status === 404) return;
       if (result.value.status !== 200) return errors.push({ calendar, code: "http-status", status: result.value.status });
       try {
-        detached = attachCalendarResponse(detached, fromHex(message), result.value.bytes);
+        detached = attachCalendarResponse(detached, fromHex(message), result.value.bytes, { hashers: SERVER_HASHERS });
       } catch (error) {
         errors.push({ calendar, code: error.code ?? "invalid-response" });
       }
     });
     const proof = encodeProof(detached);
-    return { changed: proof !== before, proof, attestations: summarize(attestations(detached)), errors };
+    return { changed: proof !== before, proof, attestations: summarize(attestations(detached, { hashers: SERVER_HASHERS })), errors };
   }
 
   async function settle(call) {
@@ -301,7 +306,7 @@ export function createOpenTimestampsProvider({
     if (detached.fileHashOp !== "sha256" || toHex(detached.digest) !== toHex(expected)) {
       return { status: "invalid", reason: "digest-mismatch", checkedSources: [] };
     }
-    const bitcoin = attestations(detached).filter((a) => a.kind === "bitcoin");
+    const bitcoin = attestations(detached, { hashers: SERVER_HASHERS }).filter((a) => a.kind === "bitcoin");
     const checkable = bitcoin.filter((a) => a.message !== null && a.message.length === 64);
     if (checkable.length === 0) {
       return bitcoin.length

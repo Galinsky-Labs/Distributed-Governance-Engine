@@ -1,6 +1,6 @@
 # Authenticated private Yjs update frames — partial DCE-003 / DCE-008
 
-The shared engine now exposes \`sealPrivateYjsUpdate\` and \`openPrivateYjsUpdate\` as a **client-only** encrypted update-framing primitive. These functions are not enabled by the public collaboration relay or the Quill UI; do not claim that private realtime collaboration is running.
+The shared engine now exposes \`sealPrivateYjsUpdate\` and \`openPrivateYjsUpdate\` as a **client-only** encrypted update-framing primitive. They are used by the private workspace client behind `PRIVATE_WORKSPACES=enabled` with MLS-exporter epoch keys (ADR 0009, INTEGRATION-private.md); the public collaboration relay never uses them.
 
 ## Boundary
 

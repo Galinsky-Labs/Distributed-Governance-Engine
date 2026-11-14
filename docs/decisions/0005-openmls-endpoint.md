@@ -1,6 +1,6 @@
 # ADR 0005 — integrate released OpenMLS at endpoints
 
-Status: accepted for a partial, disabled DCE-003/DCE-008 contribution.
+Status: accepted for a partial DCE-003/DCE-008 contribution; composed into the private workspace path behind PRIVATE_WORKSPACES (ADR 0009).
 
 The existing AES-GCM frame adapter does not provide group key agreement,
 authenticated sender identity, membership rotation or protocol interoperability.

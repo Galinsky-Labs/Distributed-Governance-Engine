@@ -17,29 +17,10 @@ import {
   applyIdentityMigrations,
 } from "../../server/identity-store.mjs";
 import { createOIDCLogin } from "../../server/oidc-login.mjs";
-import { createDiscussionStore } from "../../server/discussion-store.mjs";
-import { createDecisionStore } from "../../server/decision-store.mjs";
-import { createDecisionRoutes, decisionBodyLimit } from "../../server/decision-http.mjs";
-import {
-  createDiscussionRoutes,
-  discussionBodyLimit,
-} from "../../server/discussion-http.mjs";
-import { createProposalStore } from "../../server/proposal-store.mjs";
-import {
-  createProposalRoutes,
-  proposalBodyLimit,
-} from "../../server/proposal-http.mjs";
-import { createAccountHandler } from "../../server/account-http.mjs";
-import { createDocumentStore } from "../../server/document-store.mjs";
 import {attachPublicCollaborationHub} from "../../server/public-collaboration-hub.mjs";
-import {
-  createDocumentRoutes,
-  documentBodyLimit,
-} from "../../server/document-http.mjs";
-import {
-  createEngineApplication,
-  nodeListener,
-} from "../../server/application.mjs";
+import { nodeListener } from "../../server/application.mjs";
+import { createPlatform } from "../../server/platform.mjs";
+import { loadLogSigningKey } from "../../server/ledger.mjs";
 
 const escape = (value) =>
   String(value).replace(
@@ -202,39 +183,13 @@ export async function accountFixture({
     configuration: config,
     redirectUri: origin + "/auth/callback",
   });
-  const accounts = createAccountHandler({
-      store,
-      login,
-      origin,
-      extensions: [
-        createDecisionRoutes({decisions:createDecisionStore({identity:store,transaction})}),
-        createDiscussionRoutes({
-          discussion: createDiscussionStore({
-            identity: store,
-            transaction: transaction,
-          }),
-        }),
-        createProposalRoutes({
-          proposals: createProposalStore({
-            identity: store,
-            transaction: transaction,
-          }),
-        }),
-        createDocumentRoutes({
-          documents: createDocumentStore({ identity: store, transaction }),
-        }),
-      ],
-    }),
-    application = createEngineApplication({ accounts, origin });
+  const { application, bodyLimit, services } = createPlatform({
+    identity: store, transaction, login, origin, logId: "quill.fixture",
+    logSigningKey: loadLogSigningKey(generateKeyPairSync("ed25519").privateKey.export({ format: "der", type: "pkcs8" }).toString("base64")),
+  });
   listener = nodeListener({
     origin,
-    bodyLimit: (path) =>
-      Math.max(
-        documentBodyLimit(path),
-        proposalBodyLimit(path),
-        discussionBodyLimit(path),
-        decisionBodyLimit(path),
-      ),
+    bodyLimit,
     application: async (request, context) => {
       const url = new URL(request.url);
       if (url.pathname !== "/fixture/authorize") {
@@ -306,13 +261,14 @@ export async function accountFixture({
       });
     },
   });
-  const sharedDocuments=createDocumentStore({identity:store,transaction});
+  const sharedDocuments=services.documents;
   const collaborationDocuments=collaborationSaveDelayMs?{...sharedDocuments,async save(...args){await new Promise(resolve=>setTimeout(resolve,collaborationSaveDelayMs));return sharedDocuments.save(...args);}}:sharedDocuments;
   const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:collaborationDocuments}):null;
   return {
     origin,
     db,
     store,
+    services,
     collaborationStats:()=>collaboration?.stats()??null,
     close: async () => {
       collaboration?.close();

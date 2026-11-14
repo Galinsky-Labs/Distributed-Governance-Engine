@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { createServer } from "node:https";
+import { createServer as createPlainServer } from "node:http";
 
 const security = {
   "x-content-type-options": "nosniff",
@@ -16,6 +17,7 @@ export function createEngineApplication({
   product = "civic",
   assetDirectory = new URL("../dist/", import.meta.url),
   readiness = null,
+  release = null,
 }) {
   if (
     !["civic", "charter"].includes(product) ||
@@ -43,7 +45,7 @@ export function createEngineApplication({
         headers: security,
       });
     if (url.pathname === "/healthz")
-      return Response.json({ status: "ok" }, { headers: security });
+      return Response.json({ status: "ok", ...(release ? { release } : {}) }, { headers: security });
     if(url.pathname === "/readyz") {
       try {
         if(typeof readiness!=="function")throw Error("Readiness unavailable");
@@ -90,18 +92,26 @@ export function nodeListener({
   application,
   origin,
   requireTLS = true,
+  edgeTLS = false,
   bodyLimit = () => 8192,
 }) {
   const site = new URL(origin);
   return async (req, res) => {
     try {
-      if (requireTLS && !req.socket.encrypted) {
+      const probe = req.url === "/healthz" || req.url === "/readyz";
+      if (edgeTLS && !probe && req.headers["x-forwarded-proto"] !== "https") {
+        // The platform edge must have received this request over HTTPS.
+        res.writeHead(400, security);
+        res.end("TLS required");
+        return;
+      }
+      if (requireTLS && !edgeTLS && !req.socket.encrypted) {
         res.writeHead(400, security);
         res.end("TLS required");
         return;
       }
       if (
-        req.headers.host !== site.host ||
+        (req.headers.host !== site.host && !(edgeTLS && probe)) ||
         !req.url?.startsWith("/") ||
         req.url.startsWith("//") ||
         req.url.includes("\\") ||
@@ -139,7 +149,7 @@ export function nodeListener({
           : {}),
       });
       const response = await application(request, {
-        peerAddress: req.socket.remoteAddress,
+        peerAddress: edgeTLS ? edgeClientAddress(req) : req.socket.remoteAddress,
       });
       res.statusCode = response.status;
       for (const [name, value] of response.headers)
@@ -158,6 +168,29 @@ export function nodeListener({
       } else res.destroy();
     }
   };
+}
+/** The edge proxy appends the connecting client as the last forwarded hop. */
+function edgeClientAddress(req) {
+  const hops = String(req.headers["x-forwarded-for"] ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  const last = hops.at(-1);
+  return last && last.length <= 64 && /^[0-9a-fA-F:.]+$/.test(last) ? last : req.socket.remoteAddress;
+}
+
+/**
+ * Edge-TLS transport for platforms (such as Render web services) whose
+ * managed edge terminates public TLS and forwards to the container over the
+ * provider's private network. This is a declared transport boundary recorded
+ * in the security inventory, never an implicit fallback: it must be enabled
+ * explicitly with TRANSPORT_MODE=edge-tls.
+ */
+export function createEdgeServer({ application, origin, bodyLimit }) {
+  const server = createPlainServer(nodeListener({ application, origin, bodyLimit, edgeTLS: true, requireTLS: false }));
+  server.requestTimeout = 15000;
+  server.headersTimeout = 10000;
+  server.keepAliveTimeout = 65000; // Longer than the edge's idle timeout.
+  server.maxHeadersCount = 64;
+  server.maxRequestsPerSocket = 1000;
+  return server;
 }
 export function createEngineServer({
   application,

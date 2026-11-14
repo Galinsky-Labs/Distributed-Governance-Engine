@@ -134,6 +134,11 @@ build it once before relying on it.
 - **New members** see only the state re-encrypted for the epoch they joined,
   not earlier frame history. Snapshots are whole-document; very large
   documents (>2.9 MB ciphertext) are refused.
+- **Key package availability**: any owner/admin/editor of a shared workspace can
+  claim (consume) another member's published key packages, so a malicious member
+  can temporarily block that member's admission until their client replenishes
+  packages (it tops up to 6 whenever the private page opens). Confidentiality is
+  unaffected: a claimed package only admits the device whose approved key signed it.
 - **Realtime fanout** is per instance; clients poll the ledger and mailbox
   every 2 s as the authority. Two clients behind one IP share the existing
   per-peer request budget.

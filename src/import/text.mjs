@@ -5,8 +5,8 @@ import {LEGAL_LIMITS} from '../legal-structure.mjs';
 const LONE_SURROGATE=/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 const MARKDOWN_HEADING=/^(#{1,6})[ \t]+(\S.*?)[ \t]*$/;
 const ARTICLE_HEADING=/^(?:Article|ARTICLE|Art\.|ART\.)[ \t]+(?:[IVXLCDM]+|\d+)\b/;
-const SECTION_HEADING=/^(?:Section|SECTION|Sec\.|SEC\.|§)[ \t]*\d+[A-Za-z]?(?:[.-]\d+[A-Za-z]?)*\.?(?:[ \t]|$)/;
-const LIST_MARKER=/^[ \t]*(?:([-*•])|\(([0-9]{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)|([0-9]{1,3})[.)])(?:[ \t]+|$)/;
+const SECTION_HEADING=/^(?:Section|SECTION|Sec\.|SEC\.|\u00A7)[ \t]*\d+[A-Za-z]?(?:[.-]\d+[A-Za-z]?)*\.?(?:[ \t]|$)/;
+const LIST_MARKER=/^[ \t]*(?:([-*\u2022])|\(([0-9]{1,3}|[a-z]{1,4}|[A-Z]{1,4})\)|([0-9]{1,3})[.)])(?:[ \t]+|$)/;
 const MAX_HEADING_LINE=200;
 
 function isCapsHeading(line,lineCount) {
@@ -63,7 +63,7 @@ class MarkerLevels {
 export function plainTextBlocks(text,{joinLines='\n'}={}) {
  const groups=[];let current=[];
  for(const line of text.split('\n')) {
-  if(/^[ \t\f\v ]*$/.test(line)){if(current.length)groups.push(current);current=[];}
+  if(/^[ \t\f\v\u00A0]*$/.test(line)){if(current.length)groups.push(current);current=[];}
   else current.push(line);
  }
  if(current.length)groups.push(current);
@@ -112,7 +112,7 @@ export function validateText(text) {
 export function importPlainText(text,options={}) {
  const resolved=resolveOptions(options);
  validateText(text);
- const normalized=text.replace(/^﻿/,'').replace(/\r\n?/g,'\n');
+ const normalized=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
  const ctx=new ImportContext('text');
  return finishImport(plainTextBlocks(normalized),ctx,resolved);
 }

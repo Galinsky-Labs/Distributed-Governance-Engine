@@ -9,7 +9,6 @@ const check=(condition,code,status=400)=>{if(!condition)throw new DocumentError(
 const managers=["owner","admin"];
 const members=["owner","admin","editor","participant","viewer"];
 export const REPORT_CATEGORIES=Object.freeze(["spam","harassment","off-topic","private-information","illegal-content","impersonation","other"]);
-export const RESTORE_CATEGORIES=Object.freeze(["review-reversed","appeal-granted"]);
 export const REMOVED_PLACEHOLDER="Removed by moderator";
 const TARGETS=["proposal","point"];
 const iso=value=>new Date(value).toISOString();

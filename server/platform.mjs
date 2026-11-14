@@ -18,6 +18,8 @@ import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
+/** Browser pages served by the engine shell (see web/engine-pages.jsx). */
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).
@@ -99,8 +101,9 @@ export function createPlatform({
   }
   // Platform routes are matched before account management, in a stable order.
   const accounts = createAccountHandler({ store: identity, login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });
+  const pagePaths = [...ENGINE_PAGES, ...extensions.flatMap((e) => e.pagePaths ?? [])];
   const application = createEngineApplication({
-    accounts, origin, product, readiness, release,
+    accounts, origin, product, readiness, release, pagePaths,
     ...(assetDirectory ? { assetDirectory } : {}),
   });
   const bodyLimit = (path) => Math.max(...routeSets.map((s) => s.bodyLimit(path)));

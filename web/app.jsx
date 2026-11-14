@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createRoot } from "react-dom/client";
 import {
   mountLegalEditor,
   commands,
@@ -254,7 +253,7 @@ const saveMessage = (state) =>
           : "Saved version " +
             state.version +
             " · Blockchain anchoring pending.";
-function App() {
+export function App() {
   const accountEnabled =
     document.documentElement.dataset.accountEnabled === "true";
   const [product, setProduct] = useState(
@@ -1141,4 +1140,3 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")).render(window.location.pathname === "/governance" ? <GovernanceHome /> : <App />);

@@ -14,6 +14,7 @@ import { createDecisionRoutes, decisionBodyLimit } from "./decision-http.mjs";
 import { createLedger } from "./ledger.mjs";
 import { createLedgerRoutes, ledgerBodyLimit } from "./ledger-http.mjs";
 import { createVerificationRoutes, verificationBodyLimit } from "./verification-http.mjs";
+import { createExportRoutes, exportBodyLimit } from "./export-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 
@@ -92,6 +93,7 @@ export function createPlatform({
     { routes: createProposalRoutes({ proposals }), bodyLimit: proposalBodyLimit },
     { routes: createDocumentRoutes({ documents }), bodyLimit: documentBodyLimit },
   ];
+  routeSets.unshift({ routes: createExportRoutes({ documents, clock }), bodyLimit: exportBodyLimit });
   routeSets.unshift({ routes: createVerificationRoutes({ transaction, ledger, decisions, clock }), bodyLimit: verificationBodyLimit });
   if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: (c) => services.isPlatformAdmin?.(c) ?? false }), bodyLimit: ledgerBodyLimit });
   const workers = ledger ? [{ name: "ledger", intervalMs: 5000, tick: () => ledger.tick() }] : [];

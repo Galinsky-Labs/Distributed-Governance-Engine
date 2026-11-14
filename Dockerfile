@@ -23,6 +23,7 @@ COPY --from=build /app/src ./src
 COPY --from=build /app/server ./server
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/dist ./dist
+COPY assets ./assets
 COPY scripts/migrate-identity.mjs ./scripts/migrate-identity.mjs
 # The deployment operator mounts TLS certificates and injects secrets.
 # Never bake real credentials into an image or use demo credentials.

@@ -1,10 +1,8 @@
 import {randomUUID,randomBytes} from "node:crypto";
 import {normalizeVotePolicySettings,describeVotePolicy} from "../src/vote-policy-settings.mjs";
 import {digest} from "../src/integrity.mjs";
-import {
-  createGovernanceSnapshot, validateGovernanceSnapshot,
-  ballotForGovernanceSnapshot, evaluateGovernanceSnapshot,
-} from "../src/governance-snapshots.mjs";
+import {createGovernanceSnapshot,validateGovernanceSnapshot} from "../src/governance-snapshots.mjs";
+import {evaluateDecision} from "../src/governance.mjs";
 import {textProposalDigest,applyTextProposal} from "../src/legal-proposals.mjs";
 import {legalDocumentDigest} from "../src/legal-schema.mjs";
 import {DocumentError} from "./document-store.mjs";
@@ -17,16 +15,54 @@ const check = (condition, code, status=400) => {
 const votingRoles=["owner","admin","editor","participant"];
 const managerialRoles=["owner","admin"];
 const choices=["yes","no","abstain"];
+const ownBallot = async(db,tenantId,decisionId,accountId) =>
+  (await db.query("SELECT choice,version FROM dge_decisions.ballots WHERE tenant_id=$1 AND decision_id=$2 AND account_id=$3",
+    [tenantId,decisionId,accountId])).rows[0] ?? null;
 const rowsFor = async(db,tenantId,decisionId) =>
   (await db.query("SELECT account_id,choice,cast_at,version FROM dge_decisions.ballots WHERE tenant_id=$1 AND decision_id=$2 ORDER BY account_id",
     [tenantId,decisionId])).rows;
-const ballotsFor = (snapshot, rows) =>
-  rows.map(row => ballotForGovernanceSnapshot(snapshot,row.account_id,row.choice,new Date(row.cast_at).getTime()));
-const publicState = (row,ballots,clock,own) => {
-  const snapshot=validateGovernanceSnapshot(row.snapshot);
-  check(snapshot.snapshotDigest===row.snapshot_digest,"DECISION_INTEGRITY_ERROR",503);
-  const result=evaluateGovernanceSnapshot(snapshot,ballotsFor(snapshot,ballots),clock);
-  const my=own ? ballots.find(v=>v.account_id===own) : null;
+/** Binds stored ballots to an already validated snapshot (same checks as
+ * ballotForGovernanceSnapshot, which re-validates the whole snapshot per call
+ * and made every tally quadratic in the electorate size). */
+const ballotsFor = (verified, rows) => rows.map(row => {
+  const castAt=new Date(row.cast_at).getTime(),{snapshot}=verified;
+  check(verified.members.has(row.account_id)&&choices.includes(row.choice)&&Number.isSafeInteger(castAt)&&
+    castAt>=snapshot.policy.opensAt&&castAt<snapshot.policy.closesAt,"DECISION_INTEGRITY_ERROR",503);
+  return Object.freeze({
+    principalId:row.account_id,choice:row.choice,castAt,proposalDigest:snapshot.proposalDigest,
+    electorateId:snapshot.electorate.id,electorateDigest:snapshot.electorateDigest,
+    policyId:snapshot.policy.id,policyDigest:snapshot.policyDigest,
+  });
+});
+const evaluate = (verified,rows,now) => {
+  const {snapshot}=verified;
+  return evaluateDecision({mode:snapshot.mode,policy:snapshot.policy,electorate:snapshot.electorate,
+    proposalDigest:snapshot.proposalDigest,ballots:ballotsFor(verified,rows),now});
+};
+/** Outcome figures from the reference evaluator over every stored ballot. */
+const evaluatedSummary = (verified,rows,clock) => {
+  const result=evaluate(verified,rows,clock);
+  return {status:result.status,quorumMet:result.quorumMet,approvalMet:result.approvalMet,counts:result.counts,weights:result.weights};
+};
+/**
+ * Read projection: a closed decision reports its certificate's outcome (the
+ * evaluator's result at closure); an open one reports equal-weight running
+ * counts from one aggregate query instead of loading and re-evaluating every
+ * ballot on each read. Closure itself always runs the reference evaluator.
+ */
+async function projectedSummary(db,tenantId,row,verified) {
+  if(row.state==="closed")return row.certificate.outcome;
+  const tally={yes:0,no:0,abstain:0};
+  for(const t of (await db.query(
+    "SELECT choice,count(*)::int AS n FROM dge_decisions.ballots WHERE tenant_id=$1 AND decision_id=$2 GROUP BY choice",
+    [tenantId,row.id])).rows) tally[t.choice]=t.n;
+  const participating=tally.yes+tally.no+tally.abstain;
+  return {status:null,quorumMet:null,approvalMet:null,
+    counts:{eligible:verified.snapshot.electorate.members.length,participating},
+    weights:{yes:String(tally.yes),no:String(tally.no),abstain:String(tally.abstain)}};
+}
+const publicState = (row,verified,result,clock,my) => {
+  const {snapshot}=verified;
   return {
     id:row.id,documentId:row.document_id,proposalId:row.proposal_id,baseVersion:row.base_version,
     mode:snapshot.mode,snapshotDigest:snapshot.snapshotDigest,proposalDigest:snapshot.proposalDigest,
@@ -55,12 +91,13 @@ const publicState = (row,ballots,clock,own) => {
  * This is not a statutory signature, an enacted law or an executed resolution.
  */
 export function createDecisionStore({
-  identity,transaction,clock=Date.now,maxElectors=1000,maxVoteVersions=50,
+  identity,transaction,clock=Date.now,maxElectors=1000,maxVoteVersions=50,snapshotCacheSize=16,
 }={}) {
   check(identity && typeof identity.withTenant==="function" && typeof clock==="function",
     "DECISION_STORE_CONFIG");
   check(Number.isSafeInteger(maxElectors)&&maxElectors>0&&maxElectors<=100000 &&
-    Number.isSafeInteger(maxVoteVersions)&&maxVoteVersions>0&&maxVoteVersions<=100,"DECISION_STORE_CONFIG");
+    Number.isSafeInteger(maxVoteVersions)&&maxVoteVersions>0&&maxVoteVersions<=100 &&
+    Number.isSafeInteger(snapshotCacheSize)&&snapshotCacheSize>0&&snapshotCacheSize<=1000,"DECISION_STORE_CONFIG");
   const now=()=>{
     const ms=clock();
     check(Number.isSafeInteger(ms)&&ms>=0,"CLOCK_UNAVAILABLE",503);
@@ -68,19 +105,33 @@ export function createDecisionStore({
   };
   const ids=(tenantId,documentId,proposalId) =>
     check(uuid(tenantId)&&uuid(documentId)&&uuid(proposalId),"INVALID_DECISION_CONTEXT");
-  async function decision(db,tenantId,documentId,proposalId,lock=false) {
+  // Ballot writers share the decision row lock with each other and are
+  // fenced from closure, which takes it exclusively.
+  async function decision(db,tenantId,documentId,proposalId,lock="",columns="*") {
     const row=(await db.query(
-      "SELECT * FROM dge_decisions.decisions WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3" +
-      (lock?" FOR UPDATE":""),
+      `SELECT ${columns} FROM dge_decisions.decisions WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 ${lock}`,
       [tenantId,documentId,proposalId])).rows[0];
     check(row,"DECISION_NOT_FOUND",404);
     return row;
   }
-  const snapshotOf=row=>{
-    const snap=validateGovernanceSnapshot(row.snapshot);
-    check(snap.snapshotDigest===row.snapshot_digest,"DECISION_INTEGRITY_ERROR",503);
-    return snap;
-  };
+  // Snapshots are immutable and addressed by digest, so a validated copy is
+  // reused instead of re-parsing and re-hashing the frozen electorate on
+  // every ballot and read. Bounded so a process never holds many rosters.
+  const verifiedSnapshots=new Map();
+  async function verified(db,tenantId,row) {
+    const key=row.snapshot_digest;
+    let entry=verifiedSnapshots.get(key);
+    if(entry){verifiedSnapshots.delete(key);verifiedSnapshots.set(key,entry);return entry;}
+    const stored=row.snapshot??(await db.query(
+      "SELECT snapshot FROM dge_decisions.decisions WHERE tenant_id=$1 AND id=$2",[tenantId,row.id])).rows[0]?.snapshot;
+    let snapshot;
+    try{snapshot=validateGovernanceSnapshot(stored);}catch{throw new DocumentError("DECISION_INTEGRITY_ERROR",503);}
+    check(snapshot.snapshotDigest===key,"DECISION_INTEGRITY_ERROR",503);
+    entry=Object.freeze({snapshot,members:new Set(snapshot.electorate.members.map(m=>m.principalId))});
+    verifiedSnapshots.set(key,entry);
+    if(verifiedSnapshots.size>snapshotCacheSize)verifiedSnapshots.delete(verifiedSnapshots.keys().next().value);
+    return entry;
+  }
   const scoped=(credentials,tenantId,roles,write,fn)=>
     identity.withTenant(credentials,tenantId,{write,roles},fn);
   async function activity(db,tenantId,row,actorId,commandId,requestDigest,result,eventType,at) {
@@ -110,8 +161,8 @@ export function createDecisionStore({
           [tenantId,commandId])).rows[0];
         if(prior){
           check(prior.request_digest===requestDigest,"COMMAND_REUSED",409);
-          const votes=await rowsFor(db,tenantId,prior.id);
-          return publicState(prior,votes,now(),actor.accountId);
+          const checked=await verified(db,tenantId,prior);
+          return publicState(prior,checked,await projectedSummary(db,tenantId,prior,checked),now(),await ownBallot(db,tenantId,prior.id,actor.accountId));
         }
         const source=(await db.query(
           "SELECT version,current,digest FROM dge_documents.documents WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
@@ -150,7 +201,8 @@ export function createDecisionStore({
           [tenantId,decisionId,documentId,proposalId,proposal.base_version,snapshot,snapshot.snapshotDigest,actor.accountId,at,new Date(closeMs),commandId,requestDigest]
         );
         const row=await decision(db,tenantId,documentId,proposalId);
-        const result=publicState(row,[],at.getTime(),actor.accountId);
+        const checked=await verified(db,tenantId,row);
+        const result=publicState(row,checked,evaluatedSummary(checked,[],at.getTime()),at.getTime(),null);
         await activity(db,tenantId,row,actor.accountId,commandId,requestDigest,
           {snapshotDigest:snapshot.snapshotDigest},"opened",at);
         return result;
@@ -160,8 +212,8 @@ export function createDecisionStore({
       ids(tenantId,documentId,proposalId);
       return scoped(credentials,tenantId,["owner","admin","editor","participant","viewer"],false,async(db,actor)=>{
         const row=await decision(db,tenantId,documentId,proposalId);
-        const ballots=await rowsFor(db,tenantId,row.id);
-        return publicState(row,ballots,now(),actor.accountId);
+        const checked=await verified(db,tenantId,row);
+        return publicState(row,checked,await projectedSummary(db,tenantId,row,checked),now(),await ownBallot(db,tenantId,row.id,actor.accountId));
       });
     },
     async publicReceipt(documentId,proposalId){
@@ -191,8 +243,13 @@ export function createDecisionStore({
       ids(tenantId,documentId,proposalId);
       check(uuid(commandId)&&choices.includes(choice)&&Number.isSafeInteger(expectedVersion)&&
         expectedVersion>=0&&expectedVersion<maxVoteVersions,"INVALID_BALLOT");
-      return scoped(credentials,tenantId,votingRoles,true,async(db,actor)=>{
-        const row=await decision(db,tenantId,documentId,proposalId,true);
+      // A ballot touches only its decision and voter rows, so it takes the
+      // tenant lock shared: role changes still wait for it, other voters do not.
+      return identity.withTenant(credentials,tenantId,{write:true,roles:votingRoles,sharedTenantLock:true},async(db,actor)=>{
+        const row=await decision(db,tenantId,documentId,proposalId,"FOR SHARE","id,state,snapshot_digest");
+        // Serializes one voter's concurrent commands (replays and version
+        // races) without serializing different voters on a hot decision.
+        await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[row.id+":"+actor.accountId]);
         const requestDigest=digest("decision-ballot-command-v1",{
           actorId:actor.accountId,decisionId:row.id,choice,expectedVersion
         });
@@ -203,19 +260,19 @@ export function createDecisionStore({
           check(prior.request_digest===requestDigest,"COMMAND_REUSED",409);
           return prior.result;
         }
-        const snapshot=snapshotOf(row),at=new Date(now());
+        const {snapshot,members}=await verified(db,tenantId,row),at=new Date(now());
         check(row.state==="open","VOTE_CLOSED",409);
         check(at.getTime()>=snapshot.policy.opensAt&&at.getTime()<snapshot.policy.closesAt,
           "VOTE_WINDOW_CLOSED",409);
-        check(snapshot.electorate.members.some(m=>m.principalId===actor.accountId),
-          "NOT_IN_FROZEN_ELECTORATE",403);
+        check(members.has(actor.accountId),"NOT_IN_FROZEN_ELECTORATE",403);
         const previous=(await db.query(
           "SELECT version FROM dge_decisions.ballots WHERE tenant_id=$1 AND decision_id=$2 AND account_id=$3",
           [tenantId,row.id,actor.accountId])).rows[0];
         const version=previous?.version??0;
         check(version===expectedVersion,"BALLOT_VERSION_CONFLICT",409);
         check(version<maxVoteVersions,"BALLOT_CHANGE_LIMIT_REACHED",429);
-        // The decision row lock serializes two writes and a concurrent close.
+        // The voter lock serializes this voter's writes; the shared decision
+        // lock keeps a concurrent close waiting until this ballot commits.
         await db.query(
           "INSERT INTO dge_decisions.ballots(tenant_id,decision_id,account_id,choice,version,cast_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tenant_id,decision_id,account_id) DO UPDATE SET choice=excluded.choice,version=excluded.version,cast_at=excluded.cast_at",
           [tenantId,row.id,actor.accountId,choice,version+1,at]
@@ -234,12 +291,12 @@ export function createDecisionStore({
     async close(credentials,tenantId,documentId,proposalId) {
       ids(tenantId,documentId,proposalId);
       return scoped(credentials,tenantId,managerialRoles,true,async(db,actor)=>{
-        const row=await decision(db,tenantId,documentId,proposalId,true);
+        const row=await decision(db,tenantId,documentId,proposalId,"FOR UPDATE");
         if(row.state==="closed")return {certificate:row.certificate,certificateDigest:row.certificate_digest};
-        const snapshot=snapshotOf(row),at=new Date(now());
+        const checked=await verified(db,tenantId,row),{snapshot}=checked,at=new Date(now());
         check(at.getTime()>=snapshot.policy.closesAt,"VOTE_STILL_OPEN",409);
         const records=await rowsFor(db,tenantId,row.id);
-        const outcome=evaluateGovernanceSnapshot(snapshot,ballotsFor(snapshot,records),at.getTime());
+        const outcome=evaluate(checked,records,at.getTime());
         // This lock serializes two passed amendments against the exact
         // same source. The decision lock above fences late ballot writers.
         const source=(await db.query(

@@ -98,11 +98,15 @@ export function createIdentityStore({transaction,sessionKey,stateKey,origin,cloc
   }
   const scope=(db,tenantId)=>{deny(uuid(tenantId));return db.query("SELECT set_config('dge.tenant_id',$1,true)",[tenantId]);};
   const event=(db,tenantId,actorId,subjectId,kind)=>db.query('INSERT INTO dge_identity.events(id,tenant_id,actor_id,subject_id,kind,occurred_at) VALUES($1,$2,$3,$4,$5,$6)',[randomUUID(),tenantId,actorId,subjectId,kind,now()]);
-  async function tenantContext(db,credentials,tenantId,write=false,recent=write) {
+  // Writers normally hold the tenant row exclusively, which serializes
+  // count-based quotas. A writer whose own rows are fenced by a narrower lock
+  // may pass sharedTenantLock: it still excludes membership changes (which
+  // lock exclusively) but no longer queues behind every other tenant write.
+  async function tenantContext(db,credentials,tenantId,write=false,recent=write,sharedTenantLock=false) {
     const actor=await session(db,credentials,write,recent);
     deny(actor.authentication_method==='oidc','RECOVERY_SESSION_RESTRICTED');
     await scope(db,tenantId);
-    const tenant=await db.query(`SELECT id FROM dge_identity.tenants WHERE id=$1 FOR ${write?'UPDATE':'SHARE'}`,[tenantId]);
+    const tenant=await db.query(`SELECT id FROM dge_identity.tenants WHERE id=$1 FOR ${write&&!sharedTenantLock?'UPDATE':'SHARE'}`,[tenantId]);
     deny(tenant.rows.length);
     const member=await db.query('SELECT role FROM dge_identity.memberships WHERE tenant_id=$1 AND account_id=$2 AND active=true',[tenantId,actor.id]);
     deny(member.rows.length);
@@ -292,9 +296,9 @@ export function createIdentityStore({transaction,sessionKey,stateKey,origin,cloc
       await securityEvent(db,actor.id,'device-revoked',revokedAt);return {revoked:true};
     }),
     // Trusted server extension boundary: authorization and the operation share one transaction.
-    withTenant:(credentials,tenantId,{write=false,recent=false,roles=['owner','admin','editor','participant','viewer']}={},operation)=>transaction(async db=>{
-      deny(typeof operation==='function'&&Array.isArray(roles)&&roles.every(role));
-      const actor=await tenantContext(db,credentials,tenantId,write,recent);deny(roles.includes(actor.role));
+    withTenant:(credentials,tenantId,{write=false,recent=false,sharedTenantLock=false,roles=['owner','admin','editor','participant','viewer']}={},operation)=>transaction(async db=>{
+      deny(typeof operation==='function'&&Array.isArray(roles)&&roles.every(role)&&typeof sharedTenantLock==='boolean');
+      const actor=await tenantContext(db,credentials,tenantId,write,recent,sharedTenantLock);deny(roles.includes(actor.role));
       return operation(db,{accountId:actor.id,role:actor.role,tenantId});
     }),
     createTenant:credentials=>transaction(async db=>{

@@ -161,7 +161,7 @@ const definitions=[
 ];
 export const SETTINGS_REGISTRY=deepFreeze(definitions.map(d=>{
   const definition={mutability:'mutable',invariant:null,...d};
-  definition.default=deepFreeze(normalizeBySpec(definition,structuredClone(definition.default),definition.key));
+  definition.default=deepFreeze(normalizeBySpec(definition,definition.default,definition.key));
   return definition;
 }));
 const byKey=new Map(SETTINGS_REGISTRY.map(d=>[d.key,d]));

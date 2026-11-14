@@ -57,7 +57,7 @@ export function legalFixture() {
     ]}
    ]},
    {kind:'section',id:'s3',title:'Dataset schedule',children:[para('p3-0','The following schedule is adopted:'),{kind:'table',id:'schedule',children:rows}]},
-   {kind:'section',id:'s4',title:'Effective date',children:[para('p4-0',prose(3,9)),para('p4-1',prose(4,9)),para('p4-2',prose(0,9))]},
+   {kind:'section',id:'s4',title:'Effective date',children:[para('p4-0',prose(3,9)),para('p4-1',prose(4,40)),para('p4-2',prose(0,9))]},
    {kind:'exhibit',id:'ex-a',title:'Exhibit A — Model notice',children:[
     {kind:'section',id:'ex-s1',title:'Notice text',children:[para('ex-p1','Notice is hereby given that the dataset described below is available.')]}
    ]},

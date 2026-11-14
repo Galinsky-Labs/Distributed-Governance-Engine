@@ -44,7 +44,7 @@ export function redlineModel(beforeDocument,afterDocument) {
   const change=changes.get(node.id);
   let segments,kind=status;
   if(status==='deleted')segments=[{op:'delete',text:change.before.text}];
-  else if(!change)segments=[{op:'equal',text:currentText(node)}];
+  else if(!change){kind='unchanged';segments=[{op:'equal',text:currentText(node)}];}
   else if(change.kind==='added'){kind='inserted';segments=[{op:'insert',text:change.after.text}];}
   else {
    segments=segmentsOf(change.text);

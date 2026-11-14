@@ -20,7 +20,7 @@ import { createEngineApplication } from "./application.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
-export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency"]);
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).

@@ -2,6 +2,10 @@ import {before,after,beforeEach,test} from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID,randomBytes,generateKeyPairSync,createHash,sign} from "node:crypto";
 import {PGlite} from "@electric-sql/pglite";
+import {spawnSync} from "node:child_process";
+import {mkdtemp,writeFile,rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 import {isoCBOR} from "@simplewebauthn/server/helpers";
 import {createIdentityStore,applyIdentityMigrations,AccessError} from "../server/identity-store.mjs";
 import {createLegalDocument} from "../src/legal-structure.mjs";
@@ -416,7 +420,26 @@ test("HTTP routes stream redacted JSON and CSV manifests, page the directory and
   response=await call("/api/public/editions?documentId="+edition.documentId);
   assert.equal((await response.json()).items.length,1);
   response=await call(base+"/signatures/"+hidden.signatureId+"/receipt",{who:member});
-  assert.equal(verifySignatureReceipt(await response.json()).checks.intentDigest,true);
+  const personal=await response.json();
+  assert.equal(verifySignatureReceipt(personal).checks.intentDigest,true);
+  // The offline CLI verifies the personal receipt against the downloaded full manifest.
+  const dir=await mkdtemp(join(tmpdir(),"quill-receipt-"));
+  try{
+    await writeFile(join(dir,"receipt.json"),JSON.stringify(personal));
+    await writeFile(join(dir,"manifest.json"),JSON.stringify(full));
+    const cli=args=>spawnSync(process.execPath,["scripts/verify-signature-receipt.mjs",...args],{encoding:"utf8"});
+    const ok=cli([join(dir,"receipt.json"),"--manifest",join(dir,"manifest.json")]);
+    assert.equal(ok.status,0);
+    const report=JSON.parse(ok.stdout);
+    assert.equal(report.receipt.valid,true);
+    assert.deepEqual([report.manifest.rootRecomputed,report.manifest.containsReceiptRecord,report.manifest.sameManifestAsReceipt],[true,true,true]);
+    full.entries[2].recordDigest="0".repeat(64);
+    await writeFile(join(dir,"manifest.json"),JSON.stringify(full));
+    assert.equal(cli([join(dir,"receipt.json"),"--manifest",join(dir,"manifest.json")]).status,1);
+    personal.recordDigest="1".repeat(64);
+    await writeFile(join(dir,"receipt.json"),JSON.stringify(personal));
+    assert.equal(cli([join(dir,"receipt.json")]).status,1);
+  }finally{await rm(dir,{recursive:true,force:true});}
 });
 
 test("cross-tenant canaries: another workspace cannot read, sign or freeze this workspace's editions",async()=>{

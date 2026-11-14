@@ -478,6 +478,8 @@ export function createDiscussionStore({
           canContribute:
             roles.includes(actor.role) &&
             (await mayDiscuss(db, tenantId, documentId, proposalId, actor)),
+          // Every workspace member, viewers included, may report content.
+          canReport: true,
         };
       });
     },

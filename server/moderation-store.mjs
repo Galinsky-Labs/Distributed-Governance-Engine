@@ -123,6 +123,8 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
           "SELECT DISTINCT ON (target_kind,target_id) target_kind,target_id,id,action,reason_category,created_at FROM dge_moderation.actions WHERE tenant_id=$1 ORDER BY target_kind,target_id,target_version DESC",
           [tenantId])).rows;
         const lastAction=new Map(actions.map(a=>[a.target_kind+":"+a.target_id,a]));
+        const visibility=new Map((await db.query("SELECT target_kind,target_id,hidden,version FROM dge_moderation.visibility WHERE tenant_id=$1",[tenantId])).rows
+          .map(v=>[v.target_kind+":"+v.target_id,v]));
         const groups=new Map();
         for(const r of reports){
           const key=r.target_kind+":"+r.target_id;
@@ -139,7 +141,7 @@ export function createModerationStore({identity,transaction,clock=Date.now,maxRe
           for(const r of g.reports)categories[r.reason_category]=(categories[r.reason_category]??0)+1;
           return {targetKind:g.targetKind,targetId:g.targetId,documentId:g.documentId,proposalId:g.proposalId,
             totalReports:g.reports.length,openReports:open.length,categories,latestReportAt:iso(latest),
-            hidden:last?.action==="hide",lastAction:last?{id:last.id,action:last.action,reasonCategory:last.reason_category,createdAt:iso(last.created_at)}:null,
+            hidden:visibility.get(key)?.hidden??false,version:visibility.get(key)?.version??0,lastAction:last?{id:last.id,action:last.action,reasonCategory:last.reason_category,createdAt:iso(last.created_at)}:null,
             notes:open.filter(r=>r.note!==null).map(r=>({reasonCategory:r.reason_category,note:r.note,createdAt:iso(r.created_at)})),
             coordinatedFlagging:{flagged:recentAccounts>=coordinatedThreshold&&recentAccounts*2>=inWindow.length,
               recentAccountReports:recentAccounts,reportsInWindow:inWindow.length,

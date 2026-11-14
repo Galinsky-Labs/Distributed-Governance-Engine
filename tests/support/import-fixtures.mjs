@@ -183,7 +183,7 @@ export function pdfWithObjectStreams({content,cmap}) {
  const rows=[];
  for(let n=0;n<=9;n++) {
   if(n===0)rows.push(Uint8Array.of(0,0,0,0,255));
-  else if(compressedObjects[n]!==undefined)rows.push(Uint8Array.of(2,0,8,0,numbers.indexOf(n)));
+  else if(compressedObjects[n]!==undefined)rows.push(Uint8Array.of(2,0,0,8,numbers.indexOf(n)));
   else if(n===9)rows.push(Uint8Array.of(1,(xrefOffset>>16)&255,(xrefOffset>>8)&255,xrefOffset&255,0));
   else rows.push(Uint8Array.of(1,(offsets[n]>>16)&255,(offsets[n]>>8)&255,offsets[n]&255,0));
  }

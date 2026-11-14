@@ -12,6 +12,7 @@ import { sha256 } from "./sha256.mjs";
 import { canonicalize, invariant } from "./integrity-values.mjs";
 import { digest } from "./integrity.mjs";
 import { legalDocumentDigest } from "./legal-schema.mjs";
+import { validatePolicy } from "./governance.mjs";
 import {
   toHex, keyIdFor, verifyEd25519, verifyCheckpoint, verifyInclusion, verifyConsistency,
   checkpointBody, entryLeafHash,
@@ -467,8 +468,10 @@ export async function verifySnapshotBundle(bundle, { authorityKey, claim: knownC
   } catch { return reject("invalid-edition"); }
   for (const d of b.decisions) {
     try {
-      exactKeys(d, ["descriptor", "certificateDigest"], "decision entry");
+      exactKeys(d, ["descriptor", "policy", "certificateDigest"], "decision entry");
       decisionDescriptorBody(d.descriptor.body);
+      validatePolicy(structuredClone(d.policy));
+      invariant(digest("policy", d.policy) === d.descriptor.body.policyDigest, "Policy does not match its descriptor");
       invariant(d.descriptor.body.documentId === b.documentId && d.descriptor.body.authority === b.authority, "Foreign decision");
       invariant(d.certificateDigest === null || HEX64.test(d.certificateDigest), "Invalid certificate digest");
     } catch { return reject("invalid-decision"); }

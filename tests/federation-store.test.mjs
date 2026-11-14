@@ -120,6 +120,7 @@ test("the mirror verifies signed checkpoints and snapshots and serves them read-
   assert.equal(served.servedBy, mars.instanceId);
   assert.deepEqual(served.bundle.body.edition.document, document);
   assert.equal(served.bundle.body.decisions[0].descriptor.body.decisionId, descriptor.body.decisionId);
+  assert.equal(served.bundle.body.decisions[0].policy.closesAt, Date.parse(descriptor.body.closesAt), "the frozen policy travels with its signed digest");
   const copy = structuredClone(document);
   await assert.rejects(mars.db.query("INSERT INTO dge_identity.tenants(id,created_at) VALUES($1,now())", [tenantId]).then(() =>
     mars.db.query("INSERT INTO dge_documents.documents(tenant_id,id,version,current,digest,visibility,disclosure,created_at) SELECT $1,$2,1,$3,repeat('a',64),'public','publish-all-revisions-v1',now()", [tenantId, copy.id, copy])),

@@ -190,9 +190,9 @@ export function createFederationStore({
       if (!checkpoint || checkpoint.body.size === 0) return null;
     }
     const decisions = (await db.query(
-      `SELECT f.descriptor, d.certificate_digest FROM dge_federation.decisions f JOIN dge_decisions.decisions d ON d.tenant_id=f.tenant_id AND d.id=f.decision_id
+      `SELECT f.descriptor, d.snapshot->'policy' AS policy, d.certificate_digest FROM dge_federation.decisions f JOIN dge_decisions.decisions d ON d.tenant_id=f.tenant_id AND d.id=f.decision_id
        WHERE f.document_id=$1 ORDER BY f.created_at LIMIT 200`, [documentId])).rows
-      .map((r) => ({ descriptor: r.descriptor, certificateDigest: r.certificate_digest?.trim() ?? null }));
+      .map((r) => ({ descriptor: r.descriptor, policy: r.policy, certificateDigest: r.certificate_digest?.trim() ?? null }));
     const body = {
       schema: FEDERATION_SCHEMAS.snapshot, authority: instanceId, documentId, sequence: Number(checkpoint.body.size),
       issuedAt: new Date(now()).toISOString(), claim, edition, decisions, checkpoint, evidence,
@@ -640,8 +640,9 @@ export function createFederationStore({
     document: (documentId) => {
       check(isUuid(documentId), "INVALID_DOCUMENT_ID");
       return worker(async (db) => {
-        const authority = (await db.query("SELECT local,authority FROM dge_federation.authorities WHERE document_id=$1", [documentId])).rows[0];
-        check(authority, "DOCUMENT_NOT_FOUND", 404);
+        const authority = (await db.query("SELECT local,authority,claim FROM dge_federation.authorities WHERE document_id=$1", [documentId])).rows[0];
+        // Private snapshots travel only to registered peers; the public endpoint never reveals them.
+        check(authority && authority.claim.body.visibility === "public", "DOCUMENT_NOT_FOUND", 404);
         if (authority.local) {
           const bundle = await exportBundle(db, documentId);
           check(bundle, "SNAPSHOT_NOT_READY", 503);

@@ -11,6 +11,7 @@ import {
 } from "../../src/federation.mjs";
 import { memoryLog, entryLeafHash, checkpointBody, checkpointSigningInput, verifyCheckpoint, toHex } from "../../src/transparency.mjs";
 import { createLegalDocument, legalDocumentDigest } from "../../src/legal-schema.mjs";
+import { digest } from "../../src/integrity.mjs";
 
 export const MINUTE = 60_000, HOUR = 3_600_000;
 
@@ -210,8 +211,12 @@ export class SimAuthority extends Peer {
     this.claim = await signObject(FEDERATION_SCHEMAS.authority, authorityClaimBody({ documentId: this.documentId, authority: this.id, visibility: "public", claimedAt: this.clock.iso() }), this.signer);
   }
   async openDecision({ decisionId, electorateSize, opensAt, closesAt, delayClass }) {
+    this.policy = {
+      id: "policy-" + decisionId, weighting: "equal", allowEarlyClose: false, opensAt, closesAt, minYes: "1",
+      quorum: { kind: "count", minimum: "1" }, approval: { basis: "decisive", comparison: "gt", numerator: "1", denominator: "2" },
+    };
     const body = decisionDescriptorBody({
-      authority: this.id, documentId: this.documentId, decisionId, proposalDigest: "1".repeat(64), snapshotDigest: "2".repeat(64), policyDigest: "3".repeat(64),
+      authority: this.id, documentId: this.documentId, decisionId, proposalDigest: "1".repeat(64), snapshotDigest: "2".repeat(64), policyDigest: digest("policy", this.policy),
       electorate: { electorateDigest: "4".repeat(64), size: electorateSize }, opensAt: this.clock.iso(opensAt), closesAt: this.clock.iso(closesAt), delayClass, issuedAt: this.clock.iso(),
     });
     this.descriptor = await signObject(FEDERATION_SCHEMAS.decision, body, this.signer);
@@ -249,7 +254,7 @@ export class SimAuthority extends Peer {
     const index = this.leaves.findIndex((l) => l.kind === "document-version");
     return signObject(FEDERATION_SCHEMAS.snapshot, {
       schema: FEDERATION_SCHEMAS.snapshot, authority: this.id, documentId: this.documentId, sequence: cp.body.size, issuedAt: this.clock.iso(),
-      claim: this.claim, edition: this.edition, decisions: this.descriptor ? [{ descriptor: this.descriptor, certificateDigest: null }] : [], checkpoint: cp,
+      claim: this.claim, edition: this.edition, decisions: this.descriptor ? [{ descriptor: this.descriptor, policy: this.policy, certificateDigest: null }] : [], checkpoint: cp,
       evidence: [{ kind: "document-version", subjectId: this.documentId, eventDigest: this.leaves[index].eventDigest, index, proof: await this.log.inclusion(index, cp.body.size) }],
     }, this.signer);
   }

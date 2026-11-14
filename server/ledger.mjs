@@ -16,13 +16,17 @@ const UUID = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const fail = (code, status = 400) => { throw new DocumentError(code, status); };
 const check = (condition, code, status) => { if (!condition) fail(code, status); };
 
-/** Outbox sources: each maps an existing committed event table onto log entries. */
+/**
+ * Outbox sources: each maps an existing committed event table onto log
+ * entries. `types` are the key column types, so the write-back compares the
+ * columns themselves (index-usable) rather than their text casts.
+ */
 const SOURCES = [
-  { table: "dge_documents.anchor_outbox", key: ["tenant_id", "document_id", "version"], kind: "'document-version'", subject: "document_id", scope: "'public'", final: "false" },
-  { table: "dge_proposals.anchor_outbox", key: ["tenant_id", "document_id", "proposal_id"], kind: "'proposal'", subject: "document_id", scope: "'public'", final: "false" },
-  { table: "dge_discussion.anchor_outbox", key: ["tenant_id", "event_id"], kind: "'discussion-event'", subject: "document_id", scope: "'public'", final: "false" },
-  { table: "dge_decisions.anchor_outbox", key: ["tenant_id", "event_id"], kind: "'decision-event'", subject: "decision_id", scope: "'public'", final: "false" },
-  { table: "dge_ledger.outbox", key: ["id"], kind: "kind", subject: "subject_id", scope: "scope", final: "finalization" },
+  { table: "dge_documents.anchor_outbox", key: ["tenant_id", "document_id", "version"], types: ["uuid", "uuid", "integer"], kind: "'document-version'", subject: "document_id", scope: "'public'", final: "false" },
+  { table: "dge_proposals.anchor_outbox", key: ["tenant_id", "document_id", "proposal_id"], types: ["uuid", "uuid", "uuid"], kind: "'proposal'", subject: "document_id", scope: "'public'", final: "false" },
+  { table: "dge_discussion.anchor_outbox", key: ["tenant_id", "event_id"], types: ["uuid", "uuid"], kind: "'discussion-event'", subject: "document_id", scope: "'public'", final: "false" },
+  { table: "dge_decisions.anchor_outbox", key: ["tenant_id", "event_id"], types: ["uuid", "uuid"], kind: "'decision-event'", subject: "decision_id", scope: "'public'", final: "false" },
+  { table: "dge_ledger.outbox", key: ["id"], types: ["uuid"], kind: "kind", subject: "subject_id", scope: "scope", final: "finalization" },
 ];
 
 export function loadLogSigningKey(base64Pkcs8) {
@@ -73,10 +77,12 @@ export function createLedger({
   async function sequence() {
     return worker(async (db) => {
       const size = Number((await db.query("SELECT size FROM dge_ledger.head WHERE id FOR UPDATE")).rows[0].size);
+      // Each source contributes at most one batch in the global order, so the
+      // final sort never touches the whole backlog.
       const union = SOURCES.map((s, i) =>
-        `SELECT ${i} AS source, ${s.key.map((k, j) => `${k}::text AS k${j}`).join(",")}${s.key.length < 3 ? "," + Array.from({ length: 3 - s.key.length }, (_, j) => `NULL::text AS k${s.key.length + j}`).join(",") : ""},
+        `(SELECT ${i} AS source, ${s.key.map((k, j) => `${k}::text AS k${j}`).join(",")}${s.key.length < 3 ? "," + Array.from({ length: 3 - s.key.length }, (_, j) => `NULL::text AS k${s.key.length + j}`).join(",") : ""},
           ${s.kind} AS kind, ${s.scope} AS scope, tenant_id, ${s.subject} AS subject_id, event_digest, ${s.final} AS finalization, created_at
-          FROM ${s.table} WHERE ledger_seq IS NULL`).join(" UNION ALL ");
+          FROM ${s.table} WHERE ledger_seq IS NULL ORDER BY created_at, k0, k1, k2 LIMIT $1)`).join(" UNION ALL ");
       const rows = (await db.query(`SELECT * FROM (${union}) pending ORDER BY created_at, source, k0, k1, k2 LIMIT $1`, [batchSize])).rows;
       if (!rows.length) return 0;
       const getNode = nodeReader(db);
@@ -100,7 +106,7 @@ export function createLedger({
           seq = treeSize++;
         }
         const source = SOURCES[row.source];
-        await db.query(`UPDATE ${source.table} SET ledger_seq=$1 WHERE ${source.key.map((k, j) => `${k}::text=$${j + 2}`).join(" AND ")}`,
+        await db.query(`UPDATE ${source.table} SET ledger_seq=$1 WHERE ${source.key.map((k, j) => `${k}=$${j + 2}::${source.types[j]}`).join(" AND ")}`,
           [seq, ...source.key.map((_, j) => row["k" + j])]);
       }
       await db.query("UPDATE dge_ledger.head SET size=$1 WHERE id", [treeSize]);

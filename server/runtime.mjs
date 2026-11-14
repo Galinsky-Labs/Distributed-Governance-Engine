@@ -10,6 +10,8 @@ import { attachPublicCollaborationHub } from "./public-collaboration-hub.mjs";
 import { configuredPasskeys } from "./passkey-verifier.mjs";
 import { createPlatform, startWorkers, verifyExtensionMigrations } from "./platform.mjs";
 import { loadLogSigningKey } from "./ledger.mjs";
+import { createFederationExtension } from "./federation-http.mjs";
+import { createImmutableEditionExtension } from "./public-edition-cache-http.mjs";
 import { postmarkFromEnvironment } from "./email-adapters/postmark.mjs";
 import { stripeProviderFromEnvironment } from "./payment-providers/stripe.mjs";
 import { manualProviderFromEnvironment } from "./payment-providers/manual.mjs";
@@ -81,6 +83,15 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
       : null;
     if (!login && !passkeySignin) throw Error("Configure OIDC_ISSUER or SIGNIN_PASSKEYS=enabled");
     const release = (env.QUILL_RELEASE ?? env.RENDER_GIT_COMMIT ?? "").slice(0, 64) || null;
+    if (env.FEDERATION && !["enabled", "disabled"].includes(env.FEDERATION)) throw Error("Invalid federation setting");
+    if (env.FEDERATION === "enabled" && !env.LOG_SIGNING_KEY) throw Error("Federation needs the transparency log key");
+    // Engine-provided extensions first: exact editions are immutable and
+    // edge-cacheable; federation is an explicit operator opt-in.
+    extensions = [
+      createImmutableEditionExtension(),
+      ...(env.FEDERATION === "enabled" ? [createFederationExtension({ origin, signingKey: loadLogSigningKey(env.LOG_SIGNING_KEY) })] : []),
+      ...extensions,
+    ];
     const { services, application, bodyLimit, workers } = createPlatform({
       identity, transaction, login, origin, product, extensions, release, assetDirectory, privateWorkspaces, passkeySignin,
       verifyPasskeyAuthentication: passkeys.verifyPasskeyAuthentication,

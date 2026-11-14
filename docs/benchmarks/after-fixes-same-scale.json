@@ -1,0 +1,212 @@
+{
+  "options": {
+    "voters": 2000,
+    "concurrency": 32,
+    "pool": 32,
+    "bulk-electorate": 2000,
+    "bulk-decisions": 2,
+    "public-tenants": 20,
+    "documents-per-tenant": 100,
+    "proposals": 200,
+    "points": 1000,
+    "read-requests": 20000,
+    "decision-reads": 10,
+    "ledger-events": 20000,
+    "label": "after-fixes-same-scale",
+    "out": "docs/benchmarks",
+    "keep": false
+  },
+  "environment": {
+    "cpuModel": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cpuCount": 4,
+    "memoryGiB": 15.7,
+    "platform": "Linux 6.18.44-fc-v470 x64",
+    "node": "v24.19.0",
+    "postgres": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "postgresSettings": {
+      "fsync": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384 8kB",
+      "synchronous_commit": "on",
+      "work_mem": "4096 kB"
+    },
+    "topology": "PostgreSQL and the Node.js load generator share the same host; no network hop, no TLS, no HTTP socket."
+  },
+  "startedAt": "2026-11-14T23:40:24.911Z",
+  "results": {
+    "hotDecision": {
+      "voters": 2000,
+      "electorate": 2001,
+      "sessionSetupMs": 1063.24,
+      "openMs": 129.2,
+      "firstBallots": {
+        "operations": 2000,
+        "errors": 0,
+        "wallMs": 2687.32,
+        "throughputPerSecond": 744.24,
+        "p50Ms": 41.65,
+        "p95Ms": 62.34,
+        "p99Ms": 72.39,
+        "maxMs": 80.35,
+        "failures": {}
+      },
+      "ballotChanges": {
+        "operations": 200,
+        "errors": 0,
+        "wallMs": 251.87,
+        "throughputPerSecond": 794.06,
+        "p50Ms": 39.94,
+        "p95Ms": 53.38,
+        "p99Ms": 59.81,
+        "maxMs": 62.28,
+        "failures": {}
+      },
+      "participantReadsAfterAllBallots": {
+        "operations": 10,
+        "errors": 0,
+        "wallMs": 25.89,
+        "throughputPerSecond": 386.24,
+        "p50Ms": 23.56,
+        "p95Ms": 25.47,
+        "p99Ms": 25.47,
+        "maxMs": 25.47,
+        "failures": {}
+      },
+      "closeAndTallyMs": 62.81,
+      "ballotsStored": 2000,
+      "outcome": {
+        "status": "passed",
+        "quorumMet": true,
+        "approvalMet": true,
+        "counts": {
+          "eligible": 2001,
+          "participating": 2000
+        },
+        "weights": {
+          "eligible": "2001",
+          "participating": "2000",
+          "yes": "800",
+          "no": "600",
+          "abstain": "600"
+        }
+      }
+    },
+    "ballotStorage": {
+      "electoratePerDecision": 2000,
+      "decisions": 2,
+      "totalBallotRows": 6000,
+      "ballotTableBytesIncludingIndexes": 1228800,
+      "accountInsertMs": 12.81,
+      "openDecisionMs": [
+        97.32,
+        80.62
+      ],
+      "bulkLoadMs": 54.84,
+      "closeAndTallyOneDecisionMs": 58.59,
+      "closedDecisionBallots": 2000,
+      "readOneClosedOrOpenDecisionMs": 8.95,
+      "method": "Ballot rows are inserted with INSERT … SELECT into dge_decisions.ballots (real table, constraints, indexes, foreign keys); no per-ballot event/outbox rows are created for the bulk rows. Opening and closing use DecisionStore.open/close unchanged."
+    },
+    "publicReads": {
+      "seededDocuments": 2000,
+      "seedMs": 3430.34,
+      "proposalsOnReadDocument": 200,
+      "pointsOnProposal": 1000,
+      "overall": {
+        "operations": 20000,
+        "errors": 0,
+        "wallMs": 18930.73,
+        "throughputPerSecond": 1056.48,
+        "p50Ms": 29.58,
+        "p95Ms": 45.27,
+        "p99Ms": 53.72,
+        "maxMs": 85.55,
+        "failures": {}
+      },
+      "byEndpoint": {
+        "directory": {
+          "operations": 3334,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.06,
+          "p50Ms": 27.74,
+          "p95Ms": 42.35,
+          "p99Ms": 50.63,
+          "maxMs": 62.71
+        },
+        "documentCurrent": {
+          "operations": 3334,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.06,
+          "p50Ms": 26.33,
+          "p95Ms": 38.32,
+          "p99Ms": 47.38,
+          "maxMs": 62.79
+        },
+        "documentEdition": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.01,
+          "p50Ms": 25.97,
+          "p95Ms": 38.17,
+          "p99Ms": 45.84,
+          "maxMs": 64.86
+        },
+        "history": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.01,
+          "p50Ms": 32.74,
+          "p95Ms": 47.32,
+          "p99Ms": 57.18,
+          "maxMs": 80.08
+        },
+        "proposals": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.01,
+          "p50Ms": 33.06,
+          "p95Ms": 47.16,
+          "p99Ms": 55.34,
+          "maxMs": 85.54
+        },
+        "points": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 18936.48,
+          "throughputPerSecond": 176.01,
+          "p50Ms": 32.76,
+          "p95Ms": 49.57,
+          "p99Ms": 55.65,
+          "maxMs": 66.84
+        }
+      },
+      "extrapolatedReadsPerDay": 91279872,
+      "extrapolation": "throughputPerSecond × 86,400 on this single host with no CDN; assumes the measured mix and sustained load, which was not run for 24 hours."
+    },
+    "ledger": {
+      "pendingEvents": 25413,
+      "sequenced": 25413,
+      "sequenceMs": 24733.38,
+      "entriesPerSecond": 1027.48,
+      "checkpointMs": 5.19,
+      "logSize": 25413,
+      "inclusionProofs": {
+        "operations": 500,
+        "errors": 0,
+        "wallMs": 2121.44,
+        "throughputPerSecond": 235.69,
+        "p50Ms": 129.71,
+        "p95Ms": 199.19,
+        "p99Ms": 306.89,
+        "maxMs": 336.76,
+        "failures": {}
+      }
+    }
+  },
+  "finishedAt": "2026-11-14T23:41:29.469Z"
+}

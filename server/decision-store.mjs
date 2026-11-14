@@ -3,7 +3,7 @@ import {normalizeVotePolicySettings,describeVotePolicy} from "../src/vote-policy
 import {digest} from "../src/integrity.mjs";
 import {
   createGovernanceSnapshot, validateGovernanceSnapshot,
-  ballotForGovernanceSnapshot, evaluateGovernanceSnapshot,
+  evaluateGovernanceSnapshot,
 } from "../src/governance-snapshots.mjs";
 import {
   normalizeWeightedPolicySettings, createWeightedSnapshot, validateWeightedSnapshot,
@@ -40,8 +40,18 @@ const proxyRowsFor = async(db,tenantId,decisionId) =>
     `SELECT b.grant_id,b.proxy_id,b.principal_id,b.choice,b.version,b.allocation,b.cast_at,g.revoked_at
      FROM dge_electorates.proxy_ballots b JOIN dge_electorates.proxy_grants g ON g.tenant_id=b.tenant_id AND g.id=b.grant_id
      WHERE b.tenant_id=$1 AND b.decision_id=$2 ORDER BY b.grant_id`,[tenantId,decisionId])).rows;
-const ballotsFor = (snapshot, rows) =>
-  rows.map(row => ballotForGovernanceSnapshot(snapshot,row.account_id,row.choice,new Date(row.cast_at).getTime()));
+/** Binds stored ballots to a snapshot validated once by the caller. Calling
+ * ballotForGovernanceSnapshot per row re-validated and re-hashed the whole
+ * frozen electorate for every ballot, which made each tally quadratic. The
+ * evaluator still rejects any ballot outside the electorate or window. */
+const ballotsFor = (snapshot, rows) => {
+  const fixed=validateGovernanceSnapshot(snapshot);
+  return rows.map(row => Object.freeze({
+    principalId:row.account_id,choice:row.choice,castAt:new Date(row.cast_at).getTime(),
+    proposalDigest:fixed.proposalDigest,electorateId:fixed.electorate.id,electorateDigest:fixed.electorateDigest,
+    policyId:fixed.policy.id,policyDigest:fixed.policyDigest,
+  }));
+};
 /** Weighted ballots as the evaluator sees them. A proxy ballot whose grant
  * was revoked at or before `at` no longer counts. */
 const weightedBallots=(direct,proxies,at)=>[

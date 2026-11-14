@@ -1,0 +1,220 @@
+{
+  "options": {
+    "voters": 10000,
+    "concurrency": 32,
+    "pool": 32,
+    "bulk-electorate": 99999,
+    "bulk-decisions": 10,
+    "public-tenants": 20,
+    "documents-per-tenant": 100,
+    "proposals": 200,
+    "points": 1000,
+    "read-requests": 20000,
+    "decision-reads": 200,
+    "ledger-events": 50000,
+    "label": "local-10k-voters-1m-ballots",
+    "out": "docs/benchmarks",
+    "keep": false
+  },
+  "environment": {
+    "cpuModel": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "cpuCount": 4,
+    "memoryGiB": 15.7,
+    "platform": "Linux 6.18.44-fc-v470 x64",
+    "node": "v24.19.0",
+    "postgres": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "postgresSettings": {
+      "fsync": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384 8kB",
+      "synchronous_commit": "on",
+      "work_mem": "4096 kB"
+    },
+    "topology": "PostgreSQL and the Node.js load generator share the same host; no network hop, no TLS, no HTTP socket."
+  },
+  "startedAt": "2026-11-14T23:44:18.812Z",
+  "results": {
+    "hotDecision": {
+      "voters": 10000,
+      "electorate": 10001,
+      "sessionSetupMs": 5265.64,
+      "openMs": 510.4,
+      "firstBallots": {
+        "operations": 10000,
+        "errors": 0,
+        "wallMs": 13004.08,
+        "throughputPerSecond": 768.99,
+        "p50Ms": 39.76,
+        "p95Ms": 62.21,
+        "p99Ms": 76.97,
+        "maxMs": 145.29,
+        "failures": {}
+      },
+      "ballotChanges": {
+        "operations": 200,
+        "errors": 0,
+        "wallMs": 200.28,
+        "throughputPerSecond": 998.61,
+        "p50Ms": 31.65,
+        "p95Ms": 41.6,
+        "p99Ms": 44.07,
+        "maxMs": 46.81,
+        "failures": {}
+      },
+      "participantReadsAfterAllBallots": {
+        "operations": 200,
+        "errors": 0,
+        "wallMs": 1504.48,
+        "throughputPerSecond": 132.94,
+        "p50Ms": 231.18,
+        "p95Ms": 362.83,
+        "p99Ms": 415.79,
+        "maxMs": 425.57,
+        "failures": {}
+      },
+      "closeAndTallyMs": 203.12,
+      "ballotsStored": 10000,
+      "outcome": {
+        "status": "passed",
+        "quorumMet": true,
+        "approvalMet": true,
+        "counts": {
+          "eligible": 10001,
+          "participating": 10000
+        },
+        "weights": {
+          "eligible": "10001",
+          "participating": "10000",
+          "yes": "3467",
+          "no": "3266",
+          "abstain": "3267"
+        }
+      }
+    },
+    "ballotStorage": {
+      "electoratePerDecision": 99999,
+      "decisions": 10,
+      "totalBallotRows": 1009990,
+      "ballotTableBytesIncludingIndexes": 189775872,
+      "accountInsertMs": 772.21,
+      "openDecisionMs": [
+        4072.87,
+        4131.61,
+        4321.4,
+        4027.08,
+        4145.67,
+        4284.02,
+        4158.48,
+        4203.47,
+        4646.3,
+        4315.84
+      ],
+      "bulkLoadMs": 14302.06,
+      "closeAndTallyOneDecisionMs": 1772.63,
+      "closedDecisionBallots": 99999,
+      "readOneClosedOrOpenDecisionMs": 107.02,
+      "method": "Ballot rows are inserted with INSERT … SELECT into dge_decisions.ballots (real table, constraints, indexes, foreign keys); no per-ballot event/outbox rows are created for the bulk rows. Opening and closing use DecisionStore.open/close unchanged."
+    },
+    "publicReads": {
+      "seededDocuments": 2000,
+      "seedMs": 4136.36,
+      "proposalsOnReadDocument": 200,
+      "pointsOnProposal": 1000,
+      "overall": {
+        "operations": 20000,
+        "errors": 0,
+        "wallMs": 23211.97,
+        "throughputPerSecond": 861.62,
+        "p50Ms": 35.88,
+        "p95Ms": 57.02,
+        "p99Ms": 68.77,
+        "maxMs": 103.09,
+        "failures": {}
+      },
+      "byEndpoint": {
+        "directory": {
+          "operations": 3334,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.6,
+          "p50Ms": 34.01,
+          "p95Ms": 53.84,
+          "p99Ms": 63.97,
+          "maxMs": 90.2
+        },
+        "documentCurrent": {
+          "operations": 3334,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.6,
+          "p50Ms": 31.99,
+          "p95Ms": 49.65,
+          "p99Ms": 61.24,
+          "maxMs": 89.35
+        },
+        "documentEdition": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.56,
+          "p50Ms": 31.33,
+          "p95Ms": 48.79,
+          "p99Ms": 60.53,
+          "maxMs": 88.52
+        },
+        "history": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.56,
+          "p50Ms": 40.1,
+          "p95Ms": 59.67,
+          "p99Ms": 71.08,
+          "maxMs": 101.67
+        },
+        "proposals": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.56,
+          "p50Ms": 40.43,
+          "p95Ms": 61.14,
+          "p99Ms": 73.02,
+          "maxMs": 103.09
+        },
+        "points": {
+          "operations": 3333,
+          "errors": 0,
+          "wallMs": 23217.29,
+          "throughputPerSecond": 143.56,
+          "p50Ms": 38.99,
+          "p95Ms": 61.02,
+          "p99Ms": 72.31,
+          "maxMs": 83.88
+        }
+      },
+      "extrapolatedReadsPerDay": 74443968,
+      "extrapolation": "throughputPerSecond × 86,400 on this single host with no CDN; assumes the measured mix and sustained load, which was not run for 24 hours."
+    },
+    "ledger": {
+      "pendingEvents": 63429,
+      "sequenced": 63429,
+      "sequenceMs": 69367.58,
+      "entriesPerSecond": 914.39,
+      "checkpointMs": 7.21,
+      "logSize": 63429,
+      "inclusionProofs": {
+        "operations": 500,
+        "errors": 0,
+        "wallMs": 1649,
+        "throughputPerSecond": 303.21,
+        "p50Ms": 99.48,
+        "p95Ms": 167.78,
+        "p99Ms": 203.44,
+        "maxMs": 222.94,
+        "failures": {}
+      }
+    }
+  },
+  "finishedAt": "2026-11-14T23:47:32.270Z"
+}

@@ -50,7 +50,7 @@ async function anchorProvidersFrom(env) {
   return providers;
 }
 
-export async function runPlatform({ extensions = [], env = process.env } = {}) {
+export async function runPlatform({ extensions = [], env = process.env, assetDirectory } = {}) {
   let pool;
   try {
     const origin = required(env, "PUBLIC_ORIGIN");
@@ -70,7 +70,7 @@ export async function runPlatform({ extensions = [], env = process.env } = {}) {
     const login = createOIDCLogin({ store: identity, configuration, redirectUri: origin + "/auth/callback" });
     const release = (env.QUILL_RELEASE ?? env.RENDER_GIT_COMMIT ?? "").slice(0, 64) || null;
     const { services, application, bodyLimit, workers } = createPlatform({
-      identity, transaction, login, origin, product, extensions, release,
+      identity, transaction, login, origin, product, extensions, release, assetDirectory,
       logId: env.LOG_ID ?? new URL(origin).hostname,
       logSigningKey: env.LOG_SIGNING_KEY ? loadLogSigningKey(env.LOG_SIGNING_KEY) : null,
       anchorProviders: await anchorProvidersFrom(env),

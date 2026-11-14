@@ -56,7 +56,11 @@
     "./ledger": "./server/ledger.mjs",
     "./transparency": "./src/transparency.mjs",
     "./verification": "./src/verification-package.mjs",
-    "./opentimestamps": "./src/opentimestamps.mjs"
+    "./opentimestamps": "./src/opentimestamps.mjs",
+    "./web/*": "./web/*",
+    "./src/*": "./src/*",
+    "./server/*": "./server/*",
+    "./package.json": "./package.json"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

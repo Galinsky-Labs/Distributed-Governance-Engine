@@ -1,6 +1,6 @@
 // Tolerant HTML reader that never builds a DOM, never fetches and never keeps active content.
 import {fail} from './errors.mjs';
-import {ImportContext,resolveOptions,finishImport,textRun} from './build.mjs';
+import {ImportContext,resolveOptions,finishImport} from './build.mjs';
 
 export const HTML_DEFAULT_LIMITS=Object.freeze({maxInputLength:20*1024*1024,maxDepth:256,maxNodes:500000});
 const REPLACEMENT='\uFFFD';

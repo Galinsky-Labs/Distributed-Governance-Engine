@@ -2,6 +2,16 @@
 import zlib from 'node:zlib';
 
 const encoder=new TextEncoder();
+
+/** Compact shape for assertions: [kind, title/text/style, children...]. */
+export function outline(nodes) {
+ return nodes.map(node=>{
+  if(node.inlines)return node.kind==='paragraph'?node.inlines.map(run=>run.kind==='text'?run.text:run.kind==='link'?`[${run.label}](${run.targetUrl})`:'^'+run.kind).join(''):[node.kind,node.inlines.map(run=>run.text??'').join('')];
+  const head=node.kind==='section'?['section',node.title]:node.kind==='list'?['list',node.style]:[node.kind];
+  return [...head,...outline(node.children)];
+ });
+}
+
 export const bytesOf=value=>typeof value==='string'?encoder.encode(value):value;
 
 /**

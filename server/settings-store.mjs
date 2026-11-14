@@ -23,12 +23,11 @@ const TENANT_EDITORS=['owner','admin'],DOCUMENT_EDITORS=['owner','admin','editor
 export function createPlatformAccess({identity,clock=Date.now,reauthenticationSeconds=300}){
   check(Number.isSafeInteger(reauthenticationSeconds)&&reauthenticationSeconds>=60&&reauthenticationSeconds<=3600,'INVALID_PLATFORM_ACCESS_POLICY',503);
   return Object.freeze({
-    async account(credentials,{write=false}={}){
+    /** `write` excludes recovery sessions; `recent` also requires sign-in within the re-authentication window. */
+    async account(credentials,{write=false,recent=write}={}){
       const info=await identity.sessionInfo(credentials?.sessionToken);
-      if(write){
-        check(info.authenticationMethod==='oidc','RECOVERY_SESSION_RESTRICTED',403);
-        check(clock()-Date.parse(info.authenticatedAt)<=reauthenticationSeconds*1000,'REAUTHENTICATION_REQUIRED',403);
-      }
+      if(write)check(info.authenticationMethod==='oidc','RECOVERY_SESSION_RESTRICTED',403);
+      if(recent)check(clock()-Date.parse(info.authenticatedAt)<=reauthenticationSeconds*1000,'REAUTHENTICATION_REQUIRED',403);
       return info.accountId;
     },
     async isAdmin(db,accountId){

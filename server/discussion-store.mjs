@@ -5,6 +5,8 @@ import {
   discussionPointDigest,
 } from "../src/discussion.mjs";
 import { DocumentError } from "./document-store.mjs";
+import { sectionAccess, proposalBase, targetPath } from "./section-grants.mjs";
+import { removedView } from "./moderation-store.mjs";
 const uuid = (value) =>
   typeof value === "string" &&
   /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(value);
@@ -26,6 +28,13 @@ const pointView = (row) => {
     up: row.up ?? 0,
     down: row.down ?? 0,
     net: row.net ?? 0,
+    // Hidden points stay in the thread with a visible placeholder; scores
+    // and votes are untouched and nothing is deleted.
+    ...(row.moderation_hidden
+      ? removedView(row.moderation_reason, (placeholder) => ({
+          point: { ...(row.data ?? row.point), text: placeholder, evidence: [] },
+        }))
+      : {}),
   };
 };
 export function createDiscussionStore({
@@ -73,6 +82,19 @@ export function createDiscussionStore({
       "PROPOSAL_NOT_FOUND",
       404,
     );
+  }
+  // With clause permissions, discussing a proposal needs `discuss` on the
+  // section its wording targets.
+  async function mayDiscuss(db, tenantId, documentId, proposalId, actor) {
+    const access = await sectionAccess(db, { tenantId, documentId, at: now() });
+    if (!access.restricted) return true;
+    const { proposal: text, document } = await proposalBase(db, {
+      tenantId,
+      documentId,
+      proposalId,
+    });
+    const path = targetPath(document, text.selection.blockId);
+    return Boolean(path && access.holds(actor, path, "discuss"));
   }
   async function reserve(db, tenantId, value) {
     const bytes = Buffer.byteLength(JSON.stringify(value));
@@ -155,6 +177,11 @@ export function createDiscussionStore({
       check(disclosure === "publish-point-v1", "PUBLIC_DISCLOSURE_REQUIRED");
       return context(credentials, tenantId, true, async (db, actor) => {
         await proposal(db, tenantId, documentId, proposalId);
+        check(
+          await mayDiscuss(db, tenantId, documentId, proposalId, actor),
+          "SECTION_RIGHT_REQUIRED",
+          403,
+        );
         const requestDigest = hashInput({
           action: "create",
           actorId: actor.accountId,
@@ -276,6 +303,11 @@ export function createDiscussionStore({
       );
       return context(credentials, tenantId, true, async (db, actor) => {
         await proposal(db, tenantId, documentId, proposalId);
+        check(
+          await mayDiscuss(db, tenantId, documentId, proposalId, actor),
+          "SECTION_RIGHT_REQUIRED",
+          403,
+        );
         const requestDigest = hashInput({
           action: "vote",
           actorId: actor.accountId,
@@ -443,7 +475,9 @@ export function createDiscussionStore({
         return {
           items: rows,
           ownPointIds: own,
-          canContribute: roles.includes(actor.role),
+          canContribute:
+            roles.includes(actor.role) &&
+            (await mayDiscuss(db, tenantId, documentId, proposalId, actor)),
         };
       });
     },
@@ -506,8 +540,10 @@ export function createDiscussionStore({
             `SELECT COALESCE(CASE WHEN $6='new' THEN a.content_epoch ELSE a.epoch END,0)::text AS epoch,
       (SELECT jsonb_agg(page ORDER BY page.rank_net DESC,page.rank_time DESC,page.id ASC) FROM (
        SELECT p.id,p.data AS point,p.digest,p.depth,p.created_at AS "createdAt",s.up_count AS up,s.down_count AS down,s.net,
+        mv.hidden AS moderation_hidden,mv.reason_category AS moderation_reason,
         CASE WHEN $6='top' THEN s.net ELSE 0 END AS rank_net,CASE WHEN $6='new' THEN p.created_at ELSE 'epoch'::timestamptz END AS rank_time
        FROM dge_discussion.points p JOIN dge_discussion.scores s ON s.tenant_id=p.tenant_id AND s.document_id=p.document_id AND s.proposal_id=p.proposal_id AND s.point_id=p.id
+       LEFT JOIN dge_moderation.visibility mv ON mv.tenant_id=p.tenant_id AND mv.target_kind='point' AND mv.target_id=p.id
        WHERE p.document_id=$1 AND p.proposal_id=$2 AND p.parent_id IS NOT DISTINCT FROM $3::uuid AND ($4='all' OR p.position=$4)
         AND ($5::uuid IS NULL OR ($6='top' AND (s.net<$7 OR (s.net=$7 AND p.id>$5::uuid))) OR ($6='new' AND (p.created_at<$8::timestamptz OR (p.created_at=$8::timestamptz AND p.id>$5::uuid))))
        ORDER BY rank_net DESC,rank_time DESC,p.id ASC LIMIT $9) page) AS items

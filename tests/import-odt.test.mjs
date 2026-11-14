@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {importOdt} from '../src/import/odt.mjs';
+import {importDocument} from '../src/import/index.mjs';
 import {ImportError} from '../src/import/errors.mjs';
 import {validateLegalDocument} from '../src/legal-structure.mjs';
 import {odt,zip,prng,mutateText,mutateBytes,outline} from './support/import-fixtures.mjs';
@@ -59,6 +60,8 @@ test('ODT with macros, tracked changes, styles, lists, notes, links and tables m
 });
 
 test('mimetype, structure and XML safety are enforced',async()=>{
+ const detected=await importDocument({...options(),bytes:odt({body:'<text:p>Detected</text:p>'}),fileName:'minutes.odt'});
+ assert.equal(detected.report.format,'odt');assert.deepEqual(outline(detected.document.content),['Detected']);assert.deepEqual(detected.report.warnings,[]);
  await rejects(importOdt(odt({body:'<text:p>x</text:p>',mimetype:'application/vnd.oasis.opendocument.spreadsheet'}),options()),'UNSUPPORTED_FORMAT');
  await rejects(importOdt(odt({body:'<text:p>x</text:p>',mimetype:null}),options()),'UNSUPPORTED_FORMAT');
  await rejects(importOdt(odt({body:'',parts:{'content.xml':null}}),options()),'UNSUPPORTED_FORMAT');

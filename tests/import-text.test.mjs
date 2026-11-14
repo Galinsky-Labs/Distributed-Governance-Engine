@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {importPlainText} from '../src/import/text.mjs';
+import {importDocument,ImportError as IndexImportError,IMPORT_ERROR_CODES} from '../src/import/index.mjs';
 import {ImportError} from '../src/import/errors.mjs';
 import {validateLegalDocument} from '../src/legal-structure.mjs';
 import {prng,mutateText,outline} from './support/import-fixtures.mjs';
@@ -56,6 +57,32 @@ test('default IDs are UUIDs and the title falls back to the file name',()=>{
  const {document}=importPlainText('Hello',{tenantId:'org',fileName:'C:\\docs\\Bylaws 2026.txt'});
  assert.match(document.id,/^[0-9a-f-]{36}$/);assert.match(document.content[0].id,/^[0-9a-f-]{36}$/);
  assert.equal(document.metadata.title,'Bylaws 2026');assert.equal(document.metadata.locale,'en-US');
+});
+
+test('importDocument sniffs text and HTML by content, decodes encodings and reports mismatches',async()=>{
+ const encode=s=>new TextEncoder().encode(s);
+ assert.equal(IndexImportError,ImportError);
+ assert.deepEqual(IMPORT_ERROR_CODES,['UNSUPPORTED_FORMAT','ARCHIVE_LIMIT','ARCHIVE_INVALID','XML_DOCTYPE_FORBIDDEN','XML_INVALID','DOCUMENT_TOO_LARGE','PDF_ENCRYPTED','PDF_NO_TEXT_LAYER','PDF_UNSUPPORTED','INVALID_TEXT']);
+ const text=await importDocument({...options(),bytes:encode('Plain words.'),fileName:'notes.txt',mediaType:'text/plain; charset=utf-8'});
+ assert.equal(text.report.format,'text');assert.deepEqual(text.report.warnings,[]);
+ assert.equal(text.document.metadata.title,'notes');
+ const html=await importDocument({...options(),bytes:encode('<!doctype html><p>Hi <b>there</b></p>'),fileName:'upload.txt',mediaType:'text/plain'});
+ assert.equal(html.report.format,'html');
+ assert.deepEqual(html.report.warnings.map(w=>w.code),['EXTENSION_MISMATCH','MEDIA_TYPE_MISMATCH']);
+ const byName=await importDocument({...options(),bytes:encode('x <i>y</i>'),fileName:'page.HTM'});
+ assert.equal(byName.report.format,'html');assert.deepEqual(outline(byName.document.content),['x y']);
+ const legacy=await importDocument({...options(),bytes:Uint8Array.of(0x93,0x41,0x94),fileName:'a.txt'});
+ assert.deepEqual(outline(legacy.document.content),['\u201CA\u201D']);assert.equal(legacy.report.warnings[0].code,'ENCODING_FALLBACK');
+ const utf16=await importDocument({...options(),bytes:Uint8Array.of(0xff,0xfe,0x48,0,0x69,0)});
+ assert.deepEqual(outline(utf16.document.content),['Hi']);
+ const bom=await importDocument({...options(),bytes:Uint8Array.of(0xef,0xbb,0xbf,0x48,0x69)});
+ assert.deepEqual(outline(bom.document.content),['Hi']);
+ const typed=async(input,code)=>assert.rejects(importDocument({...options(),...input}),error=>error instanceof ImportError&&error.code===code);
+ await typed({bytes:Uint8Array.of(0xd0,0xcf,0x11,0xe0,0,0,0,0)},'UNSUPPORTED_FORMAT');
+ await typed({bytes:Uint8Array.of(0x41,0,0x42),fileName:'x.txt'},'INVALID_TEXT');
+ await typed({bytes:encode('x'.repeat(100)),limits:{maxInputBytes:10}},'DOCUMENT_TOO_LARGE');
+ await typed({bytes:Uint8Array.of(0x50,0x4b,0x05,0x06,...new Array(18).fill(0))},'UNSUPPORTED_FORMAT');
+ await assert.rejects(importDocument({...options(),bytes:'text'}),TypeError);
 });
 
 test('mutation fuzzing yields a valid document or ImportError only',()=>{

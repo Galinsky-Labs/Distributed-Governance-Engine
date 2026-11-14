@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {importDocx} from '../src/import/docx.mjs';
+import {importDocument} from '../src/import/index.mjs';
 import {ImportError} from '../src/import/errors.mjs';
 import {validateLegalDocument} from '../src/legal-structure.mjs';
 import {docx,zip,p,r,heading,numbered,table,relationship,HEADING_STYLES,NUMBERING,wordXml,prng,mutateText,mutateBytes,outline} from './support/import-fixtures.mjs';
@@ -85,6 +86,16 @@ test('legal formatting fixture keeps exact text with (a)/(1) nesting and a table
  ]);
  assert.deepEqual(report.numbering.sourceLabels,['SEC. 101.']);
  assert.equal(report.warnings.length,0);
+});
+
+test('importDocument detects DOCX by content regardless of the claimed name',async()=>{
+ const bytes=docx({body:p(r('Detected'))});
+ const {document,report}=await importDocument({...options(),bytes,fileName:'contract.pdf',mediaType:'application/pdf'});
+ assert.equal(report.format,'docx');assert.deepEqual(outline(document.content),['Detected']);
+ assert.deepEqual(report.warnings.map(w=>w.code),['EXTENSION_MISMATCH','MEDIA_TYPE_MISMATCH']);
+ const plain=await importDocument({...options(),bytes,fileName:'contract.docx',mediaType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+ assert.deepEqual(plain.report.warnings,[]);
+ await rejects(importDocument({...options(),bytes:zip([{name:'a.txt',data:'x'}])}),'UNSUPPORTED_FORMAT');
 });
 
 test('corrupted, truncated, non-Word and hostile XML packages fail with typed errors',async()=>{

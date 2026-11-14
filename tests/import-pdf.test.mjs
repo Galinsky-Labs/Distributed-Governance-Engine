@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import zlib from 'node:zlib';
 import {importPdfText} from '../src/import/pdf.mjs';
+import {importDocument} from '../src/import/index.mjs';
 import {ImportError} from '../src/import/errors.mjs';
 import {validateLegalDocument} from '../src/legal-structure.mjs';
 import {pdf,pdfWithObjectStreams,prng,mutateText,mutateBytes,outline} from './support/import-fixtures.mjs';
@@ -44,6 +45,8 @@ test('uncompressed PDF: page order, Td/TJ/T*/quote operators, WinAnsi and struct
  assert.match(report.provisionalReason,/review/);assert.match(report.provisionalReason,/OCR is not implemented/);
  assert.equal(report.discarded.scripts,1);assert.equal(report.discarded.externalReferences,1);
  assert(!JSON.stringify(document).includes('evil.example'));
+ const detected=await importDocument({...options(),bytes:classicPdf(),fileName:'statute.html'});
+ assert.equal(detected.report.format,'pdf');assert.equal(detected.report.warnings[0].code,'EXTENSION_MISMATCH');
 });
 
 test('FlateDecode with xref stream, PNG predictor, object stream and ToUnicode CMap',async()=>{

@@ -79,5 +79,6 @@ Each certificate (provisional, final, void) is stored in `dge_electorates.certif
 - Proxy expiry is checked when a proxy ballot is cast, not again at closure. Revocation is checked at closure.
 - Proxy grants are made by the authenticated principal only; custodial or beneficial-owner chains and imported proxy sources are not implemented.
 - Challenges are filed by members of the frozen electorate only; public (non-member) challenges are not supported. A dismissed challenge does not reset the window.
+- Casting a ballot (direct or as a proxy) still requires a current owner, admin, editor or participant role, as in version 1. A roster principal demoted to viewer, or removed from the workspace, cannot vote even though the snapshot still lists them; their weight then simply does not participate.
 - Open-admission (non-frozen) electorates remain future work.
 - Software records a configured entitlement; it does not create shareholder rights, enact law or execute a resolution.

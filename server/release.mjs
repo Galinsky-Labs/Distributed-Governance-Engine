@@ -48,7 +48,9 @@ export async function releaseAndRun({ extensions = [], assetDirectory, env = pro
   if (env.MIGRATION_DATABASE_URL) {
     try {
       runtimeEnv.DATABASE_URL = await migrateAndProvision({ env, extensions });
-    } catch {
+    } catch (error) {
+      const { startupFailureSummary } = await import("./runtime.mjs");
+      console.error("Release failure cause: " + startupFailureSummary(error));
       console.error("Release migration failed; nothing was served. No credential details were logged.");
       process.exit(1);
     }

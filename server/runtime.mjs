@@ -28,6 +28,19 @@ const hexKey = (env, name) => {
   return Buffer.from(raw, "hex");
 };
 
+/**
+ * Operator-safe failure summary: our own configuration errors are fixed
+ * strings, and PostgreSQL contributes only its SQLSTATE code. Connection
+ * strings, keys and server messages are never included.
+ */
+export function startupFailureSummary(error) {
+  if (error?.code && /^[0-9A-Z]{5}$/.test(error.code)) return "database error SQLSTATE " + error.code;
+  if (error?.code && /^[A-Z_]{3,40}$/.test(error.code)) return "error code " + error.code;
+  const message = String(error?.message ?? "");
+  return /^[A-Za-z][A-Za-z0-9 :,._()=-]{2,120}$/.test(message) && !/postgres(ql)?:\/\/|password|secret|key=/i.test(message)
+    ? message : "unclassified " + (error?.name ?? "error");
+}
+
 export function databasePool(rawUrl, { max = 4 } = {}) {
   const url = new URL(rawUrl);
   if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname) throw Error("Invalid database configuration");
@@ -138,8 +151,9 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
     process.once("SIGTERM", stop);
     process.once("SIGINT", stop);
     return { server, services, stop };
-  } catch {
+  } catch (error) {
     await pool?.end().catch(() => {});
+    console.error("Startup failure cause: " + startupFailureSummary(error));
     console.error("Account service startup failed. Check configured origin, identity provider, migrations, runtime permissions, TLS and secret references. No credential details were logged.");
     process.exit(1);
   }

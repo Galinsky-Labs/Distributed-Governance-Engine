@@ -93,7 +93,7 @@ export async function exportManifest({doc,format,editionDigest,version,profile,f
   ...(pageCount===undefined?{}:{pageCount}),
   generatedAt:profile.generatedAt,
   warnings:[...warnings],
-  conformance:{pdfa:'PDF/A-2b profile targeted; not validated by an external validator',tagged:true},
+  conformance:format==='pdf'?{pdfa:'PDF/A-2b profile targeted; not validated by an external validator',tagged:true}:{pdfa:'not applicable to '+format,tagged:false},
   ...extra
  };
 }

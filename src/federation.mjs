@@ -24,6 +24,7 @@ export const FEDERATION_SCHEMAS = Object.freeze({
   keyBinding: "quill-federation-key-binding-v1",
   ballot: "quill-federation-ballot-v1",
   receipt: "quill-federation-receipt-v1",
+  relayStatus: "quill-federation-relay-status-v1",
   snapshot: "quill-federation-snapshot-v1",
   message: "quill-federation-message-v1",
   request: "quill-federation-request-v1",
@@ -322,6 +323,26 @@ export const receiptLogEntry = (body) => ({
   kind: RECEIPT_KINDS[body.status], scope: "public", subjectId: body.decisionId, eventDigest: body.eventDigest,
 });
 
+/**
+ * A mirror's signed statement about an envelope it relayed. Signing it turns
+ * "the mirror told me there is no receipt" into checkable evidence.
+ */
+export function relayStatusBody({ mirror, envelopeId: id, status, at }) {
+  instance(mirror, "mirror"); hex64(id, "envelope id"); iso(at, "statement time");
+  invariant(["receipt-available", "awaiting-authority", "unknown"].includes(status), "Invalid relay status");
+  return { schema: FEDERATION_SCHEMAS.relayStatus, mirror, envelopeId: id, status, at };
+}
+/**
+ * True when a mirror still denied having a receipt later than the declared
+ * delivery bound for its path (one-way delay plus retry allowance) after the
+ * authority issued it. Inside the bound a missing receipt is indistinguishable
+ * from ordinary delay, so this never fires early.
+ */
+export function receiptWithheld({ statement, receipt, deliveryBoundMs }) {
+  const s = relayStatusBody(statement.body), r = receipt.body;
+  return s.envelopeId === r.envelopeId && s.status !== "receipt-available" && ms(s.at) > ms(r.receivedAt) + deliveryBoundMs;
+}
+
 /** Final counted ballot per voter key: the highest accepted sequence. */
 export function countAcceptedReceipts(receipts) {
   const latest = new Map();
@@ -414,10 +435,10 @@ export async function verifySnapshotBundle(bundle, { authorityKey, claim: knownC
     authorityClaimBody(b.claim.body);
     invariant(Array.isArray(b.decisions) && b.decisions.length <= 200 && Array.isArray(b.evidence) && b.evidence.length <= 400, "Snapshot too large");
   } catch { return reject("malformed-snapshot"); }
-  if (b.sequence <= previousSequence) return { status: "stale", reason: "older-snapshot" };
   if (b.claim.body.documentId !== b.documentId || b.claim.body.authority !== b.authority) return reject("claim-mismatch");
   if (!(await verifySignedObject(FEDERATION_SCHEMAS.authority, b.claim, authorityKey))) return reject("invalid-claim-signature");
   if (compareAuthority(knownClaim, b.claim.body) === "conflict") return reject("authority-conflict", { conflict: { known: knownClaim, claimed: b.claim } });
+  if (b.sequence <= previousSequence) return { status: "stale", reason: "older-snapshot" };
   if (b.checkpoint.body?.logId !== b.authority || !(await verifyCheckpoint(b.checkpoint, authorityKey))) return reject("invalid-checkpoint");
   const known = history.find((h) => h.size === b.checkpoint.body.size);
   if (!known) return { status: "awaiting-checkpoint", size: b.checkpoint.body.size };

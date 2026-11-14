@@ -10,7 +10,7 @@ import {
   authorityClaimBody, compareAuthority, decisionDescriptorBody, keyBindingBody, bindingEventDigest,
   verifyEnvelope, judgeEnvelope, receiptBody, receiptLogEntry, observeCheckpoint, auditReceipt,
   verifySnapshotBundle, createMessage, verifyMessage, classifyIncoming, retryDelayMs, verifyRequest,
-  signRequest, isUuid, isInstanceId,
+  signRequest, isUuid, isInstanceId, relayStatusBody,
 } from "../src/federation.mjs";
 import { verifyCheckpoint, keyIdFor, inclusionProof, consistencyProof } from "../src/transparency.mjs";
 import { validateGovernanceSnapshot } from "../src/governance-snapshots.mjs";
@@ -318,6 +318,9 @@ export function createFederationStore({
         await recordEvidence(db, from, "invalid-message", documentId, { messageId: message.id, reason: "invalid-receipt" });
         return "rejected";
       }
+      const relay = (await db.query("SELECT receipt FROM dge_federation.relays WHERE envelope_id=$1 FOR UPDATE", [payload.body.envelopeId])).rows[0];
+      if (relay?.receipt && relay.receipt.signature !== payload.signature)
+        await recordEvidence(db, from, "conflicting-receipts", documentId, { first: relay.receipt, second: payload });
       await db.query("UPDATE dge_federation.relays SET receipt=$2 WHERE envelope_id=$1 AND receipt IS NULL", [payload.body.envelopeId, payload]);
       return "stored";
     }
@@ -625,7 +628,11 @@ export function createFederationStore({
         if (own) return { receipt: own.receipt, servedBy: instanceId };
         const relayed = (await db.query("SELECT authority,receipt FROM dge_federation.relays WHERE envelope_id=$1", [envelopeIdentity])).rows[0];
         check(relayed, "RECEIPT_NOT_FOUND", 404);
-        return { receipt: relayed.receipt, status: relayed.receipt ? "received" : "awaiting-authority", authority: relayed.authority, servedBy: instanceId };
+        // Signed, so a voter can prove this mirror withheld a receipt it held.
+        const statement = await signObject(FEDERATION_SCHEMAS.relayStatus, relayStatusBody({
+          mirror: instanceId, envelopeId: envelopeIdentity, status: relayed.receipt ? "receipt-available" : "awaiting-authority", at: new Date(now()).toISOString(),
+        }), signer);
+        return { receipt: relayed.receipt, statement, authority: relayed.authority, servedBy: instanceId };
       });
     },
 
@@ -690,7 +697,12 @@ export function createFederationStore({
           const appliedIds = atSequence && sequence <= cursor ? new Map([[sequence, atSequence.id.trim()]]) : new Map();
           const verdict = classifyIncoming(channel, message, { appliedIds });
           if (verdict === "conflict") {
-            await recordEvidence(db, sender, "sender-equivocation", documentId, { sequence, stored: atSequence?.id.trim() ?? null, received: message.id });
+            const known = (await db.query("SELECT 1 FROM dge_federation.evidence WHERE peer=$1 AND kind='sender-equivocation' AND details->>'received'=$2",
+              [sender, message.id])).rows.length;
+            if (!known) await recordEvidence(db, sender, "sender-equivocation", documentId, { sequence, stored: atSequence?.id.trim() ?? null, received: message.id });
+            // Checkpoints and receipts are self-authenticating and order-insensitive:
+            // their content can still prove a forked log or a second receipt.
+            if (!known && (message.body.type === "checkpoint" || message.body.type === "receipt")) await applyMessage(db, message);
             rejected.push({ id: message.id, reason: "sequence-conflict" });
           } else if (verdict === "too-far-ahead") rejected.push({ id: message.id, reason: "too-far-ahead" });
           else {

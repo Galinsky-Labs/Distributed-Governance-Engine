@@ -141,8 +141,10 @@ test("a relayed delayed ballot is accepted once by the authority, receipted, log
   now += 3 * 3_600_000 - 20 * 60_000; // past closesAt, inside the 3 h Mars grace
   for (let i = 0; i < 4; i++) { await round(); now += 30_000; }
   response = await call(mars, `/api/federation/receipts/${envelopeId(envelope)}`);
-  const { receipt } = await response.json();
+  const { receipt, statement } = await response.json();
   assert.equal(receipt.body.status, "accepted");
+  assert.equal(statement.body.status, "receipt-available");
+  assert.ok(await verifySignedObject(FEDERATION_SCHEMAS.relayStatus, statement, mars.signingKey.publicKey), "the mirror signs what it says about a relay");
   assert.ok(Date.parse(receipt.body.receivedAt) > Date.parse(descriptor.body.closesAt), "received during the grace period");
   assert.ok(await verifySignedObject(FEDERATION_SCHEMAS.receipt, receipt, alpha.signingKey.publicKey));
   // Duplicate submission straight to the authority is idempotent.

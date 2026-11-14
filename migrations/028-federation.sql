@@ -142,7 +142,7 @@ CREATE TABLE dge_federation.checkpoints (
 CREATE TABLE dge_federation.evidence (
   id uuid PRIMARY KEY,
   peer text NOT NULL,
-  kind text NOT NULL CHECK (kind IN ('authority-conflict','split-view','sender-equivocation','omission','invalid-message')),
+  kind text NOT NULL CHECK (kind IN ('authority-conflict','split-view','sender-equivocation','omission','conflicting-receipts','invalid-message')),
   document_id uuid,
   details jsonb NOT NULL,
   observed_at timestamptz NOT NULL

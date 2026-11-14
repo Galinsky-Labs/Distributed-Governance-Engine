@@ -29,12 +29,18 @@ import { createSettingsRoutes, settingsBodyLimit } from "./settings-http.mjs";
 import { createEntitlementStore } from "./entitlement-store.mjs";
 import { createBillingStore } from "./billing-store.mjs";
 import { createBillingRoutes, billingBodyLimit } from "./billing-http.mjs";
+import { createElectorateStore } from "./electorate-store.mjs";
+import { createElectorateRoutes, electorateBodyLimit } from "./electorate-http.mjs";
+import { createSectionGrantStore } from "./section-grants.mjs";
+import { createSectionGrantRoutes, sectionGrantBodyLimit } from "./section-grants-http.mjs";
+import { createModerationStore } from "./moderation-store.mjs";
+import { createModerationRoutes, moderationBodyLimit } from "./moderation-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
-export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers", "/admin", "/billing"]);
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers", "/admin", "/billing", "/governance/electorates", "/governance/moderation", "/governance/clause-access"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).
@@ -91,7 +97,7 @@ export function createPlatform({
   extensions = [], assetDirectory, readiness, release = null, budget,
   decorateDocuments = (documents) => documents,
   verifyPasskeyAuthentication, notificationTokenKey = null, email = null,
-  paymentProviders = [], enforceEntitlements = true,
+  paymentProviders = [], enforceEntitlements = true, personKeySecret = null,
 }) {
   for (const extension of extensions) validateExtension(extension);
   const settings = createSettingsStore({ identity, transaction, product, clock });
@@ -106,6 +112,9 @@ export function createPlatform({
   const ledger = logSigningKey
     ? createLedger({ transaction, logId, signingKey: logSigningKey, clock, anchorProviders, ...anchorOptions })
     : null;
+  const electorates = createElectorateStore({ identity, clock, ...(personKeySecret ? { personKeySecret } : {}) });
+  const sectionGrants = createSectionGrantStore({ identity, clock });
+  const moderation = createModerationStore({ identity, transaction, clock });
   const editions = createEditionStore({ identity, transaction, clock });
   const signatures = createSignatureStore({ identity, transaction, origin, clock, ...(verifyPasskeyAuthentication ? { verifyPasskeyAuthentication } : {}) });
   const search = createSearchStore({ identity, transaction, product });
@@ -115,7 +124,7 @@ export function createPlatform({
     : null;
   const services = {
     identity, transaction, clock, origin, product, documents, proposals, discussion, decisions, ledger,
-    editions, signatures, search, notifications, settings, entitlements, billing,
+    editions, signatures, search, notifications, settings, entitlements, billing, electorates, sectionGrants, moderation,
     /** True only for platform administrators granted through the operator CLI. */
     isPlatformAdmin: async (credentials) => {
       try {
@@ -126,6 +135,9 @@ export function createPlatform({
   };
 
   const routeSets = [
+    { routes: createElectorateRoutes({ electorates }), bodyLimit: electorateBodyLimit },
+    { routes: createSectionGrantRoutes({ sectionGrants }), bodyLimit: sectionGrantBodyLimit },
+    { routes: createModerationRoutes({ moderation }), bodyLimit: moderationBodyLimit },
     { routes: createEditionRoutes({ editions }), bodyLimit: editionBodyLimit },
     { routes: createSignatureRoutes({ signatures }), bodyLimit: signatureBodyLimit },
     { routes: createSearchRoutes({ search }), bodyLimit: searchBodyLimit },

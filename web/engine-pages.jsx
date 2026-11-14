@@ -3,9 +3,14 @@
 import { VerifyPage } from "./verify-page.jsx";
 import { TransparencyPage } from "./transparency-page.jsx";
 import { ImportPage, ExportPage } from "./document-io-pages.jsx";
-import { SearchPage, NotificationsPage, UnsubscribePage, VerifyEmailPage, EditionsPage, SignersPage, AdminPage, BillingPage } from "./feature-pages.jsx";
+import { SearchPage, NotificationsPage, UnsubscribePage, VerifyEmailPage, EditionsPage, SignersPage, AdminPage, BillingPage, ElectoratesPage, ModerationPage, ClauseAccessPage } from "./feature-pages.jsx";
 
 export const enginePages = [
+  { path: "/governance/electorates", title: "Electorates and proxies", nav: "Governance", Component: ElectoratesPage,
+    description: "Rosters with exact voting units and classes, record-date snapshots, verified-person cohorts and proxy grants." },
+  { path: "/governance/clause-access", title: "Clause access", nav: "Governance", Component: ClauseAccessPage,
+    description: "Open selected sections to selected roles, accounts or classes to propose, discuss or vote, with expirations." },
+  { path: "/governance/moderation", title: "Moderation and appeals", nav: "Governance", Component: ModerationPage },
   { path: "/admin", title: "Settings and policy", nav: "Administration", Component: AdminPage },
   { path: "/billing", title: "Plans and allowances", nav: "Account", Component: BillingPage },
   { path: "/search", title: "Search", nav: "Documents", Component: SearchPage },

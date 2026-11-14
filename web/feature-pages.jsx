@@ -7,6 +7,9 @@ import { SignaturePanel } from "./signature-panel.jsx";
 import { SignerDirectory } from "./signer-directory.jsx";
 import { AdminConsole } from "./admin-console.jsx";
 import { BillingPanel } from "./billing-panel.jsx";
+import { ElectoratePanel } from "./electorate-panel.jsx";
+import { ModerationPanel } from "./moderation-panel.jsx";
+import { SectionGrantsPanel } from "./section-grants-panel.jsx";
 
 const api = createAccountAPI();
 
@@ -129,4 +132,45 @@ export function BillingPage() {
       <BillingPanel key={tenantId} tenantId={tenantId || undefined} />
     </section>
   );
+}
+
+function WorkspaceScoped({ render, needsDocument = false }) {
+  const session = useSession();
+  const [tenantId, setTenantId] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [documentId, setDocumentId] = useState("");
+  useEffect(() => { if (session.workspaces[0] && !tenantId) setTenantId(session.workspaces[0].tenantId); }, [session]);
+  useEffect(() => {
+    if (!needsDocument || !tenantId) return;
+    api("/api/workspaces/" + tenantId + "/documents?limit=100").then((r) => { setDocuments(r.items); setDocumentId(r.items[0]?.id ?? ""); }).catch(() => setDocuments([]));
+  }, [tenantId]);
+  if (!session.checked) return <p role="status">Loading…</p>;
+  if (!session.signedIn) return <SignInPrompt />;
+  const role = session.workspaces.find((w) => w.tenantId === tenantId)?.role;
+  return (
+    <>
+      <section className="console-card"><div className="console-form">
+        <label>Workspace<select value={tenantId} onChange={(e) => setTenantId(e.target.value)}>{session.workspaces.map((w) => <option key={w.tenantId} value={w.tenantId}>Workspace {w.tenantId.slice(0, 8)} · {w.role}</option>)}</select></label>
+        {needsDocument && <label>Document<select value={documentId} onChange={(e) => setDocumentId(e.target.value)}>{documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}</select></label>}
+      </div></section>
+      {tenantId && (!needsDocument || documentId) && <section className="console-card">{render({ tenantId, role, documentId })}</section>}
+    </>
+  );
+}
+export const ElectoratesPage = () => <WorkspaceScoped render={({ tenantId, role }) => <ElectoratePanel key={tenantId} tenantId={tenantId} role={role} />} />;
+export const ModerationPage = () => <WorkspaceScoped render={({ tenantId, role }) => <ModerationPanel key={tenantId} tenantId={tenantId} role={role} />} />;
+export function ClauseAccessPage() {
+  return <WorkspaceScoped needsDocument render={({ tenantId, role, documentId }) => <ClauseAccess key={documentId} tenantId={tenantId} role={role} documentId={documentId} />} />;
+}
+function ClauseAccess({ tenantId, role, documentId }) {
+  const [sections, setSections] = useState([]);
+  useEffect(() => {
+    api("/api/workspaces/" + tenantId + "/documents/" + documentId).then((r) => {
+      const found = [];
+      const walk = (nodes) => { for (const n of nodes ?? []) { if (n.kind === "section") found.push({ id: n.id, title: n.title }); walk(n.children); } };
+      walk(r.document.content);
+      setSections(found);
+    }).catch(() => setSections([]));
+  }, [documentId]);
+  return <SectionGrantsPanel tenantId={tenantId} documentId={documentId} role={role} sections={sections} />;
 }

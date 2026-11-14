@@ -34,3 +34,4 @@
 .console-check input{width:auto}
 .console-subcard{border-top:1px solid #e1e8e3;padding:12px 0}
 .console-status{min-height:22px;font-size:13px;color:#4d654f}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:6px 0}

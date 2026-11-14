@@ -41,7 +41,7 @@ export function ReportButton({tenantId,targetKind,targetId}){
       setStatus(message(error));
     }finally{setBusy(false);}
   }
-  return <div className="point-actions">
+  return <div className="report-actions">
     {!open&&<button onClick={()=>setOpen(true)} disabled={busy}>Report</button>}
     {open&&<>
       <label>Reason<select value={reason} onChange={e=>{setReason(e.target.value);pending.current=null;}} disabled={busy}>

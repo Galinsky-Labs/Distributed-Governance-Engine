@@ -56,7 +56,13 @@ export function createDocumentStore({
   maxDocuments = 100,
   maxVersions = 1000,
   maxStoredBytes = 30000000,
+  entitlements = null,
 }) {
+  if (
+    entitlements !== null &&
+    typeof entitlements?.reserveDocumentCreation !== "function"
+  )
+    throw Error("Invalid entitlement hook");
   for (const n of [maxDocuments, maxVersions])
     if (!Number.isSafeInteger(n) || n < 1 || n > 1000000)
       throw Error("Invalid document budget");
@@ -211,6 +217,15 @@ export function createDocumentStore({
             throw new DocumentError("DOCUMENT_ID_EXISTS", 409);
           throw cause;
         }
+        // Optional quota hook: reserves inside this transaction, so any later
+        // failure rolls the reservation back with the document.
+        if (entitlements)
+          await entitlements.reserveDocumentCreation(db, {
+            tenantId,
+            accountId: actor.accountId,
+            documentId: doc.id,
+            commandId,
+          });
         return append(db, actor, doc, {
           commandId,
           requestDigest,

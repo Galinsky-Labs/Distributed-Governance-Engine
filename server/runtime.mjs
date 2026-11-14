@@ -72,13 +72,17 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
       sessionKey: hexKey(env, "SESSION_KEY"), stateKey: hexKey(env, "OIDC_STATE_KEY"),
       ...passkeys,
     });
-    const configuration = await discoverIdentityProvider({
-      issuer: required(env, "OIDC_ISSUER"), clientId: required(env, "OIDC_CLIENT_ID"), clientSecret: required(env, "OIDC_CLIENT_SECRET"),
-    });
-    const login = createOIDCLogin({ store: identity, configuration, redirectUri: origin + "/auth/callback" });
+    // External OIDC when configured; first-party passkeys when enabled; or both.
+    const passkeySignin = env.SIGNIN_PASSKEYS === "enabled";
+    if (env.SIGNIN_PASSKEYS && !["enabled", "disabled"].includes(env.SIGNIN_PASSKEYS)) throw Error("Invalid passkey sign-in setting");
+    const login = env.OIDC_ISSUER
+      ? createOIDCLogin({ store: identity, redirectUri: origin + "/auth/callback", configuration: await discoverIdentityProvider({
+          issuer: env.OIDC_ISSUER, clientId: required(env, "OIDC_CLIENT_ID"), clientSecret: required(env, "OIDC_CLIENT_SECRET") }) })
+      : null;
+    if (!login && !passkeySignin) throw Error("Configure OIDC_ISSUER or SIGNIN_PASSKEYS=enabled");
     const release = (env.QUILL_RELEASE ?? env.RENDER_GIT_COMMIT ?? "").slice(0, 64) || null;
     const { services, application, bodyLimit, workers } = createPlatform({
-      identity, transaction, login, origin, product, extensions, release, assetDirectory, privateWorkspaces,
+      identity, transaction, login, origin, product, extensions, release, assetDirectory, privateWorkspaces, passkeySignin,
       verifyPasskeyAuthentication: passkeys.verifyPasskeyAuthentication,
       notificationTokenKey: env.NOTIFICATION_TOKEN_KEY ? hexKey(env, "NOTIFICATION_TOKEN_KEY") : null,
       email: postmarkFromEnvironment(env),

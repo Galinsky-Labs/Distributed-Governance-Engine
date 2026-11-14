@@ -35,13 +35,14 @@ import { createSectionGrantStore } from "./section-grants.mjs";
 import { createSectionGrantRoutes, sectionGrantBodyLimit } from "./section-grants-http.mjs";
 import { createModerationStore } from "./moderation-store.mjs";
 import { createModerationRoutes, moderationBodyLimit } from "./moderation-http.mjs";
+import { createPasskeySignin, passkeySigninBodyLimit } from "./passkey-signin.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 import { createPrivateWorkspaceServices } from "./private-workspace.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
-export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers", "/admin", "/billing", "/governance/electorates", "/governance/moderation", "/governance/clause-access"]);
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers", "/admin", "/billing", "/governance/electorates", "/governance/moderation", "/governance/clause-access", "/signin"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).
@@ -99,7 +100,7 @@ export function createPlatform({
   decorateDocuments = (documents) => documents,
   verifyPasskeyAuthentication, notificationTokenKey = null, email = null,
   paymentProviders = [], enforceEntitlements = true, personKeySecret = null,
-  privateWorkspaces = false, privateLimits = {},
+  privateWorkspaces = false, privateLimits = {}, passkeySignin = false,
 }) {
   if (typeof privateWorkspaces !== "boolean") throw Error("Invalid private workspace setting");
   for (const extension of extensions) validateExtension(extension);
@@ -137,7 +138,11 @@ export function createPlatform({
     },
   };
 
+  // Without an external OIDC provider, discoverable passkeys are the sign-in.
+  const signin = passkeySignin ? createPasskeySignin({ identity, transaction, origin, clock, rpName: product === "charter" ? "CharterQuill" : "CivicQuill" }) : null;
+  if (!login && !signin) throw Error("An identity provider or passkey sign-in is required");
   const routeSets = [
+    ...(signin ? [{ routes: signin.routes, bodyLimit: passkeySigninBodyLimit }] : []),
     { routes: createElectorateRoutes({ electorates }), bodyLimit: electorateBodyLimit },
     { routes: createSectionGrantRoutes({ sectionGrants }), bodyLimit: sectionGrantBodyLimit },
     { routes: createModerationRoutes({ moderation }), bodyLimit: moderationBodyLimit },
@@ -169,7 +174,7 @@ export function createPlatform({
     for (const worker of extension.createWorkers?.(services) ?? []) workers.push(worker);
   }
   // Platform routes are matched before account management, in a stable order.
-  const accounts = createAccountHandler({ store: identity, login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });
+  const accounts = createAccountHandler({ store: identity, login: login ?? signin.login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });
   const pagePaths = [...ENGINE_PAGES, ...extensions.flatMap((e) => e.pagePaths ?? [])];
   const application = createEngineApplication({
     accounts, origin, product, readiness, release, pagePaths, privateWorkspaces,

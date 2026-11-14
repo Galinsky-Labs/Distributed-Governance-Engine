@@ -189,7 +189,7 @@ export async function accountFixture({
     redirectUri: origin + "/auth/callback",
   });
   const { application, bodyLimit, services } = createPlatform({
-    identity: store, transaction, login, origin, logId: "quill.fixture", notificationTokenKey: randomBytes(32),
+    identity: store, transaction, login, origin, logId: "quill.fixture", notificationTokenKey: randomBytes(32), passkeySignin: true,
     logSigningKey: loadLogSigningKey(generateKeyPairSync("ed25519").privateKey.export({ format: "der", type: "pkcs8" }).toString("base64")),
     privateWorkspaces,
     ...(perPeerBudget ? { budget: createRequestBudget({ perPeer: perPeerBudget }) } : {}),

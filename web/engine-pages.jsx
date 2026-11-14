@@ -1,11 +1,13 @@
 // Engine-owned console pages. Applications pass these through to bootQuill
 // together with their own pages.
 import { VerifyPage } from "./verify-page.jsx";
+import { SigninPage } from "./signin-page.jsx";
 import { TransparencyPage } from "./transparency-page.jsx";
 import { ImportPage, ExportPage } from "./document-io-pages.jsx";
 import { SearchPage, NotificationsPage, UnsubscribePage, VerifyEmailPage, EditionsPage, SignersPage, AdminPage, BillingPage, ElectoratesPage, ModerationPage, ClauseAccessPage } from "./feature-pages.jsx";
 
 export const enginePages = [
+  { path: "/signin", title: "Sign in", Component: SigninPage },
   { path: "/governance/electorates", title: "Electorates and proxies", nav: "Governance", Component: ElectoratesPage,
     description: "Rosters with exact voting units and classes, record-date snapshots, verified-person cohorts and proxy grants." },
   { path: "/governance/clause-access", title: "Clause access", nav: "Governance", Component: ClauseAccessPage,

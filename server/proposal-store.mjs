@@ -6,6 +6,8 @@ import {
 } from "../src/legal-proposals.mjs";
 import { legalDocumentDigest } from "../src/legal-schema.mjs";
 import { DocumentError } from "./document-store.mjs";
+import { requireSectionRight } from "./section-grants.mjs";
+import { removedView } from "./moderation-store.mjs";
 const uuid = (value) =>
   typeof value === "string" &&
   /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(value);
@@ -25,8 +27,17 @@ const view = (row, currentVersion) => {
     createdAt: new Date(row.created_at).toISOString(),
     stale: row.base_version !== currentVersion,
     anchorStatus: "pending",
+    // A moderated proposal keeps its place and digest; only its wording is
+    // replaced by a visible placeholder. Nothing is deleted.
+    ...(row.moderation_hidden
+      ? removedView(row.moderation_reason, (placeholder) => ({
+          proposal: { ...row.proposal, replacement: placeholder, rationale: placeholder },
+        }))
+      : {}),
   };
 };
+const MODERATED_PROPOSALS =
+  "SELECT p.*,v.hidden AS moderation_hidden,v.reason_category AS moderation_reason FROM dge_proposals.proposals p LEFT JOIN dge_moderation.visibility v ON v.tenant_id=p.tenant_id AND v.target_kind='proposal' AND v.target_id=p.id";
 /** First public-content adapter: creation is restricted to workspace contributors. */
 export function createProposalStore({
   identity,
@@ -144,6 +155,16 @@ export function createProposalStore({
           } catch {
             throw new DocumentError("INVALID_TEXT_SELECTION_OR_REPLACEMENT");
           }
+          // Clause permissions: only unlocked sections are amendable targets.
+          await requireSectionRight(db, {
+            tenantId,
+            documentId,
+            document: base.document,
+            blockId: proposal.selection.blockId,
+            actor,
+            right: "propose",
+            at: now(),
+          });
           // The document row is locked until commit. Count and insert must share
           // this serialization point or simultaneous writers can evade quotas.
           const counts = (
@@ -224,7 +245,8 @@ export function createProposalStore({
       return publicContext(documentId, async (db, currentVersion) => {
         const rows = (
           await db.query(
-            "SELECT * FROM dge_proposals.proposals WHERE document_id=$1 AND ($2::uuid IS NULL OR id>$2::uuid) ORDER BY id LIMIT $3",
+            MODERATED_PROPOSALS +
+              " WHERE p.document_id=$1 AND ($2::uuid IS NULL OR p.id>$2::uuid) ORDER BY p.id LIMIT $3",
             [documentId, after, limit + 1],
           )
         ).rows;
@@ -240,7 +262,7 @@ export function createProposalStore({
       return publicContext(documentId, async (db, currentVersion) => {
         const row = (
           await db.query(
-            "SELECT * FROM dge_proposals.proposals WHERE document_id=$1 AND id=$2",
+            MODERATED_PROPOSALS + " WHERE p.document_id=$1 AND p.id=$2",
             [documentId, proposalId],
           )
         ).rows[0];

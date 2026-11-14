@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createAccountAPI } from "./account-api.mjs";
+import { RemovedNotice, ReportButton } from "./moderation-panel.jsx";
 const api = createAccountAPI(),
   names = {
     support: "Supporting points",
@@ -270,6 +271,7 @@ export function DiscussionPanel({ document: doc, proposal }) {
             : ""}
         </p>
         <p className="point-thesis">{item.point.text}</p>
+        <RemovedNotice moderation={item.moderation} />
         {item.point.evidence.length > 0 && (
           <ul className="point-evidence">
             {item.point.evidence.map((link, index) => (
@@ -281,6 +283,13 @@ export function DiscussionPanel({ document: doc, proposal }) {
               </li>
             ))}
           </ul>
+        )}
+        {rights.canReport && !item.moderation && (
+          <ReportButton
+            tenantId={doc.tenantId}
+            targetKind="point"
+            targetId={item.point.id}
+          />
         )}
         <div className="point-voting" data-tour="point-vote">
           <button

@@ -15,12 +15,21 @@ import { createLedger } from "./ledger.mjs";
 import { createLedgerRoutes, ledgerBodyLimit } from "./ledger-http.mjs";
 import { createVerificationRoutes, verificationBodyLimit } from "./verification-http.mjs";
 import { createExportRoutes, exportBodyLimit } from "./export-http.mjs";
+import { createEditionStore } from "./edition-store.mjs";
+import { createEditionRoutes, editionBodyLimit } from "./edition-http.mjs";
+import { createSignatureStore } from "./signature-store.mjs";
+import { createSignatureRoutes, signatureBodyLimit } from "./signature-http.mjs";
+import { createSearchStore } from "./search-store.mjs";
+import { createSearchRoutes, searchBodyLimit } from "./search-http.mjs";
+import { createNotificationStore, createNotificationTokens } from "./notification-store.mjs";
+import { createNotificationRoutes, notificationBodyLimit } from "./notification-http.mjs";
+import { createNotificationWorker } from "./notification-worker.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
-export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export"]);
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).
@@ -76,6 +85,7 @@ export function createPlatform({
   logId, logSigningKey, anchorProviders = [], anchorOptions = {},
   extensions = [], assetDirectory, readiness, release = null, budget,
   decorateDocuments = (documents) => documents,
+  verifyPasskeyAuthentication, notificationTokenKey = null, email = null,
 }) {
   for (const extension of extensions) validateExtension(extension);
   const documents = decorateDocuments(createDocumentStore({ identity, transaction }));
@@ -85,9 +95,20 @@ export function createPlatform({
   const ledger = logSigningKey
     ? createLedger({ transaction, logId, signingKey: logSigningKey, clock, anchorProviders, ...anchorOptions })
     : null;
-  const services = { identity, transaction, clock, origin, product, documents, proposals, discussion, decisions, ledger };
+  const editions = createEditionStore({ identity, transaction, clock });
+  const signatures = createSignatureStore({ identity, transaction, origin, clock, ...(verifyPasskeyAuthentication ? { verifyPasskeyAuthentication } : {}) });
+  const search = createSearchStore({ identity, transaction, product });
+  // Notifications need an unsubscribe-token key; without one they stay disabled.
+  const notifications = notificationTokenKey
+    ? createNotificationStore({ identity, transaction, origin, email, tokens: createNotificationTokens({ key: notificationTokenKey }) })
+    : null;
+  const services = { identity, transaction, clock, origin, product, documents, proposals, discussion, decisions, ledger, editions, signatures, search, notifications };
 
   const routeSets = [
+    { routes: createEditionRoutes({ editions }), bodyLimit: editionBodyLimit },
+    { routes: createSignatureRoutes({ signatures }), bodyLimit: signatureBodyLimit },
+    { routes: createSearchRoutes({ search }), bodyLimit: searchBodyLimit },
+    ...(notifications ? [{ routes: createNotificationRoutes({ notifications, origin }), bodyLimit: notificationBodyLimit }] : []),
     { routes: createDecisionRoutes({ decisions }), bodyLimit: decisionBodyLimit },
     { routes: createDiscussionRoutes({ discussion }), bodyLimit: discussionBodyLimit },
     { routes: createProposalRoutes({ proposals }), bodyLimit: proposalBodyLimit },
@@ -97,6 +118,10 @@ export function createPlatform({
   routeSets.unshift({ routes: createVerificationRoutes({ transaction, ledger, decisions, clock }), bodyLimit: verificationBodyLimit });
   if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: (c) => services.isPlatformAdmin?.(c) ?? false }), bodyLimit: ledgerBodyLimit });
   const workers = ledger ? [{ name: "ledger", intervalMs: 5000, tick: () => ledger.tick() }] : [];
+  if (notifications) {
+    const notificationWorker = createNotificationWorker({ transaction, store: notifications, email, origin });
+    workers.push({ name: "notifications", intervalMs: 30000, tick: () => notificationWorker.tick() });
+  }
   for (const extension of extensions) {
     for (const set of extension.createRoutes?.(services) ?? []) routeSets.unshift(set);
     for (const worker of extension.createWorkers?.(services) ?? []) workers.push(worker);

@@ -5,7 +5,12 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app.jsx";
 import { GovernanceHome } from "./governance-home.jsx";
+import { I18nProvider, browserLocale } from "./i18n-react.mjs";
+import { LanguagePicker } from "./language-picker.jsx";
 import "./console.css";
+
+const LOCALE_KEY = "quill.locale";
+const storedLocale = () => { try { return localStorage.getItem(LOCALE_KEY); } catch { return null; } };
 
 const PATH = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
 
@@ -19,7 +24,7 @@ export function validatePages(pages) {
   return pages;
 }
 
-function ConsoleNavigation({ pages, current, product }) {
+function ConsoleNavigation({ pages, current, product, locale, onLocale }) {
   const brand = product === "charter" ? "CharterQuill" : "CivicQuill";
   const groups = [...new Set(pages.filter((p) => p.nav).map((p) => p.nav))];
   return (
@@ -39,6 +44,7 @@ function ConsoleNavigation({ pages, current, product }) {
           </details>
         ))}
         <a href="/account">Account</a>
+        {onLocale && <LanguagePicker value={locale} onChange={onLocale} id="console-language" />}
       </nav>
     </header>
   );
@@ -46,16 +52,20 @@ function ConsoleNavigation({ pages, current, product }) {
 
 export function ConsolePage({ page, pages, product }) {
   const Component = page.Component;
+  const [locale, setLocale] = React.useState(() => browserLocale(storedLocale()));
+  const changeLocale = (next) => { setLocale(next); try { localStorage.setItem(LOCALE_KEY, next); } catch {} };
   React.useEffect(() => { document.title = page.title + " — " + (product === "charter" ? "CharterQuill" : "CivicQuill"); }, [page, product]);
   return (
+    <I18nProvider locale={locale} applyToDocument>
     <div className="governance-page console-page">
-      <ConsoleNavigation pages={pages} current={page.path} product={product} />
+      <ConsoleNavigation pages={pages} current={page.path} product={product} locale={locale} onLocale={changeLocale} />
       <main className="console-body" id="main">
         <h1 className="console-title">{page.title}</h1>
         {page.description && <p className="console-description">{page.description}</p>}
         <Component product={product} />
       </main>
     </div>
+    </I18nProvider>
   );
 }
 

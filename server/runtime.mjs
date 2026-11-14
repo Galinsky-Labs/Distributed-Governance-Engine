@@ -10,6 +10,7 @@ import { attachPublicCollaborationHub } from "./public-collaboration-hub.mjs";
 import { configuredPasskeys } from "./passkey-verifier.mjs";
 import { createPlatform, startWorkers, verifyExtensionMigrations } from "./platform.mjs";
 import { loadLogSigningKey } from "./ledger.mjs";
+import { postmarkFromEnvironment } from "./email-adapters/postmark.mjs";
 
 const required = (env, name) => {
   const value = env[name];
@@ -59,10 +60,11 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
     await verifyIdentityRuntime(pool);
     for (const extension of extensions) await verifyExtensionMigrations(pool, extension);
     const transaction = pgTransactions(pool);
+    const passkeys = configuredPasskeys(env.PASSKEY_ATTESTATION_POLICY);
     const identity = createIdentityStore({
       transaction, origin,
       sessionKey: hexKey(env, "SESSION_KEY"), stateKey: hexKey(env, "OIDC_STATE_KEY"),
-      ...configuredPasskeys(env.PASSKEY_ATTESTATION_POLICY),
+      ...passkeys,
     });
     const configuration = await discoverIdentityProvider({
       issuer: required(env, "OIDC_ISSUER"), clientId: required(env, "OIDC_CLIENT_ID"), clientSecret: required(env, "OIDC_CLIENT_SECRET"),
@@ -71,6 +73,9 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
     const release = (env.QUILL_RELEASE ?? env.RENDER_GIT_COMMIT ?? "").slice(0, 64) || null;
     const { services, application, bodyLimit, workers } = createPlatform({
       identity, transaction, login, origin, product, extensions, release, assetDirectory,
+      verifyPasskeyAuthentication: passkeys.verifyPasskeyAuthentication,
+      notificationTokenKey: env.NOTIFICATION_TOKEN_KEY ? hexKey(env, "NOTIFICATION_TOKEN_KEY") : null,
+      email: postmarkFromEnvironment(env),
       logId: env.LOG_ID ?? new URL(origin).hostname,
       logSigningKey: env.LOG_SIGNING_KEY ? loadLogSigningKey(env.LOG_SIGNING_KEY) : null,
       anchorProviders: await anchorProvidersFrom(env),

@@ -31,9 +31,9 @@ import { createLegalDocument } from "../src/legal-structure.mjs";
 
 const DEFAULTS = {
   voters: 2000, concurrency: 32, pool: 32,
-  "bulk-electorate": 100000, "bulk-decisions": 10,
+  "bulk-electorate": 99999, "bulk-decisions": 10,
   "public-tenants": 20, "documents-per-tenant": 100, proposals: 200, points: 1000,
-  "read-requests": 20000, "ledger-events": 50000,
+  "read-requests": 20000, "decision-reads": 200, "ledger-events": 50000,
   label: "local", out: "docs/benchmarks", keep: false,
 };
 export function parseArgs(argv) {
@@ -50,6 +50,8 @@ export function parseArgs(argv) {
     } else options[key] = raw;
   }
   if (!/^[a-z0-9-]{1,60}$/.test(options.label)) throw Error("Invalid --label");
+  // The engine caps a frozen electorate at 100,000 members; the convenor holds one seat.
+  if (options["bulk-electorate"] > 99999 || options.voters > 99999) throw Error("--voters and --bulk-electorate are limited to 99,999");
   return options;
 }
 
@@ -189,7 +191,7 @@ async function run(options, { owner, runtime }) {
     decisions.cast(voters[i], hotTenant, hotDocument.id, hotProposal.id, { choice: choices[i % 3], expectedVersion: 0, commandId: randomUUID() }));
   const revote = await load(Math.min(200, voters.length), options.concurrency, (i) =>
     decisions.cast(voters[i], hotTenant, hotDocument.id, hotProposal.id, { choice: "yes", expectedVersion: 1, commandId: randomUUID() }));
-  const decisionReads = await load(200, options.concurrency, (i) => decisions.read(voters[i % voters.length], hotTenant, hotDocument.id, hotProposal.id));
+  const decisionReads = await load(options["decision-reads"], options.concurrency, (i) => decisions.read(voters[i % voters.length], hotTenant, hotDocument.id, hotProposal.id));
   offset = 3600001 + 1000;
   const hotClose = await timed(() => decisions.close(chair, hotTenant, hotDocument.id, hotProposal.id));
   const counted = (await owner.query("SELECT count(*)::int AS n FROM dge_decisions.ballots WHERE decision_id=$1", [opened.value.id])).rows[0].n;
@@ -323,9 +325,9 @@ async function run(options, { owner, runtime }) {
   log("ledger: sequencing", pending, "events");
   const sequenced = await timed(async () => { let total = 0, pass; do { pass = await ledger.sequence(); total += pass; } while (pass > 0); return total; });
   const checkpoint = await timed(() => ledger.issueCheckpoint({ force: true }));
-  const proofs = await load(500, options.concurrency, async () => {
-    const row = (await owner.query("SELECT event_digest FROM dge_ledger.entries ORDER BY random() LIMIT 1")).rows[0];
-    const proof = await ledger.proof({ eventDigest: row.event_digest.trim() });
+  const sample = (await owner.query("SELECT event_digest FROM dge_ledger.entries ORDER BY random() LIMIT 500")).rows.map((r) => r.event_digest.trim());
+  const proofs = await load(sample.length, options.concurrency, async (i) => {
+    const proof = await ledger.proof({ eventDigest: sample[i] });
     if (proof.status !== "included") throw Error("not included");
   });
   report.results.ledger = {
@@ -345,7 +347,7 @@ export function markdown(report) {
     `# Benchmark run \`${o.label}\``, "",
     "Local measurement with the real engine stores against PostgreSQL. Not a production capacity claim.", "",
     "## Command", "", "```sh",
-    `DGE_TEST_DATABASE_URL=postgresql://postgres:…@127.0.0.1:5432/<admin>_test node scripts/benchmark.mjs ${Object.entries(o).filter(([k, v]) => v !== DEFAULTS[k]).map(([k, v]) => `--${k}=${v}`).join(" ")}`.trim(),
+    `DGE_TEST_DATABASE_URL=postgresql://postgres:…@127.0.0.1:5432/<admin>_test node scripts/benchmark.mjs ${Object.entries(o).filter(([k, v]) => k !== "keep" && (k !== "out" || v !== DEFAULTS.out) && Object.hasOwn(DEFAULTS, k)).map(([k, v]) => `--${k}=${v}`).join(" ")}`.trim(),
     "```", "",
     "## Hardware and software", "",
     `- CPU: ${env.cpuModel} × ${env.cpuCount} logical CPUs`, `- Memory: ${env.memoryGiB} GiB`, `- OS: ${env.platform}`,

@@ -1,8 +1,10 @@
 //! Narrow browser bindings: protocol state and private keys never cross this API.
 mod vault;
 use crate::{Endpoint, Group, MemberPin, Received};
+use js_sys::{Array, Object, Promise, Reflect, Uint8Array};
 use std::collections::BTreeMap;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsCast};
+use web_sys::Crypto;
 
 fn error(_: crate::Error) -> JsValue {
     JsValue::from_str("MLS_OPERATION_REJECTED")
@@ -189,6 +191,32 @@ impl BrowserEndpoint {
                 bytes: vec![],
             }),
         }
+    }
+    /// Imports the current epoch's exporter secret directly into WebCrypto as a
+    /// NON-extractable AES-256-GCM key. Raw secret bytes are zeroized in Wasm
+    /// memory and in the transient JavaScript copy before this returns.
+    #[wasm_bindgen(js_name=exportKey)]
+    pub fn export_key(&self, id: u32, label: &str, context: &[u8]) -> Result<Promise, JsValue> {
+        let group = self.groups.get(&id).ok_or_else(invalid)?;
+        let secret = self
+            .inner
+            .export_secret(group, label, context)
+            .map_err(error)?;
+        let raw = Uint8Array::from(&secret[..]);
+        let algorithm = Object::new();
+        Reflect::set(&algorithm, &"name".into(), &"AES-GCM".into()).map_err(|_| invalid())?;
+        let usages = Array::of2(&"encrypt".into(), &"decrypt".into());
+        let crypto: Crypto = Reflect::get(&js_sys::global(), &"crypto".into())
+            .map_err(|_| invalid())?
+            .dyn_into()
+            .map_err(|_| invalid())?;
+        // WebCrypto copies keyData synchronously before returning its promise.
+        let imported = crypto
+            .subtle()
+            .import_key_with_object("raw", &raw, &algorithm, false, &usages);
+        raw.fill(0, 0, raw.length());
+        drop(secret);
+        imported.map_err(|_| invalid())
     }
     #[wasm_bindgen(js_name=groupInventory)]
     pub fn group_inventory(&self) -> Result<String, JsValue> {

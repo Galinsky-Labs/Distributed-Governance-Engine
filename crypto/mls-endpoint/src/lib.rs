@@ -328,6 +328,33 @@ impl Endpoint {
                 .map_err(|_| Error::InvalidState)?,
         )
     }
+    /// RFC 9420 section 8.5 MLS-Exporter for the CURRENT epoch only. Labels are
+    /// restricted to the application's "dge-private-" namespace so an exported
+    /// key can never collide with another protocol's exporter use. The secret
+    /// is zeroized on drop; callers must not persist it in extractable form.
+    pub fn export_secret(
+        &self,
+        group: &Group,
+        label: &str,
+        context: &[u8],
+    ) -> Result<zeroize::Zeroizing<Vec<u8>>> {
+        self.own(group)?;
+        if !group.active()
+            || !label.starts_with("dge-private-")
+            || label.len() > 64
+            || !label
+                .bytes()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+        {
+            return Err(Error::InvalidInput);
+        }
+        bounded(context, 512)?;
+        let secret = group
+            .0
+            .export_secret(self.provider.crypto(), label, context, 32)
+            .map_err(|_| Error::InvalidState)?;
+        Ok(zeroize::Zeroizing::new(secret.as_slice().to_vec()))
+    }
     pub fn receive(
         &self,
         group: &mut Group,

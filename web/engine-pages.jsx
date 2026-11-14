@@ -3,9 +3,11 @@
 import { VerifyPage } from "./verify-page.jsx";
 import { TransparencyPage } from "./transparency-page.jsx";
 import { ImportPage, ExportPage } from "./document-io-pages.jsx";
-import { SearchPage, NotificationsPage, UnsubscribePage, VerifyEmailPage, EditionsPage, SignersPage } from "./feature-pages.jsx";
+import { SearchPage, NotificationsPage, UnsubscribePage, VerifyEmailPage, EditionsPage, SignersPage, AdminPage, BillingPage } from "./feature-pages.jsx";
 
 export const enginePages = [
+  { path: "/admin", title: "Settings and policy", nav: "Administration", Component: AdminPage },
+  { path: "/billing", title: "Plans and allowances", nav: "Account", Component: BillingPage },
   { path: "/search", title: "Search", nav: "Documents", Component: SearchPage },
   { path: "/editions", title: "Final editions and signatures", nav: "Documents", Component: EditionsPage,
     description: "Freeze an exact edition, then collect support signatures, approvals or legal execution with recorded intent and capacity." },

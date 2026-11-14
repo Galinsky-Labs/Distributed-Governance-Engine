@@ -248,3 +248,27 @@ test("entitlement routes enforce platform administration and return status",asyn
   response=await call("/api/workspaces/"+tenantId+"/entitlements",{who:participant});
   assert.equal(response.status,403);
 });
+
+test("an unlimited, never-expiring grant covers repeated creations",async()=>{
+  const {randomUUID:id}=await import("node:crypto");
+  const {PGlite:Lite}=await import("@electric-sql/pglite");
+  const {createIdentityStore:identityStore,applyIdentityMigrations:migrate}=await import("../server/identity-store.mjs");
+  const {createPlatform}=await import("../server/platform.mjs");
+  const {changePlatformAdmin}=await import("../scripts/grant-platform-admin.mjs");
+  const {createLegalDocument:legal}=await import("../src/legal-structure.mjs");
+  const lite=await Lite.create();await migrate(fn=>lite.transaction(fn));
+  const origin="https://quill.example";
+  const tx=fn=>lite.transaction(async t=>{await t.exec("SET LOCAL ROLE dge_identity_runtime");return fn(t);});
+  const ids=identityStore({transaction:tx,origin,sessionKey:(await import("node:crypto")).randomBytes(32),stateKey:(await import("node:crypto")).randomBytes(32)});
+  const platform=createPlatform({identity:ids,transaction:tx,login:{},origin});
+  const session=async()=>({...await ids.establishSession({issuer:"https://id.example",subject:id(),authenticatedAt:Date.now()}),origin});
+  const admin=await session(),author=await session();
+  await changePlatformAdmin(fn=>lite.transaction(fn),{action:"grant",accountId:admin.accountId,reason:"Test administrator"});
+  await platform.services.entitlements.createGrant(admin,{subject:{kind:"account",id:author.accountId},resource:"document-create",quantity:null,period:"none",provenance:"administrator",reason:"Unlimited drafting",idempotencyKey:"unlimited-author"});
+  const {tenantId}=await ids.createTenant(author);
+  for(let i=0;i<3;i++){
+    const document=structuredClone(legal({id:id(),tenantId,title:"Draft "+i}));
+    await platform.services.documents.create(author,tenantId,{document,commandId:id(),disclosure:"publish-all-revisions-v1"});
+  }
+  await lite.close();
+});

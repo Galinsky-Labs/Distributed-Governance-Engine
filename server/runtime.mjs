@@ -11,6 +11,8 @@ import { configuredPasskeys } from "./passkey-verifier.mjs";
 import { createPlatform, startWorkers, verifyExtensionMigrations } from "./platform.mjs";
 import { loadLogSigningKey } from "./ledger.mjs";
 import { postmarkFromEnvironment } from "./email-adapters/postmark.mjs";
+import { stripeProviderFromEnvironment } from "./payment-providers/stripe.mjs";
+import { manualProviderFromEnvironment } from "./payment-providers/manual.mjs";
 
 const required = (env, name) => {
   const value = env[name];
@@ -76,6 +78,7 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
       verifyPasskeyAuthentication: passkeys.verifyPasskeyAuthentication,
       notificationTokenKey: env.NOTIFICATION_TOKEN_KEY ? hexKey(env, "NOTIFICATION_TOKEN_KEY") : null,
       email: postmarkFromEnvironment(env),
+      paymentProviders: [stripeProviderFromEnvironment(env), manualProviderFromEnvironment(env)],
       logId: env.LOG_ID ?? new URL(origin).hostname,
       logSigningKey: env.LOG_SIGNING_KEY ? loadLogSigningKey(env.LOG_SIGNING_KEY) : null,
       anchorProviders: await anchorProvidersFrom(env),

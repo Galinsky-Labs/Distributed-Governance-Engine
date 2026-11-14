@@ -7,6 +7,8 @@ import {DocumentError} from "./document-store.mjs";
 import {createPlatformAccess} from "./settings-store.mjs";
 
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
+// Postgres timestamps end at year 294276; use the last representable day we accept.
+const OPEN_ENDED=Date.UTC(9999,11,31,23,59,59);
 const KEY=/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,99}$/;
 const check=(condition,code,status=400)=>{if(!condition)throw new DocumentError(code,status);};
 const ADMIN_PROVENANCE=['administrator','verified-official','enterprise-license'];
@@ -73,7 +75,7 @@ export function createEntitlementStore({identity,transaction,settings,clock=Date
     const official=grant.provenance==='verified-official';
     const capped=official&&policy.officials.mode==='monthly-cap';
     const period=capped?'month':grant.period;
-    const window=period==='none'?{start:new Date(grant.effective_at).getTime(),end:grant.expires_at?new Date(grant.expires_at).getTime():8.64e15}:periodWindow(at.getTime(),period,policy.timeZone);
+    const window=period==='none'?{start:new Date(grant.effective_at).getTime(),end:grant.expires_at?new Date(grant.expires_at).getTime():OPEN_ENDED}:periodWindow(at.getTime(),period,policy.timeZone);
     const limit=capped?Math.min(grant.quantity??Infinity,policy.officials.monthlyCap):grant.quantity;
     const used=await usedBetween(db,'u.grant_id',grant.id,window.start,window.end);
     return {used,limit,remaining:limit===null||limit===Infinity?null:Math.max(0,limit-used),window};

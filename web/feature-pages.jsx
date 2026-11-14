@@ -5,6 +5,8 @@ import { NotificationCenter, UnsubscribeConfirmation, EmailVerification } from "
 import { EditionsPanel } from "./editions-panel.jsx";
 import { SignaturePanel } from "./signature-panel.jsx";
 import { SignerDirectory } from "./signer-directory.jsx";
+import { AdminConsole } from "./admin-console.jsx";
+import { BillingPanel } from "./billing-panel.jsx";
 
 const api = createAccountAPI();
 
@@ -89,4 +91,42 @@ export function SignersPage() {
   return /^[a-f0-9-]{36}$/.test(editionId)
     ? <section className="console-card"><SignerDirectory editionId={editionId} kind={kind} /></section>
     : <p className="console-notice">Open a signer directory from an edition's page.</p>;
+}
+
+/** Settings at platform, product, workspace or document scope; access is enforced server-side. */
+export function AdminPage({ product }) {
+  const session = useSession();
+  const [scope, setScope] = useState("tenant");
+  const [tenantId, setTenantId] = useState("");
+  useEffect(() => { if (session.workspaces[0] && !tenantId) setTenantId(session.workspaces[0].tenantId); }, [session]);
+  if (!session.checked) return <p role="status">Loading…</p>;
+  if (!session.signedIn) return <SignInPrompt />;
+  const target = scope === "platform" ? { scope } : scope === "product" ? { scope, product } : { scope: "tenant", tenantId };
+  return (
+    <>
+      <section className="console-card">
+        <div className="console-form">
+          <label>Scope<select value={scope} onChange={(e) => setScope(e.target.value)}>
+            <option value="tenant">This workspace</option><option value="product">Product defaults (platform administrators)</option><option value="platform">Platform (platform administrators)</option></select></label>
+          {scope === "tenant" && <label>Workspace<select value={tenantId} onChange={(e) => setTenantId(e.target.value)}>{session.workspaces.map((w) => <option key={w.tenantId} value={w.tenantId}>Workspace {w.tenantId.slice(0, 8)} · {w.role}</option>)}</select></label>}
+        </div>
+        <p className="console-notice">Every change is validated, previewed and versioned. Invariants such as public anchoring, fixed public-input sources and frozen ballots cannot be turned off.</p>
+      </section>
+      {(scope !== "tenant" || tenantId) && <section className="console-card"><AdminConsole key={JSON.stringify(target)} target={target} /></section>}
+    </>
+  );
+}
+export function BillingPage() {
+  const session = useSession();
+  const [tenantId, setTenantId] = useState("");
+  if (!session.checked) return <p role="status">Loading…</p>;
+  if (!session.signedIn) return <SignInPrompt />;
+  return (
+    <section className="console-card">
+      <p>Reading, discussing and voting are always free. Drafting new documents uses your weekly allowance, a subscription, credits or a granted exemption.</p>
+      <div className="console-form"><label>Workspace balance (optional)<select value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
+        <option value="">My account</option>{session.workspaces.map((w) => <option key={w.tenantId} value={w.tenantId}>Workspace {w.tenantId.slice(0, 8)}</option>)}</select></label></div>
+      <BillingPanel key={tenantId} tenantId={tenantId || undefined} />
+    </section>
+  );
 }

@@ -60,7 +60,8 @@
     "./web/*": "./web/*",
     "./src/*": "./src/*",
     "./server/*": "./server/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./scripts/*": "./scripts/*"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

@@ -24,12 +24,17 @@ import { createSearchRoutes, searchBodyLimit } from "./search-http.mjs";
 import { createNotificationStore, createNotificationTokens } from "./notification-store.mjs";
 import { createNotificationRoutes, notificationBodyLimit } from "./notification-http.mjs";
 import { createNotificationWorker } from "./notification-worker.mjs";
+import { createSettingsStore, createPlatformAccess } from "./settings-store.mjs";
+import { createSettingsRoutes, settingsBodyLimit } from "./settings-http.mjs";
+import { createEntitlementStore } from "./entitlement-store.mjs";
+import { createBillingStore } from "./billing-store.mjs";
+import { createBillingRoutes, billingBodyLimit } from "./billing-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
-export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers"]);
+export const ENGINE_PAGES = Object.freeze(["/verify", "/transparency", "/documents/import", "/documents/export", "/search", "/notifications", "/notifications/unsubscribe", "/notifications/verify-email", "/editions", "/signatures", "/signers", "/admin", "/billing"]);
 
 /**
  * Validates an application extension (for example CivicQuill's civic module).
@@ -86,9 +91,15 @@ export function createPlatform({
   extensions = [], assetDirectory, readiness, release = null, budget,
   decorateDocuments = (documents) => documents,
   verifyPasskeyAuthentication, notificationTokenKey = null, email = null,
+  paymentProviders = [], enforceEntitlements = true,
 }) {
   for (const extension of extensions) validateExtension(extension);
-  const documents = decorateDocuments(createDocumentStore({ identity, transaction }));
+  const settings = createSettingsStore({ identity, transaction, product, clock });
+  const entitlements = createEntitlementStore({ identity, transaction, settings, clock });
+  const billing = createBillingStore({ identity, transaction, settings, entitlements, origin, clock, providers: paymentProviders.filter(Boolean) });
+  const platformAccess = createPlatformAccess({ identity, clock });
+  // Creation reserves an entitlement; reading, discussing and voting never do.
+  const documents = decorateDocuments(createDocumentStore({ identity, transaction, ...(enforceEntitlements ? { entitlements } : {}) }));
   const proposals = createProposalStore({ identity, transaction });
   const discussion = createDiscussionStore({ identity, transaction });
   const decisions = createDecisionStore({ identity, transaction, clock });
@@ -102,12 +113,24 @@ export function createPlatform({
   const notifications = notificationTokenKey
     ? createNotificationStore({ identity, transaction, origin, email, tokens: createNotificationTokens({ key: notificationTokenKey }) })
     : null;
-  const services = { identity, transaction, clock, origin, product, documents, proposals, discussion, decisions, ledger, editions, signatures, search, notifications };
+  const services = {
+    identity, transaction, clock, origin, product, documents, proposals, discussion, decisions, ledger,
+    editions, signatures, search, notifications, settings, entitlements, billing,
+    /** True only for platform administrators granted through the operator CLI. */
+    isPlatformAdmin: async (credentials) => {
+      try {
+        const accountId = await platformAccess.account(credentials);
+        return await transaction((db) => platformAccess.isAdmin(db, accountId));
+      } catch { return false; }
+    },
+  };
 
   const routeSets = [
     { routes: createEditionRoutes({ editions }), bodyLimit: editionBodyLimit },
     { routes: createSignatureRoutes({ signatures }), bodyLimit: signatureBodyLimit },
     { routes: createSearchRoutes({ search }), bodyLimit: searchBodyLimit },
+    { routes: createSettingsRoutes({ settings }), bodyLimit: settingsBodyLimit },
+    { routes: createBillingRoutes({ entitlements, billing }), bodyLimit: billingBodyLimit },
     ...(notifications ? [{ routes: createNotificationRoutes({ notifications, origin }), bodyLimit: notificationBodyLimit }] : []),
     { routes: createDecisionRoutes({ decisions }), bodyLimit: decisionBodyLimit },
     { routes: createDiscussionRoutes({ discussion }), bodyLimit: discussionBodyLimit },
@@ -116,7 +139,7 @@ export function createPlatform({
   ];
   routeSets.unshift({ routes: createExportRoutes({ documents, clock }), bodyLimit: exportBodyLimit });
   routeSets.unshift({ routes: createVerificationRoutes({ transaction, ledger, decisions, clock }), bodyLimit: verificationBodyLimit });
-  if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: (c) => services.isPlatformAdmin?.(c) ?? false }), bodyLimit: ledgerBodyLimit });
+  if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: services.isPlatformAdmin }), bodyLimit: ledgerBodyLimit });
   const workers = ledger ? [{ name: "ledger", intervalMs: 5000, tick: () => ledger.tick() }] : [];
   if (notifications) {
     const notificationWorker = createNotificationWorker({ transaction, store: notifications, email, origin });

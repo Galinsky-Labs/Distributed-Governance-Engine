@@ -28,38 +28,38 @@ export function createPrivateWorkspaceRoutes({workspace}={}){
   try{
    if((match=url.pathname.match(DEVICES))){
     method(['GET','POST']);
-    if(request.method==='GET'){query(url,[]);return workspace.directory(credentials,match[1]);}
+    if(request.method==='GET'){query(url,[]);return await workspace.directory(credentials,match[1]);}
     write();
-    return workspace.publishDevice(credentials,match[1],await boundedJson(request,['deviceId','identity','signatureKey'],undefined,16384));
+    return await workspace.publishDevice(credentials,match[1],await boundedJson(request,['deviceId','identity','signatureKey'],undefined,16384));
    }
    if((match=url.pathname.match(PACKAGES))){
     method(['POST']);write();
-    return workspace.publishKeyPackages(credentials,match[1],match[2],await boundedJson(request,['packages'],undefined,PRIVATE_PACKAGE_BODY_LIMIT));
+    return await workspace.publishKeyPackages(credentials,match[1],match[2],await boundedJson(request,['packages'],undefined,PRIVATE_PACKAGE_BODY_LIMIT));
    }
    if((match=url.pathname.match(CLAIM))){
     method(['POST']);write();
-    return workspace.claimKeyPackage(credentials,match[1],match[2],await boundedJson(request,[],undefined,1024));
+    return await workspace.claimKeyPackage(credentials,match[1],match[2],await boundedJson(request,[],undefined,1024));
    }
    if((match=url.pathname.match(GROUPS))){
     method(['GET','POST']);
-    if(request.method==='GET'){query(url,[]);return workspace.groups(credentials,match[1]);}
+    if(request.method==='GET'){query(url,[]);return await workspace.groups(credentials,match[1]);}
     write();
-    return workspace.createGroup(credentials,match[1],await boundedJson(request,['documentId','groupId','deviceId'],undefined,16384));
+    return await workspace.createGroup(credentials,match[1],await boundedJson(request,['documentId','groupId','deviceId'],undefined,16384));
    }
    if((match=url.pathname.match(GROUP))){
     method(['GET']);query(url,[]);
-    return workspace.group(credentials,match[1],match[2]);
+    return await workspace.group(credentials,match[1],match[2]);
    }
    if((match=url.pathname.match(MESSAGES))){
     method(['GET','POST']);
     if(request.method==='POST'){
      write();
-     return workspace.postCommit(credentials,match[1],match[2],await boundedJson(request,
+     return await workspace.postCommit(credentials,match[1],match[2],await boundedJson(request,
       ['deviceId','epoch','commit','welcome','add','remove','commandId'],undefined,PRIVATE_HANDSHAKE_BODY_LIMIT));
     }
     query(url,['deviceId','after','limit']);
     if(!url.searchParams.has('deviceId'))throw new HttpError(400,'DEVICE_REQUIRED');
-    return workspace.messages(credentials,match[1],match[2],{deviceId:url.searchParams.get('deviceId'),
+    return await workspace.messages(credentials,match[1],match[2],{deviceId:url.searchParams.get('deviceId'),
      after:integer(url.searchParams.get('after'),0),limit:integer(url.searchParams.get('limit'),50)});
    }
    return null;

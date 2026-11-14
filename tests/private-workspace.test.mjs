@@ -242,6 +242,16 @@ test('platform mounts private routes behind the flag with wasm-only CSP relaxati
  assert.equal((await request(disabled,'/mls/quill_mls_bg.wasm')).status,404);
  assert.ok(enabled.bodyLimit('/api/workspaces/'+tenantId+'/private-groups/'+randomUUID()+'/messages')>2_000_000);
  assert.ok(enabled.services.privateWorkspace.ledger);
+ // A claimed device that is not the caller's own is a clean 403, never a 5xx.
+ const a=await enroll(owner,tenantId);
+ const documentId=randomUUID();
+ await enabled.services.privateWorkspace.workspace.createGroup(owner,tenantId,{documentId,groupId:b64(privateGroupId(tenantId,documentId,createHash)),deviceId:a.deviceId});
+ await enabled.services.privateWorkspace.documents.create(owner,tenantId,{documentId,commandId:randomUUID(),envelope:envelope(0)},{deviceId:a.deviceId});
+ const other=await account('member');
+ const foreign=await enabled.application(new Request(origin+'/api/workspaces/'+tenantId+'/private-documents/'+documentId+'/updates?recipientDeviceId='+a.deviceId,{headers:{cookie:'__Host-dge_session='+other.sessionToken}}),{peerAddress:'127.0.0.1'});
+ assert.equal(foreign.status,403);
+ const claimed=await enabled.application(new Request(origin+'/api/workspaces/'+tenantId+'/private-documents/'+documentId,{headers:{cookie:'__Host-dge_session='+other.sessionToken,'x-dge-device':a.deviceId}}),{peerAddress:'127.0.0.1'});
+ assert.equal(claimed.status,403);
  assert.equal(disabled.services.privateWorkspace,undefined);
 });
 

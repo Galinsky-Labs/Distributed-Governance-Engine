@@ -27,13 +27,13 @@ export function createPrivateDocumentRoutes({documents}={}){
    if(!documentId){
     method(['POST']);write();
     const body=await boundedJson(request,['documentId','envelope','commandId'],undefined,PRIVATE_DOCUMENT_BODY_LIMIT);
-    return documents.create(credentials,tenantId,body,device);
+    return await documents.create(credentials,tenantId,body,device);
    }
    method(['GET','PUT']);
-   if(request.method==='GET')return documents.read(credentials,tenantId,documentId,device);
+   if(request.method==='GET')return await documents.read(credentials,tenantId,documentId,device);
    write();
    const body=await boundedJson(request,['envelope','expectedVersion','commandId'],undefined,PRIVATE_DOCUMENT_BODY_LIMIT);
-   return documents.save(credentials,tenantId,documentId,body,device);
+   return await documents.save(credentials,tenantId,documentId,body,device);
   }catch(e){
    if(e instanceof PrivateDocumentError)throw new HttpError(e.status,e.code);
    throw e;

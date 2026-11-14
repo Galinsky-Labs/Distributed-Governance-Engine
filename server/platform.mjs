@@ -37,6 +37,7 @@ import { createModerationStore } from "./moderation-store.mjs";
 import { createModerationRoutes, moderationBodyLimit } from "./moderation-http.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
+import { createPrivateWorkspaceServices } from "./private-workspace.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
 /** Browser pages served by the engine shell (see web/engine-pages.jsx). */
@@ -98,7 +99,9 @@ export function createPlatform({
   decorateDocuments = (documents) => documents,
   verifyPasskeyAuthentication, notificationTokenKey = null, email = null,
   paymentProviders = [], enforceEntitlements = true, personKeySecret = null,
+  privateWorkspaces = false, privateLimits = {},
 }) {
+  if (typeof privateWorkspaces !== "boolean") throw Error("Invalid private workspace setting");
   for (const extension of extensions) validateExtension(extension);
   const settings = createSettingsStore({ identity, transaction, product, clock });
   const entitlements = createEntitlementStore({ identity, transaction, settings, clock });
@@ -152,6 +155,10 @@ export function createPlatform({
   routeSets.unshift({ routes: createExportRoutes({ documents, clock }), bodyLimit: exportBodyLimit });
   routeSets.unshift({ routes: createVerificationRoutes({ transaction, ledger, decisions, clock }), bodyLimit: verificationBodyLimit });
   if (ledger) routeSets.unshift({ routes: createLedgerRoutes({ ledger, isPlatformAdmin: services.isPlatformAdmin }), bodyLimit: ledgerBodyLimit });
+  // End-to-end encrypted workspaces: ciphertext, public MLS material and an
+  // ordered handshake mailbox only. The server never holds a decryption key.
+  const privateWorkspace = privateWorkspaces ? createPrivateWorkspaceServices({ identity, clock, limits: privateLimits }) : null;
+  if (privateWorkspace) { services.privateWorkspace = privateWorkspace; routeSets.unshift(...privateWorkspace.routeSets); }
   const workers = ledger ? [{ name: "ledger", intervalMs: 5000, tick: () => ledger.tick() }] : [];
   if (notifications) {
     const notificationWorker = createNotificationWorker({ transaction, store: notifications, email, origin });
@@ -165,7 +172,7 @@ export function createPlatform({
   const accounts = createAccountHandler({ store: identity, login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });
   const pagePaths = [...ENGINE_PAGES, ...extensions.flatMap((e) => e.pagePaths ?? [])];
   const application = createEngineApplication({
-    accounts, origin, product, readiness, release, pagePaths,
+    accounts, origin, product, readiness, release, pagePaths, privateWorkspaces,
     ...(assetDirectory ? { assetDirectory } : {}),
   });
   const bodyLimit = (path) => Math.max(...routeSets.map((s) => s.bodyLimit(path)));

@@ -80,8 +80,11 @@ or physical-device acceptance.
 
 ## Integration and remaining acceptance
 
-The artifact is a protocol integration contribution. Production private routes and
-private editor UI remain disabled. The runtime does not import this crate, hold
+The artifact is a protocol integration contribution. Since ADR 0009 the private
+workspace path (routes, relay, `/private` UI and served Wasm) is composed behind
+`PRIVATE_WORKSPACES=enabled`; see INTEGRATION-private.md. The endpoint adds a
+narrow RFC 9420 exporter (`export_secret`/`exportKey`) whose output is imported as
+a non-extractable WebCrypto key. The server runtime still does not import this crate, hold
 its keys or accept plaintext from it. The standalone CI artifact/source inventory
 must not be presented as a deployed private-workspace product.
 

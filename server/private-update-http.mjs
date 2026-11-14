@@ -22,7 +22,7 @@ export function createPrivateUpdateRoutes({ledger}={}){
     const frame=await boundedJson(request,[
      'version','cipher','epoch','senderDeviceId','sequence','nonce','ciphertext'
     ],undefined,PRIVATE_UPDATE_BODY_LIMIT);
-    return ledger.append(credentials,tenantId,documentId,frame);
+    return await ledger.append(credentials,tenantId,documentId,frame);
    }
    for(const key of url.searchParams.keys())
     if(!['recipientDeviceId','after','limit'].includes(key)||
@@ -34,7 +34,7 @@ export function createPrivateUpdateRoutes({ledger}={}){
     after:Number(url.searchParams.get('after')??0),
     limit:Number(url.searchParams.get('limit')??50)
    };
-   return ledger.list(credentials,tenantId,documentId,options);
+   return await ledger.list(credentials,tenantId,documentId,options);
   } catch(e) {
    if(e instanceof PrivateDocumentError)throw new HttpError(e.status,e.code);
    throw e;

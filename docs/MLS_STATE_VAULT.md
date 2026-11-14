@@ -4,9 +4,10 @@ MLS sender and receive ratchets must survive a browser crash without reusing
 old send state or losing an already-consumed incoming message. The optional
 `web/mls-state-vault.mjs` coordinator stores a sealed protocol checkpoint and
 durable inbox/outbox before releasing wire data or received plaintext.
-This is endpoint persistence infrastructure; the private product UI and backend
-routes remain disabled pending device authorization, workspace/epoch and relay
-integration, recovery and deployment acceptance.
+This is endpoint persistence infrastructure. The private workspace client
+(INTEGRATION-private.md) now uses it behind `PRIVATE_WORKSPACES=enabled`, with a
+read-only `exportKey` for current-epoch content keys; recovery and deployment
+acceptance remain pending.
 
 ## Keys, scope and representation
 

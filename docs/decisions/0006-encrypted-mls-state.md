@@ -1,6 +1,6 @@
 # ADR 0006 — commit cryptographic state and delivery queues together
 
-Status: partial endpoint persistence contribution; private product paths disabled.
+Status: partial endpoint persistence contribution; used by the private workspace client behind PRIVATE_WORKSPACES (ADR 0009).
 
 A raw MLS state dump is insufficient for durable messaging. Sending before saving
 advanced ratchets can reuse encryption state after a crash; saving receive state

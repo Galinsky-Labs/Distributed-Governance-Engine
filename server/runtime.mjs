@@ -13,6 +13,7 @@ import { loadLogSigningKey } from "./ledger.mjs";
 import { postmarkFromEnvironment } from "./email-adapters/postmark.mjs";
 import { stripeProviderFromEnvironment } from "./payment-providers/stripe.mjs";
 import { manualProviderFromEnvironment } from "./payment-providers/manual.mjs";
+import { privateWorkspacesFlag, routeUpgrades, attachPrivateWorkspaceHub } from "./private-workspace.mjs";
 
 const required = (env, name) => {
   const value = env[name];
@@ -58,6 +59,9 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
   try {
     const origin = required(env, "PUBLIC_ORIGIN");
     const product = env.QUILL_PRODUCT ?? "civic";
+    // PRIVATE_WORKSPACES=enabled mounts the end-to-end encrypted workspace
+    // routes, relay and MLS browser assets; unset or "disabled" leaves them off.
+    const privateWorkspaces = privateWorkspacesFlag(env.PRIVATE_WORKSPACES);
     pool = databasePool(required(env, "DATABASE_URL"), { max: Number(env.DATABASE_POOL_MAX ?? 4) });
     await verifyIdentityRuntime(pool);
     for (const extension of extensions) await verifyExtensionMigrations(pool, extension);
@@ -74,7 +78,7 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
     const login = createOIDCLogin({ store: identity, configuration, redirectUri: origin + "/auth/callback" });
     const release = (env.QUILL_RELEASE ?? env.RENDER_GIT_COMMIT ?? "").slice(0, 64) || null;
     const { services, application, bodyLimit, workers } = createPlatform({
-      identity, transaction, login, origin, product, extensions, release, assetDirectory,
+      identity, transaction, login, origin, product, extensions, release, assetDirectory, privateWorkspaces,
       verifyPasskeyAuthentication: passkeys.verifyPasskeyAuthentication,
       notificationTokenKey: env.NOTIFICATION_TOKEN_KEY ? hexKey(env, "NOTIFICATION_TOKEN_KEY") : null,
       email: postmarkFromEnvironment(env),
@@ -95,7 +99,11 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
       const [key, cert] = await Promise.all([readFile(required(env, "TLS_KEY_FILE")), readFile(required(env, "TLS_CERT_FILE"))]);
       server = createEngineServer({ application, origin, key, cert, bodyLimit });
     } else throw Error("Invalid transport mode");
-    const collaboration = attachPublicCollaborationHub({ server, origin, documents: services.documents });
+    const upgrades = privateWorkspaces ? routeUpgrades(server) : null;
+    const collaboration = attachPublicCollaborationHub({ server: upgrades?.publicServer ?? server, origin, documents: services.documents });
+    const privateRelay = privateWorkspaces
+      ? attachPrivateWorkspaceHub({ server: upgrades.privateServer, origin, services: services.privateWorkspace, transport: mode === "edge-tls" ? "edge-tls" : "tls" })
+      : null;
     const background = env.WORKERS === "off" ? null : startWorkers(workers, {
       onError: (name) => console.error("Background worker pass failed: " + name + ". No content was logged."),
     });
@@ -106,6 +114,8 @@ export async function runPlatform({ extensions = [], env = process.env, assetDir
     const stop = () => {
       background?.stop();
       collaboration.close();
+      privateRelay?.close();
+      upgrades?.close();
       server.close(() => pool.end().finally(() => process.exit()));
       server.closeIdleConnections();
       setTimeout(() => process.exit(1), 10000).unref();

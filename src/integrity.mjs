@@ -1,16 +1,21 @@
-import {createHash} from 'node:crypto';
+import {sha256,sha256Hex} from './sha256.mjs';
 
 import {identifier,canonicalize,validDigest,invariant} from './integrity-values.mjs';
 export * from './integrity-values.mjs';
 
 export function digest(domain,value) {
   identifier(domain);
-  return createHash('sha256').update('dce-c14n-v0-dev\0'+domain+'\0'+canonicalize(value)).digest('hex');
+  return sha256Hex(encoder.encode('dce-c14n-v0-dev\0'+domain+'\0'+canonicalize(value)));
 }
 
-const hashBytes=bytes=>createHash('sha256').update(bytes).digest();
-const leafHash=d=>hashBytes(Buffer.concat([Buffer.from([0]),Buffer.from(validDigest(d),'hex')]));
-const parentHash=(l,r)=>hashBytes(Buffer.concat([Buffer.from([1]),l,r]));
+const encoder=new TextEncoder();
+const concat=(...parts)=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let o=0;for(const p of parts){out.set(p,o);o+=p.length;}return out;};
+const hexBytes=hex=>Uint8Array.from(hex.match(/../g),h=>parseInt(h,16));
+const toHex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+const equalBytes=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
+const hashBytes=bytes=>sha256(bytes);
+const leafHash=d=>hashBytes(concat(Uint8Array.of(0),hexBytes(validDigest(d))));
+const parentHash=(l,r)=>hashBytes(concat(Uint8Array.of(1),l,r));
 /** Development Merkle tree; odd nodes duplicate, empty root is domain-separated. */
 export function merkleBatch(digests) {
   invariant(Array.isArray(digests) && digests.length<=100000,'Invalid batch');
@@ -21,14 +26,14 @@ export function merkleBatch(digests) {
     for(let i=0;i<level.length;i+=2) next.push(parentHash(level[i],level[i+1]??level[i]));
     levels.push(next); level=next;
   }
-  const treeRoot=level[0]?.toString('hex')??hashBytes(Buffer.from([2])).toString('hex');
+  const treeRoot=toHex(level[0]??hashBytes(Uint8Array.of(2)));
   return {root:digest('merkle-batch',{count:digests.length,treeRoot}),count:digests.length,
     proofs:digests.map((_,index)=>{
       let i=index;
       const path=[];
       for(let l=0;l<levels.length-1;l++) {
         const row=levels[l]; const sibling=i^1;
-        path.push({side:i%2?'left':'right',hash:(row[sibling]??row[i]).toString('hex')});
+        path.push({side:i%2?'left':'right',hash:toHex(row[sibling]??row[i])});
         i=Math.floor(i/2);
       }
       return {index,count:digests.length,path};
@@ -41,11 +46,11 @@ export function verifyInclusion(leaf,proof,root) {
     let current=leafHash(leaf), i=proof.index, width=proof.count;
     for(const step of proof.path) {
       invariant(width>1 && step.side===(i%2?'left':'right'),'Invalid proof side');
-      const other=Buffer.from(validDigest(step.hash),'hex');
-      if(i%2===0 && i+1===width) invariant(other.equals(current),'Invalid duplicated odd node');
+      const other=hexBytes(validDigest(step.hash));
+      if(i%2===0 && i+1===width) invariant(equalBytes(other,current),'Invalid duplicated odd node');
       current=step.side==='left'?parentHash(other,current):parentHash(current,other);
       i=Math.floor(i/2); width=Math.ceil(width/2);
     }
-    return width===1 && digest('merkle-batch',{count:proof.count,treeRoot:current.toString('hex')})===root;
+    return width===1 && digest('merkle-batch',{count:proof.count,treeRoot:toHex(current)})===root;
   } catch { return false; }
 }

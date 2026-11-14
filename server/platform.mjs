@@ -67,6 +67,8 @@ export async function applyExtensionMigrations(transaction, extension) {
     const exec = (s) => (db.exec ? db.exec(s) : db.query(s));
     await db.query("SELECT pg_advisory_xact_lock(1245995846)");
     await exec("CREATE TABLE IF NOT EXISTS dge_identity.extension_migrations(extension text NOT NULL,version integer NOT NULL,name text NOT NULL,checksum char(64) NOT NULL,applied_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(extension,version))");
+    // The runtime verifies extension schemas at startup; it may read, never write.
+    await exec("GRANT SELECT ON dge_identity.extension_migrations TO dge_identity_runtime");
     let applied = 0;
     for (const [index, migration] of (extension.migrations ?? []).entries()) {
       const prior = (await db.query("SELECT checksum,name FROM dge_identity.extension_migrations WHERE extension=$1 AND version=$2", [extension.id, index + 1])).rows[0];

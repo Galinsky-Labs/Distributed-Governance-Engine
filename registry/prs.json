@@ -60,7 +60,8 @@
         39,
         53,
         54,
-        55
+        55,
+        69
       ]
     },
     {
@@ -89,7 +90,8 @@
         32,
         33,
         56,
-        57
+        57,
+        69
       ]
     },
     {
@@ -154,7 +156,8 @@
         62,
         63,
         64,
-        65
+        65,
+        69
       ]
     },
     {
@@ -181,7 +184,8 @@
         22,
         60,
         61,
-        65
+        65,
+        69
       ]
     },
     {
@@ -206,7 +210,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         25,
-        65
+        65,
+        69
       ]
     },
     {
@@ -246,7 +251,8 @@
         59,
         60,
         62,
-        65
+        65,
+        69
       ]
     },
     {
@@ -272,7 +278,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         9,
-        23
+        23,
+        69
       ]
     },
     {
@@ -297,7 +304,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         43,
-        66
+        66,
+        69
       ]
     },
     {
@@ -319,8 +327,11 @@
         "Sybil/replay scenarios, concurrent snapshot creation, eligibility expiry, cohort partition totals and PII disclosure tests."
       ],
       "specification": "docs/prs/DCE-011.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-012",
@@ -340,11 +351,12 @@
         "Double-submit race, write failure, process crash after commit, idempotency collision and exact-integer weighted tally tests."
       ],
       "specification": "docs/prs/DCE-012.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         46,
-        52
+        52,
+        69
       ]
     },
     {
@@ -365,8 +377,11 @@
         "Clock boundary, two closers, fraud exclusion/reopen, certificate recomputation and delayed worker tests."
       ],
       "specification": "docs/prs/DCE-013.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-014",
@@ -386,10 +401,11 @@
         "Two simultaneous adoptions, transactional rollback, stale bases, batch atomicity, cross-document injection and private-client verification tests."
       ],
       "specification": "docs/prs/DCE-014.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        48
+        48,
+        69
       ]
     },
     {
@@ -413,7 +429,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        10
+        10,
+        69
       ]
     },
     {
@@ -438,7 +455,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        10
+        10,
+        69
       ]
     },
     {
@@ -459,8 +477,11 @@
         "XSS/spam floods, coordinated flags, moderator privilege escalation, appeal restoration and redacted-export tests."
       ],
       "specification": "docs/prs/DCE-017.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-018",
@@ -481,8 +502,11 @@
         "All-role/all-resource authorization matrix, nested clauses, inherited deny, expired unlock, export leakage and cross-tenant canaries."
       ],
       "specification": "docs/prs/DCE-018.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-019",
@@ -502,11 +526,12 @@
         "Diff goldens, large edits, history pagination, restoration authorization, signature invalidation and branch/adopted isolation tests."
       ],
       "specification": "docs/prs/DCE-019.md",
-      "implementationStatus": "partial",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         67,
-        68
+        68,
+        69
       ]
     },
     {
@@ -527,10 +552,11 @@
         "Cross-language golden vectors, Unicode/number restrictions, event deletion/reorder, divergent histories and restore replay tests."
       ],
       "specification": "docs/prs/DCE-020.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        49
+        49,
+        69
       ]
     },
     {
@@ -551,8 +577,11 @@
         "Merkle golden vectors, odd/empty batch behavior, forged proofs, split-view and censored-receipt adversarial tests."
       ],
       "specification": "docs/prs/DCE-021.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-022",
@@ -572,8 +601,11 @@
         "Local chain/provider contract tests, dropped/replaced transaction, reorg, exhausted spend cap, RPC lies and end-to-end receipt verification."
       ],
       "specification": "docs/prs/DCE-022.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-023",
@@ -593,10 +625,11 @@
         "Independent implementation vectors, modified PDF/content/manifest, stale checkpoint, key revocation and offline-availability tests."
       ],
       "specification": "docs/prs/DCE-023.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        49
+        49,
+        69
       ]
     },
     {
@@ -618,8 +651,11 @@
         "Zip bombs, parser fuzzing, external entity/SSRF, malicious HTML, corrupted packages and legal formatting round-trip fixtures."
       ],
       "specification": "docs/prs/DCE-024.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-025",
@@ -640,8 +676,11 @@
         "Rendered golden pages, extracted-text comparison, accessibility tags, embedded fonts, line wrapping, stale caches and irreversible-redaction tests."
       ],
       "specification": "docs/prs/DCE-025.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-026",
@@ -662,8 +701,11 @@
         "Consent/decline, replay, substitution, concurrent signing, private ink access, cancellation, delegation and exact-byte hash tests."
       ],
       "specification": "docs/prs/DCE-026.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-027",
@@ -684,8 +726,11 @@
         "Streaming export load tests, signature-order stability, private signer redaction, duplicate signer and manifest/PDF consistency tests."
       ],
       "specification": "docs/prs/DCE-027.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-028",
@@ -707,8 +752,11 @@
         "Permission matrix, dangerous-setting rejection, concurrent changes, simulations, rollback-as-new-version and audit integrity tests."
       ],
       "specification": "docs/prs/DCE-028.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-029",
@@ -728,8 +776,11 @@
         "Concurrent credit consumption, weekly boundary, refunds, idempotency, official grant expiry and paid/free policy migration tests."
       ],
       "specification": "docs/prs/DCE-029.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-030",
@@ -749,8 +800,11 @@
         "Webhook forgery/replay/order, cancellation, dispute, duplicated checkout, test-mode reconciliation and account isolation tests."
       ],
       "specification": "docs/prs/DCE-030.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-031",
@@ -772,11 +826,12 @@
         "Browser flows for first-time mobile/desktop, Escape/focus return, zoom, reduced motion, missing target, persisted step and feedback-mode explanations."
       ],
       "specification": "docs/prs/DCE-031.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         45,
-        47
+        47,
+        69
       ]
     },
     {
@@ -798,10 +853,11 @@
         "Cross-tenant search, encrypted-index boundary, stale notification permissions, delivery retry, unsubscribe and accessibility tests."
       ],
       "specification": "docs/prs/DCE-032.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        50
+        50,
+        69
       ]
     },
     {
@@ -824,8 +880,11 @@
         "Automated axe plus manual screen-reader/keyboard checks, RTL, text scaling, contrast, offline recovery and limited-bandwidth browser tests."
       ],
       "specification": "docs/prs/DCE-033.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "partial",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-034",
@@ -847,8 +906,11 @@
         "Target staged tests: 100 editors, 10k active voters, 1M ballot records, 10M reads/day; queue lag/reconciliation and overload tests at declared hardware budgets."
       ],
       "specification": "docs/prs/DCE-034.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "implemented",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-035",
@@ -869,10 +931,11 @@
         "Migration expand/contract, restore drill, queue failover, key recovery, timeout, storage loss, secret rotation and actual negotiated transport verification."
       ],
       "specification": "docs/prs/DCE-035.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        51
+        51,
+        69
       ]
     },
     {
@@ -897,10 +960,11 @@
         "Run current-head full gates, adversarial authorization/collusion/receipt tests, source digest checks and archived tool/configuration reports."
       ],
       "specification": "docs/prs/DCE-036.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        53
+        53,
+        69
       ]
     },
     {
@@ -922,9 +986,12 @@
         "Network partitions, minutes-to-hours delay, conflicting authorities, duplicate federation messages, receipt censorship and disaster resynchronization simulations."
       ],
       "specification": "docs/prs/DCE-037.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
-      "activation": "post-terrestrial-release"
+      "activation": "post-terrestrial-release",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-038",
@@ -946,8 +1013,11 @@
         "Two-consumer contract matrix, old/new schema compatibility, SDK permission bounds, supply-chain provenance and upgrade rollback tests."
       ],
       "specification": "docs/prs/DCE-038.md",
-      "implementationStatus": "planned",
-      "operationalAcceptance": "unverified"
+      "implementationStatus": "partial",
+      "operationalAcceptance": "unverified",
+      "contributingPrs": [
+        69
+      ]
     },
     {
       "id": "DCE-039",
@@ -967,10 +1037,11 @@
         "Live multiuser authorization and browser smoke, real configured anchoring finality, restore evidence, load report and exact deployment commit checks."
       ],
       "specification": "docs/prs/DCE-039.md",
-      "implementationStatus": "planned",
+      "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        51
+        51,
+        69
       ]
     }
   ],

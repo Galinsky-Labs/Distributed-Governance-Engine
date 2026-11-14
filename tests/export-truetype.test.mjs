@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseTrueType,TrueTypeError} from '../src/export/truetype.mjs';
+import {readdirSync,readFileSync} from 'node:fs';
 import {fonts} from './support/export-fixture.mjs';
 
 /** Builds a tiny synthetic TrueType font: glyph 0 (.notdef) plus glyphs for the given code points. */
@@ -83,5 +84,14 @@ test('malformed, unsupported and restricted fonts fail with typed errors',()=>{
   const bytes=syntheticFont();
   for(let j=0;j<8;j++)bytes[Math.floor(rand()*bytes.length)]=Math.floor(rand()*256);
   try{const font=parseTrueType(bytes);font.textWidth('AB\u{1F600}',10);}catch(error){assert(error instanceof TrueTypeError,error.message);}
+ }
+});
+
+test('the export library stays platform-neutral (no node: imports, Buffer, process or DOM globals)',()=>{
+ const dir=new URL('../src/export/',import.meta.url);
+ for(const name of readdirSync(dir)) {
+  const source=readFileSync(new URL(name,dir),'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm,'');
+  assert(!/from\s+['"]node:|import\(\s*['"]node:|require\(/.test(source),name+' imports a Node module');
+  assert(!/\b(Buffer|process|window|document\.createElement|XMLSerializer)\b/.test(source),name+' uses a platform global');
  }
 });

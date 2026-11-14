@@ -285,6 +285,7 @@ export async function writePdf({layout,fonts,meta}) {
   if(element.alt)extra+=' /Alt '+pdfString(element.alt);
   if(element.bbox)extra+=' /A <</O /Layout /BBox ['+element.bbox.map(num).join(' ')+']>>';
   if(element.parent===null)extra+=' /Lang '+pdfString(meta.lang);
+  if(element.type==='Note')extra+=' /ID '+pdfString('note-'+element.id);
   w.set(elementObj.get(element.id),'<</Type /StructElem /S '+name(element.type)+' /P '+parent+extra+' /K ['+kids.join(' ')+']>>');
  }
  const nums=[];

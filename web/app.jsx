@@ -20,6 +20,7 @@ import {
 } from "../src/legal-structure.mjs";
 import { createPublicDraftCache } from "../editor/draft-cache.mjs";
 import "./style.css";
+import { Walkthrough } from "./walkthrough.jsx";
 import { TableTools } from "./table-tools.jsx";
 import { NumberingTools } from "./numbering-tools.jsx";
 import { SectionTools } from "./section-tools.jsx";
@@ -116,128 +117,6 @@ function sample(product) {
   return doc;
 }
 
-function Tour({ onClose }) {
-  const [step, setStep] = useState(0),
-    [position, setPosition] = useState({ left: 20, top: 100 });
-  const title = useRef(null);
-  const [steps] = useState(() =>
-    [
-      [
-        "mode",
-        "Know which edition you are reading",
-        "Working drafts can be edited here. The public-input preview freezes the source and rejects editor transactions that would change it.",
-      ],
-      [
-        "editor",
-        "Work with actual legal structure",
-        "Edit the sample text. Sections, paragraphs, references and tables have stable identities so numbering changes do not change which clause they represent.",
-      ],
-      [
-        "toolbar",
-        "Format with a focused set of tools",
-        "Use basic text styles, undo and redo, legal sections, lists and tables. These controls operate on the same editor in both Quill products.",
-      ],
-      [
-        "outline",
-        "Follow the legal outline",
-        "The outline follows the semantic section hierarchy. The federal profile uses section, (a), (1), (A), (i), and (I).",
-      ],
-      [
-        "recovery",
-        "Choose whether to keep this public sample",
-        "Optional device recovery applies only to this explicitly public sample. Confidential organization content will require the encrypted cache adapter.",
-      ],
-      [
-        "export",
-        "Take an exact working copy",
-        "Download structured JSON or plain text. This development preview does not produce an executed or legally finalized document.",
-      ],
-      [
-        "save",
-        "Know whether your wording is saved",
-        "Saved versions are public. A failed or conflicting save preserves your local wording; download it before reopening.",
-      ],
-      [
-        "suggest",
-        "Propose exact replacement wording",
-        "Highlight text within one paragraph and choose Suggest replacement. The proposal preserves its exact saved version and source quote.",
-      ],
-      [
-        "proposals",
-        "Review the exact suggested change",
-        "Compare before and after wording and the rationale. Public-input source text remains fixed.",
-      ],
-      ['points','Build an organized argument','Keep supporting, opposing and clarifying points separate. Replies explain whether they support, challenge or clarify their parent.'],
-      ['point-vote','Rank the point itself','Upvotes minus downvotes determine the net score. These argument ratings leave the source wording unchanged.'],
-      [
-        "history",
-        "Inspect earlier public versions",
-        "Each saved version remains available through public history. Pending blockchain work is not a verified receipt.",
-      ],
-    ].filter(([target]) =>
-      document.querySelector('[data-tour="' + target + '"]'),
-    ),
-  );
-  useEffect(() => {
-    const selector = '[data-tour="' + steps[step][0] + '"]';
-    const target = document.querySelector(selector);
-    const previous = document.activeElement;
-    target?.classList.add("tour-target");
-    target?.scrollIntoView({ block: "center" });
-    const place = () => {
-      const r = target?.getBoundingClientRect();
-      if (!r) return;
-      setPosition({
-        left: Math.max(12, Math.min(r.left, window.innerWidth - 352)),
-        top: Math.max(12, Math.min(r.bottom + 14, window.innerHeight - 280)),
-      });
-    };
-    place();
-    title.current?.focus();
-    const key = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("keydown", key);
-    return () => {
-      target?.classList.remove("tour-target");
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("keydown", key);
-      if (previous?.isConnected) previous.focus();
-    };
-  }, [step]);
-  return (
-    <aside
-      className="tour"
-      role="region"
-      aria-label="Editor walkthrough"
-      style={position}
-    >
-      <p className="eyebrow">
-        STEP {step + 1} OF {steps.length}
-      </p>
-      <h2 ref={title} tabIndex={-1}>
-        {steps[step][1]}
-      </h2>
-      <p>{steps[step][2]}</p>
-      <div>
-        <button onClick={onClose}>Close</button>
-        <button disabled={step === 0} onClick={() => setStep(step - 1)}>
-          Back
-        </button>
-        <button
-          onClick={() =>
-            step === steps.length - 1 ? onClose() : setStep(step + 1)
-          }
-        >
-          {step === steps.length - 1 ? "Finish" : "Next"}
-        </button>
-      </div>
-    </aside>
-  );
-}
 const api = createAccountAPI();
 const mayEdit = (record) =>
   !record || ["owner", "admin", "editor"].includes(record.viewerRole);
@@ -1136,7 +1015,7 @@ export function App() {
           </section>
         </aside>
       </main>
-      {tour && <Tour onClose={() => setTour(false)} />}
+      {tour && <Walkthrough id="editor" role={record?.viewerRole ?? "owner"} mode={doc.mode} onClose={() => setTour(false)} />}
     </>
   );
 }

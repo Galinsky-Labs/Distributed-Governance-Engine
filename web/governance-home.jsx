@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useState} from "react";
 import {createAccountAPI} from "./account-api.mjs";
 import {DiscussionPanel} from "./discussion-panel.jsx";
 import {DecisionPanel} from "./decision-panel.jsx";
+import {Walkthrough} from "./walkthrough.jsx";
 
 const api = createAccountAPI();
 const messageFor = (error) => {
@@ -22,6 +23,7 @@ const heading = (product) => product === "charter"
 export function GovernanceHome() {
   const serviceEnabled = document.documentElement.dataset.accountEnabled === "true";
   const [authenticated,setAuthenticated] = useState(serviceEnabled ? null : false);
+  const [tour,setTour] = useState(false);
   const accountEnabled = authenticated === true;
   const product = document.documentElement.dataset.quillProduct === "charter" ? "charter" : "civic";
   const brand = heading(product);
@@ -139,8 +141,9 @@ export function GovernanceHome() {
   return <div className="governance-page">
     <header className="governance-navigation">
       <a className="governance-brand" href="/governance"><span aria-hidden="true">Q</span>{brand.name}</a>
-      <nav aria-label="Primary"><a aria-current="page" href="/governance">Workspaces</a><a href="/">Document editor</a><a href="/account">Accounts & membership</a></nav>
+      <nav aria-label="Primary"><a aria-current="page" href="/governance">Workspaces</a><a href="/">Document editor</a><a href="/account">Accounts & membership</a><button type="button" className="console-tour" onClick={()=>setTour(true)}>Take a tour</button></nav>
     </header>
+    {tour&&<Walkthrough id="governance" onClose={()=>setTour(false)}/>}
     <section className="governance-hero">
       <p className="eyebrow">{brand.category} / SHARED GOVERNANCE ENGINE</p>
       <h1>Decisions start with better language.</h1>

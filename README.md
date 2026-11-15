@@ -2,7 +2,7 @@
 
 Reusable legal-document drafting, proposal, deliberation and governance engine.
 
-**Status (2026-11): 24 of 39 roadmap units are implemented in source with tests; 15 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
+**Status (2026-11): 25 of 39 roadmap units are implemented in source with tests; 14 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
 
 Implemented in source:
 - Workspaces and public documents with version history and restore.
@@ -21,7 +21,6 @@ Partial units:
 - Private E2EE activation and review (003).
 - Editor acceptance (005–009).
 - Realtime (015, 016).
-- Walkthrough (031).
 - Accessibility (033): automated axe audit only, with no manual screen-reader record.
 - Operations (035): restore-drill tooling exists, but no drill has been recorded.
 - Security review (036).

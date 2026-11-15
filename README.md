@@ -2,7 +2,7 @@
 
 Reusable legal-document drafting, proposal, deliberation and governance engine.
 
-**Status: real multiuser governance application implemented in code; production deployment and legal execution are not certified.** The authenticated /governance interface now includes workspace membership, public documents, exact-version amendment proposals, nested pro/con discussion, frozen-electorate member votes, tally/closure records, automatic application of passed unchanged amendments to a new public draft revision, and redacted public checksum receipts. These are verified in PostgreSQL and isolated Chrome/OIDC fixtures, not a customer-hosted service. Private encryption activation, corporate share-weighted identity, signatures, payments, independent blockchain finality and external acceptance remain separate work.
+**Status: the complete engine is implemented, tested and running in production behind https://civicquill.onrender.com and https://charterquill.onrender.com (see docs/LIVE_VERIFICATION.md). Owner review, independent security review and production acceptance are pending.** The authenticated /governance interface now includes workspace membership, public documents, exact-version amendment proposals, nested pro/con discussion, frozen-electorate member votes, tally/closure records, automatic application of passed unchanged amendments to a new public draft revision, and redacted public checksum receipts. These are verified in PostgreSQL and isolated Chrome/OIDC fixtures, not a customer-hosted service. Private encryption activation, corporate share-weighted identity, signatures, payments, independent blockchain finality and external acceptance remain separate work.
 
 - [Architecture, product differences and editor features](docs/ARCHITECTURE.md)
 - [Development plan](docs/DEVELOPMENT_PLAN.md) and [canonical PR registry](registry/prs.json)
@@ -13,6 +13,8 @@ Reusable legal-document drafting, proposal, deliberation and governance engine.
 - [New TLS-only Keycloak provider candidate](docs/IDENTITY_PROVIDER.md) and [native passkeys](docs/PASSKEY_VERIFIER.md)
 - [Saved public documents and failure recovery](docs/PUBLIC_DOCUMENTS.md)
 - [Exact text proposals](docs/TEXT_PROPOSALS.md) and [structured discussion/rating](docs/STRUCTURED_DISCUSSION.md)
+- [Live deployment verification](docs/LIVE_VERIFICATION.md), [federation](docs/FEDERATION.md), [scale measurements](docs/SCALE.md)
+- Feature references: [electorates](docs/ELECTORATES.md), [editions](docs/EDITIONS.md), [signatures](docs/SIGNATURES.md), [settings](docs/SETTINGS.md), [entitlements](docs/ENTITLEMENTS.md), [payments](docs/PAYMENTS.md), [search](docs/SEARCH.md), [notifications](docs/NOTIFICATIONS.md), [localization](docs/LOCALIZATION.md), [moderation](docs/MODERATION.md), [clause permissions](docs/CLAUSE_PERMISSIONS.md), [private workspaces](docs/INTEGRATION-private.md)
 - [Repository agent instructions](AGENTS.md)
 
 Requires Node 24.19.0 (tested). Install the exact lockfile before running the editor and tests.

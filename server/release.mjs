@@ -26,8 +26,15 @@ export async function migrateAndProvision({ env, extensions = [], createPool = d
       const exists = (await db.query("SELECT 1 FROM pg_roles WHERE rolname=$1", [role])).rows.length > 0;
       // DDL cannot take bind parameters; the name is pattern-checked and the
       // password is restricted to URL-safe characters before quoting.
-      const options = "LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD " + quoteLiteral(password);
-      await db.query((exists ? "ALTER ROLE " : "CREATE ROLE ") + quoteIdent(role) + " " + options);
+      // Managed PostgreSQL owners are not superusers: they may create a role
+      // without elevated attributes, but ALTER ROLE may not even name the
+      // superuser, replication or bypass-RLS attributes. A rotation therefore
+      // changes only login and password; the runtime's startup check still
+      // refuses to serve if the role ever holds an elevated power.
+      const passwordClause = "LOGIN PASSWORD " + quoteLiteral(password);
+      await db.query(exists
+        ? "ALTER ROLE " + quoteIdent(role) + " " + passwordClause
+        : "CREATE ROLE " + quoteIdent(role) + " NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS " + passwordClause);
       await db.query("GRANT dge_identity_runtime TO " + quoteIdent(role));
       const database = (await db.query("SELECT current_database() AS name")).rows[0].name;
       await db.query("GRANT CONNECT ON DATABASE " + quoteIdent(database) + " TO " + quoteIdent(role));

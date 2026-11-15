@@ -61,3 +61,30 @@ test("a runtime login can verify application extension migrations after release"
     await admin.end();
   }
 });
+
+test("password rotation works for a non-superuser schema owner, as on managed PostgreSQL", { skip: !url && "DGE_TEST_DATABASE_URL not set" }, async () => {
+  const admin = new pg.Client({ connectionString: url });
+  await admin.connect();
+  const database = "dge_release_owner_" + Date.now(), owner = "quill_managed_owner";
+  await admin.query(`CREATE ROLE ${owner} LOGIN CREATEROLE PASSWORD 'owner-password-for-tests-only'`);
+  await admin.query(`CREATE DATABASE ${database} OWNER ${owner}`);
+  // Roles are cluster-wide. On a managed service the owner created the runtime
+  // group on first release and so holds ADMIN on it; model that here.
+  await admin.query("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='dge_identity_runtime') THEN CREATE ROLE dge_identity_runtime NOLOGIN; END IF; END $$");
+  await admin.query(`GRANT dge_identity_runtime TO ${owner} WITH ADMIN OPTION, INHERIT FALSE, SET FALSE`);
+  try {
+    const target = new URL(url); target.pathname = "/" + database; target.username = owner; target.password = "owner-password-for-tests-only";
+    const env = { MIGRATION_DATABASE_URL: target.href, RUNTIME_DATABASE_ROLE: "quill_managed_runtime", RUNTIME_DATABASE_PASSWORD: "a".repeat(40) };
+    await migrateAndProvision({ env, createPool: plainPool });
+    const rotated = await migrateAndProvision({ env: { ...env, RUNTIME_DATABASE_PASSWORD: "b".repeat(40) }, createPool: plainPool });
+    const pool = new pg.Pool({ connectionString: rotated, max: 1 });
+    try { assert.equal(await verifyIdentityRuntime(pool), true); } finally { await pool.end(); }
+  } finally {
+    await admin.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND pid<>pg_backend_pid()", [database]);
+    await admin.query("DROP DATABASE " + database);
+    await admin.query("DROP ROLE IF EXISTS quill_managed_runtime");
+    await admin.query("DROP OWNED BY " + owner).catch(() => {});
+    await admin.query("DROP ROLE IF EXISTS " + owner);
+    await admin.end();
+  }
+});

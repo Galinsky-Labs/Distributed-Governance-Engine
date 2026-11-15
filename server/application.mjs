@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { createServer } from "node:https";
+import { createServer as createPlainServer } from "node:http";
 
 const security = {
   "x-content-type-options": "nosniff",
@@ -16,6 +17,9 @@ export function createEngineApplication({
   product = "civic",
   assetDirectory = new URL("../dist/", import.meta.url),
   readiness = null,
+  release = null,
+  pagePaths = [],
+  privateWorkspaces = false,
 }) {
   if (
     !["civic", "charter"].includes(product) ||
@@ -29,36 +33,52 @@ export function createEngineApplication({
       ["/governance", ["index.html", "text/html; charset=utf-8"]],
       ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
       ["/app.css", ["app.css", "text/css; charset=utf-8"]],
+      ...pagePaths.map((path) => {
+        if (!/^\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(path)) throw Error("Invalid page path");
+        return [path, ["index.html", "text/html; charset=utf-8"]];
+      }),
     ]),
     cache = new Map();
+  // Private workspaces need WebAssembly compilation for the MLS endpoint only:
+  // 'wasm-unsafe-eval' never permits JavaScript eval ('unsafe-eval').
+  const secure = privateWorkspaces
+    ? { ...security, "content-security-policy": security["content-security-policy"].replace("script-src 'self';", "script-src 'self' 'wasm-unsafe-eval';") }
+    : security;
+  if (privateWorkspaces)
+    for (const [path, entry] of [
+      ["/private", ["private.html", "text/html; charset=utf-8"]],
+      ["/private.js", ["private.js", "text/javascript; charset=utf-8"]],
+      ["/mls/quill_mls.js", ["mls/quill_mls.js", "text/javascript; charset=utf-8"]],
+      ["/mls/quill_mls_bg.wasm", ["mls/quill_mls_bg.wasm", "application/wasm"]],
+    ]) assets.set(path, entry);
   return async (request, context) => {
     const url = new URL(request.url);
     if (url.origin !== origin)
-      return new Response("Invalid origin", { status: 400, headers: security });
+      return new Response("Invalid origin", { status: 400, headers: secure });
     if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/"))
       return accounts(request, context);
     if (!["GET", "HEAD"].includes(request.method))
       return new Response("Method not allowed", {
         status: 405,
-        headers: security,
+        headers: secure,
       });
     if (url.pathname === "/healthz")
-      return Response.json({ status: "ok" }, { headers: security });
+      return Response.json({ status: "ok", ...(release ? { release } : {}) }, { headers: secure });
     if(url.pathname === "/readyz") {
       try {
         if(typeof readiness!=="function")throw Error("Readiness unavailable");
         await readiness();
-        return Response.json({status:"ready"},{headers:security});
-      }catch{return Response.json({status:"unavailable"},{status:503,headers:security});}
+        return Response.json({status:"ready"},{headers:secure});
+      }catch{return Response.json({status:"unavailable"},{status:503,headers:secure});}
     }
     const entry = assets.get(url.pathname);
     if (!entry)
-      return new Response("Not found", { status: 404, headers: security });
+      return new Response("Not found", { status: 404, headers: secure });
     try {
       if (!cache.has(entry[0])) {
         let bytes = await readFile(new URL(entry[0], assetDirectory));
-        if (bytes.byteLength > 2000000) throw Error("Asset too large");
-        if (entry[0] === "index.html")
+        if (bytes.byteLength > (entry[1] === "application/wasm" ? 8000000 : 2000000)) throw Error("Asset too large");
+        if (entry[0] === "index.html" || entry[0] === "private.html")
           bytes = Buffer.from(
             bytes
               .toString("utf8")
@@ -74,12 +94,12 @@ export function createEngineApplication({
       }
       return new Response(
         request.method === "HEAD" ? null : cache.get(entry[0]),
-        { headers: { ...security, "content-type": entry[1] } },
+        { headers: { ...secure, "content-type": entry[1] } },
       );
     } catch {
       return new Response("Application build unavailable", {
         status: 503,
-        headers: security,
+        headers: secure,
       });
     }
   };
@@ -90,18 +110,26 @@ export function nodeListener({
   application,
   origin,
   requireTLS = true,
+  edgeTLS = false,
   bodyLimit = () => 8192,
 }) {
   const site = new URL(origin);
   return async (req, res) => {
     try {
-      if (requireTLS && !req.socket.encrypted) {
+      const probe = req.url === "/healthz" || req.url === "/readyz";
+      if (edgeTLS && !probe && req.headers["x-forwarded-proto"] !== "https") {
+        // The platform edge must have received this request over HTTPS.
+        res.writeHead(400, security);
+        res.end("TLS required");
+        return;
+      }
+      if (requireTLS && !edgeTLS && !req.socket.encrypted) {
         res.writeHead(400, security);
         res.end("TLS required");
         return;
       }
       if (
-        req.headers.host !== site.host ||
+        (req.headers.host !== site.host && !(edgeTLS && probe)) ||
         !req.url?.startsWith("/") ||
         req.url.startsWith("//") ||
         req.url.includes("\\") ||
@@ -139,7 +167,7 @@ export function nodeListener({
           : {}),
       });
       const response = await application(request, {
-        peerAddress: req.socket.remoteAddress,
+        peerAddress: edgeTLS ? edgeClientAddress(req) : req.socket.remoteAddress,
       });
       res.statusCode = response.status;
       for (const [name, value] of response.headers)
@@ -158,6 +186,29 @@ export function nodeListener({
       } else res.destroy();
     }
   };
+}
+/** The edge proxy appends the connecting client as the last forwarded hop. */
+function edgeClientAddress(req) {
+  const hops = String(req.headers["x-forwarded-for"] ?? "").split(",").map((h) => h.trim()).filter(Boolean);
+  const last = hops.at(-1);
+  return last && last.length <= 64 && /^[0-9a-fA-F:.]+$/.test(last) ? last : req.socket.remoteAddress;
+}
+
+/**
+ * Edge-TLS transport for platforms (such as Render web services) whose
+ * managed edge terminates public TLS and forwards to the container over the
+ * provider's private network. This is a declared transport boundary recorded
+ * in the security inventory, never an implicit fallback: it must be enabled
+ * explicitly with TRANSPORT_MODE=edge-tls.
+ */
+export function createEdgeServer({ application, origin, bodyLimit }) {
+  const server = createPlainServer(nodeListener({ application, origin, bodyLimit, edgeTLS: true, requireTLS: false }));
+  server.requestTimeout = 15000;
+  server.headersTimeout = 10000;
+  server.keepAliveTimeout = 65000; // Longer than the edge's idle timeout.
+  server.maxHeadersCount = 64;
+  server.maxRequestsPerSocket = 1000;
+  return server;
 }
 export function createEngineServer({
   application,

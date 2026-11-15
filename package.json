@@ -13,14 +13,15 @@
     "demo": "node demo/server.mjs",
     "build": "node scripts/build-editor.mjs",
     "preview": "node scripts/serve-editor.mjs",
-    "test:postgres": "node --test tests/identity-postgres.integration.mjs",
+    "test:postgres": "node --test tests/identity-postgres.integration.mjs tests/release.postgres.test.mjs",
     "start": "node server/start.mjs",
     "migrate:identity": "node scripts/migrate-identity.mjs",
     "test:browser": "node --test --test-concurrency=1 tests/*.browser.mjs",
     "migrate": "node scripts/migrate-identity.mjs",
     "build:offline": "node scripts/build-offline.mjs",
     "build:mls": "node scripts/build-mls.mjs",
-    "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs"
+    "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs",
+    "verify": "node scripts/quill-verify.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -49,7 +50,19 @@
     "./private-update-ledger": "./server/private-update-ledger.mjs",
     "./private-update-http": "./server/private-update-http.mjs",
     "./private-collaboration-hub": "./server/private-collaboration-hub.mjs",
-    "./mls-state-vault": "./web/mls-state-vault.mjs"
+    "./mls-state-vault": "./web/mls-state-vault.mjs",
+    "./runtime": "./server/runtime.mjs",
+    "./platform": "./server/platform.mjs",
+    "./ledger": "./server/ledger.mjs",
+    "./transparency": "./src/transparency.mjs",
+    "./verification": "./src/verification-package.mjs",
+    "./opentimestamps": "./src/opentimestamps.mjs",
+    "./web/*": "./web/*",
+    "./src/*": "./src/*",
+    "./server/*": "./server/*",
+    "./package.json": "./package.json",
+    "./scripts/*": "./scripts/*",
+    "./release": "./server/release.mjs"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

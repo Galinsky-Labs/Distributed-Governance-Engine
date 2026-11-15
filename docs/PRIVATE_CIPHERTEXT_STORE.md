@@ -2,7 +2,9 @@
 
 Migration 014 creates tenant-scoped private document pointers, immutable encrypted version records and logical byte accounting. \`createPrivateDocumentStore\` and \`createPrivateDocumentRoutes\` implement an **opt-in server component** that only accepts authenticated AES-256-GCM envelopes; no semantic document, title, text, revision body, plaintext fallback or server-held decryption key is accepted.
 
-## Deployment gate — intentionally disabled
+## Deployment gate
+
+Update: with `PRIVATE_WORKSPACES=enabled`, `createPlatform` mounts these routes with the MLS roster/epoch authorizer from `server/private-workspace-store.mjs` (own unrevoked roster device selected by `x-dge-device`, current group epoch for writes, multi-commit rekey bound to the ordered group epoch). See INTEGRATION-private.md. The historical text below describes the gate as it stood before that authorizer existed.
 
 The production bootstrap does **not** mount these routes, and this code must not be enabled by simply toggling a flag. Construction requires an authoritative server-injected \`authorizeDevice\` adapter that checks verified device enrollment, current tenant membership and cryptographic epoch authority; a user-supplied device ID is not accepted. Epoch increases additionally require the trusted \`authorizeEpochAdvance\` adapter. These adapters are **not** implemented or configured for production.
 

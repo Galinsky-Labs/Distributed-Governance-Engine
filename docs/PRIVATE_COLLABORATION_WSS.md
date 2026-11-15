@@ -1,5 +1,7 @@
 # Dedicated private WebSocket ciphertext relay — partial DCE-008
 
+Update: with `PRIVATE_WORKSPACES=enabled` the runtime now attaches this hub to the main server through `routeUpgrades` (the public hub keeps `/ws/public/*`, this hub owns `/ws/private/*`), with the MLS roster/epoch authorizer installed in the ledger and an explicit `transport: 'edge-tls'` option for the declared managed-edge boundary. Statements below that it is not mounted describe the state before INTEGRATION-private.md.
+
 \`attachPrivateCollaborationHub\` adds an optional, bounded WebSocket transport to the already-persisted private ciphertext update ledger. It **never reads, stores or transmits plaintext Yjs payloads**, document bodies, private application keys or passkey secrets. It is **not mounted by \`server/start.mjs\`** and no production private collaboration mode is enabled.
 
 ## Deployment boundary

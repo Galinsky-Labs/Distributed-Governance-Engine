@@ -4,7 +4,7 @@ import {build} from 'esbuild';
 import {JSDOM} from 'jsdom';
 
 test('the built React interface mounts both brands, freezes public-input text and opens/closes the anchored tour',async()=>{
- const output=await build({entryPoints:['web/app.jsx'],bundle:true,write:false,outdir:'unused',platform:'browser',format:'iife',target:'es2022',define:{'process.env.NODE_ENV':'"production"'}});
+ const output=await build({entryPoints:['web/main.jsx'],bundle:true,write:false,outdir:'unused',platform:'browser',format:'iife',target:'es2022',define:{'process.env.NODE_ENV':'"production"'}});
  const script=output.outputFiles.find(x=>x.path.endsWith('.js')).text;
  const dom=new JSDOM('<html data-quill-product="civic"><body><div id="root"></div></body></html>',{url:'https://preview.example.test',runScripts:'dangerously',pretendToBeVisual:true,beforeParse(window){window.structuredClone=value=>window.JSON.parse(window.JSON.stringify(value));window.TextEncoder=TextEncoder;window.HTMLElement.prototype.scrollIntoView=function(){};window.Range.prototype.getClientRects=()=>[];window.Range.prototype.getBoundingClientRect=()=>({left:0,right:0,top:0,bottom:0,width:0,height:0});}});
  const waitFor=async predicate=>{for(let i=0;i<100;i++){if(predicate())return;await new Promise(r=>setTimeout(r,10));}throw Error('Expected UI state did not appear');};

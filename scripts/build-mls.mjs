@@ -11,4 +11,4 @@ await run(process.execPath,['scripts/verify-mls-build.mjs']);
 await mkdir(output,{recursive:true});
 await run('cargo',['+1.94.0','build','--locked','--release','--target','wasm32-unknown-unknown','--manifest-path','crypto/mls-endpoint/Cargo.toml']);
 await run('wasm-bindgen',['--target','web','--out-dir',output,'--out-name','quill_mls','crypto/mls-endpoint/target/wasm32-unknown-unknown/release/quill_mls_endpoint.wasm']);
-console.log('Built endpoint-only MLS module; private application routes remain disabled.');
+console.log('Built endpoint-only MLS module; it is served to browsers only with PRIVATE_WORKSPACES=enabled.');

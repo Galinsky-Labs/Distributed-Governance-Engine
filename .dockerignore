@@ -20,3 +20,4 @@ docs
 demo
 registry
 .DS_Store
+crypto/mls-endpoint/target

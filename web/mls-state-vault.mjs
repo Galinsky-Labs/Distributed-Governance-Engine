@@ -138,6 +138,9 @@ function coordinator({endpoint,key,scope,pin,store,generation,inbox,outbox}){
    let item;try{if(result.application)item={id:crypto.randomUUID(),group,sender:encodeBytes(result.sender),bytes:encodeBytes(result.bytes)};}finally{result.free();}
    await persist(item?[...inbox,item]:inbox);return item?event(item):null;
   });},
+  // RFC 9420 exporter for the current epoch, imported in Wasm as a
+  // non-extractable AES-256-GCM CryptoKey. Read-only: no checkpoint change.
+  async exportKey(group,label,context){group=groupInput(group);if(typeof label!=='string'||!/^dge-private-[a-z0-9-]{1,52}$/.test(label))throw fail('MLS_OPERATION_REJECTED');context=bytesInput(context,512);return serial(async()=>{try{return await endpoint.exportKey(group,label,context);}catch(error){if(error instanceof MlsStateError)throw error;throw fail('MLS_OPERATION_REJECTED');}});},
   pending(){return serial(()=>inbox.map(event));},
   outgoing(){return serial(()=>outbox.map(outgoing));},
   acknowledge(id){return serial(async()=>{if(typeof id!=='string'||!uuid.test(id))throw fail('MLS_STATE_CORRUPT');if(!inbox.some(item=>item.id===id))return {acknowledged:false};await persist(inbox.filter(item=>item.id!==id));return {acknowledged:true};});},

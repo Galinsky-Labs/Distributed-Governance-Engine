@@ -255,6 +255,12 @@ export function createAccountHandler({
           write,
           method,
         });
+        if (result instanceof Response) {
+          // Binary or text artifacts keep the same hardening headers.
+          for (const [name, value] of Object.entries(headers))
+            if (!result.headers.has(name)) result.headers.set(name, value);
+          return result;
+        }
         if (result !== null)
           return json(
             result,

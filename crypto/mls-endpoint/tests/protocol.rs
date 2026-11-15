@@ -228,3 +228,65 @@ fn native_groups_cannot_switch_endpoint_ownership_or_overwrite_an_existing_scope
     assert!(b.encrypt(&mut ag, b"Wrong endpoint").is_err());
     assert!(b.remove(&mut ag, b"alice-device").is_err());
 }
+#[test]
+fn exporter_keys_agree_per_epoch_and_exclude_removed_members() {
+    let (a, mut ag, b, mut bg, roster) = pair();
+    let context = b"tenant/document";
+    let label = "dge-private-update-v1";
+    let ka = a.export_secret(&ag, label, context).unwrap();
+    let kb = b.export_secret(&bg, label, context).unwrap();
+    assert_eq!(ka.len(), 32);
+    assert_eq!(&ka[..], &kb[..]);
+    assert_ne!(
+        &a.export_secret(&ag, "dge-private-snapshot-v1", context)
+            .unwrap()[..],
+        &ka[..]
+    );
+    assert_ne!(
+        &a.export_secret(&ag, label, b"tenant/other").unwrap()[..],
+        &ka[..]
+    );
+    for bad in ["other-label", "dge-private-UPPER", ""] {
+        assert_eq!(
+            a.export_secret(&ag, bad, context).err(),
+            Some(Error::InvalidInput)
+        );
+    }
+    assert!(a.export_secret(&ag, label, &[]).is_err());
+    assert!(b.export_secret(&ag, label, context).is_err());
+    let c = Endpoint::new(b"carol-device").unwrap();
+    let add = a
+        .add(
+            &mut ag,
+            &c.key_package().unwrap(),
+            b"carol-device",
+            &c.signature_key(),
+        )
+        .unwrap();
+    a.merge_pending(&mut ag).unwrap();
+    let mut wider = roster.clone();
+    wider.push(pin(&c, b"carol-device"));
+    b.receive(&mut bg, &add.commit, &wider).unwrap();
+    let cg = c.join(&add.welcome, b"workspace:document", &wider).unwrap();
+    let epoch2 = a.export_secret(&ag, label, context).unwrap();
+    assert_ne!(&epoch2[..], &ka[..]);
+    assert_eq!(
+        &c.export_secret(&cg, label, context).unwrap()[..],
+        &epoch2[..]
+    );
+    let mut cg = cg;
+    let removal = a.remove(&mut ag, b"bob-device").unwrap();
+    a.merge_pending(&mut ag).unwrap();
+    let remaining = vec![pin(&a, b"alice-device"), pin(&c, b"carol-device")];
+    c.receive(&mut cg, &removal, &remaining).unwrap();
+    b.receive(&mut bg, &removal, &remaining).unwrap();
+    let epoch3 = a.export_secret(&ag, label, context).unwrap();
+    assert_eq!(
+        &c.export_secret(&cg, label, context).unwrap()[..],
+        &epoch3[..]
+    );
+    assert_ne!(&epoch3[..], &epoch2[..]);
+    // The evicted endpoint is inactive and cannot derive the new epoch key.
+    assert!(!bg.active());
+    assert!(b.export_secret(&bg, label, context).is_err());
+}

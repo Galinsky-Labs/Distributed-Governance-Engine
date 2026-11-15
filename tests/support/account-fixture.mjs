@@ -17,29 +17,12 @@ import {
   applyIdentityMigrations,
 } from "../../server/identity-store.mjs";
 import { createOIDCLogin } from "../../server/oidc-login.mjs";
-import { createDiscussionStore } from "../../server/discussion-store.mjs";
-import { createDecisionStore } from "../../server/decision-store.mjs";
-import { createDecisionRoutes, decisionBodyLimit } from "../../server/decision-http.mjs";
-import {
-  createDiscussionRoutes,
-  discussionBodyLimit,
-} from "../../server/discussion-http.mjs";
-import { createProposalStore } from "../../server/proposal-store.mjs";
-import {
-  createProposalRoutes,
-  proposalBodyLimit,
-} from "../../server/proposal-http.mjs";
-import { createAccountHandler } from "../../server/account-http.mjs";
-import { createDocumentStore } from "../../server/document-store.mjs";
 import {attachPublicCollaborationHub} from "../../server/public-collaboration-hub.mjs";
-import {
-  createDocumentRoutes,
-  documentBodyLimit,
-} from "../../server/document-http.mjs";
-import {
-  createEngineApplication,
-  nodeListener,
-} from "../../server/application.mjs";
+import { nodeListener } from "../../server/application.mjs";
+import { createPlatform } from "../../server/platform.mjs";
+import { loadLogSigningKey } from "../../server/ledger.mjs";
+import { createRequestBudget } from "../../server/account-http.mjs";
+import { routeUpgrades, attachPrivateWorkspaceHub } from "../../server/private-workspace.mjs";
 
 const escape = (value) =>
   String(value).replace(
@@ -56,7 +39,10 @@ export async function accountFixture({
   hostname = '127.0.0.1',
   publicCollaboration = false,
   collaborationSaveDelayMs = 0,
+  privateWorkspaces = true,
+  perPeerBudget,
 } = {}) {
+  if (typeof privateWorkspaces !== 'boolean') throw Error('Invalid private workspace fixture setting');
   if (typeof publicCollaboration !== 'boolean') throw Error('Invalid public collaboration fixture setting');
   if (!['127.0.0.1', 'localhost'].includes(hostname)) throw Error('Loopback fixture hostname required');
   for (const delay of [proposalListDelayMs, documentListDelayMs, collaborationSaveDelayMs])
@@ -202,39 +188,15 @@ export async function accountFixture({
     configuration: config,
     redirectUri: origin + "/auth/callback",
   });
-  const accounts = createAccountHandler({
-      store,
-      login,
-      origin,
-      extensions: [
-        createDecisionRoutes({decisions:createDecisionStore({identity:store,transaction})}),
-        createDiscussionRoutes({
-          discussion: createDiscussionStore({
-            identity: store,
-            transaction: transaction,
-          }),
-        }),
-        createProposalRoutes({
-          proposals: createProposalStore({
-            identity: store,
-            transaction: transaction,
-          }),
-        }),
-        createDocumentRoutes({
-          documents: createDocumentStore({ identity: store, transaction }),
-        }),
-      ],
-    }),
-    application = createEngineApplication({ accounts, origin });
+  const { application, bodyLimit, services } = createPlatform({
+    identity: store, transaction, login, origin, logId: "quill.fixture", notificationTokenKey: randomBytes(32), passkeySignin: true,
+    logSigningKey: loadLogSigningKey(generateKeyPairSync("ed25519").privateKey.export({ format: "der", type: "pkcs8" }).toString("base64")),
+    privateWorkspaces,
+    ...(perPeerBudget ? { budget: createRequestBudget({ perPeer: perPeerBudget }) } : {}),
+  });
   listener = nodeListener({
     origin,
-    bodyLimit: (path) =>
-      Math.max(
-        documentBodyLimit(path),
-        proposalBodyLimit(path),
-        discussionBodyLimit(path),
-        decisionBodyLimit(path),
-      ),
+    bodyLimit,
     application: async (request, context) => {
       const url = new URL(request.url);
       if (url.pathname !== "/fixture/authorize") {
@@ -306,16 +268,22 @@ export async function accountFixture({
       });
     },
   });
-  const sharedDocuments=createDocumentStore({identity:store,transaction});
+  const sharedDocuments=services.documents;
   const collaborationDocuments=collaborationSaveDelayMs?{...sharedDocuments,async save(...args){await new Promise(resolve=>setTimeout(resolve,collaborationSaveDelayMs));return sharedDocuments.save(...args);}}:sharedDocuments;
-  const collaboration=publicCollaboration?attachPublicCollaborationHub({server,origin,documents:collaborationDocuments}):null;
+  const upgrades=privateWorkspaces?routeUpgrades(server):null;
+  const collaboration=publicCollaboration?attachPublicCollaborationHub({server:upgrades?.publicServer??server,origin,documents:collaborationDocuments}):null;
+  const privateRelay=privateWorkspaces?attachPrivateWorkspaceHub({server:upgrades.privateServer,origin,services:services.privateWorkspace}):null;
   return {
     origin,
     db,
     store,
+    services,
     collaborationStats:()=>collaboration?.stats()??null,
+    privateRelayStats:()=>privateRelay?.stats()??null,
     close: async () => {
       collaboration?.close();
+      privateRelay?.close();
+      upgrades?.close();
       await new Promise((resolve) => {
         server.close(resolve);
         server.closeAllConnections();

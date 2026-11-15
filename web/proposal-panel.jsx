@@ -1,6 +1,7 @@
 import { DiscussionPanel } from "./discussion-panel.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import { createAccountAPI } from "./account-api.mjs";
+import { RemovedNotice, ReportButton } from "./moderation-panel.jsx";
 const api = createAccountAPI();
 const short = (value) =>
   Array.from(value).slice(0, 90).join("") +
@@ -249,6 +250,14 @@ export function ProposalPanel({
               <p className="proposal-rationale">
                 {selected.proposal.rationale}
               </p>
+              <RemovedNotice moderation={selected.moderation} />
+              {record && !selected.moderation && (
+                <ReportButton
+                  tenantId={doc.tenantId}
+                  targetKind="proposal"
+                  targetId={selected.proposal.id}
+                />
+              )}
               <p className="small">
                 Proposal commitment:{" "}
                 <code className="digest">{selected.digest}</code>Blockchain
@@ -278,8 +287,10 @@ export function ProposalPanel({
                     setComposer(null);
                   }}
                 >
-                  Replace “{short(item.proposal.selection.quote)}” with “
-                  {short(item.proposal.replacement) || "(remove)"}”
+                  {item.moderation
+                    ? "Suggestion removed by moderator"
+                    : <>Replace “{short(item.proposal.selection.quote)}” with “
+                      {short(item.proposal.replacement) || "(remove)"}”</>}
                 </button>
                 <span className="small">
                   Version {item.baseVersion}

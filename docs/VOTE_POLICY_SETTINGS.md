@@ -63,3 +63,28 @@ retaining these readers/evaluators for new snapshots; do not rewrite history,
 ballots or policy digests. Named reusable templates, open-public safeguards,
 verified eligibility, corporate rights, finality/challenge windows, production
 hosting and independent review remain outstanding.
+
+## Policy lifecycle helpers (DCE-010 increment)
+
+`src/policy-lifecycle.mjs` (exported as `@distributed-governance/engine/policy-lifecycle`)
+adds pure, deterministic helpers that callers bind to frozen snapshots:
+
+- `resolveTie` — `fails` (status quo, default) or `casting-vote`; a missing
+  casting vote fails closed instead of inventing an outcome.
+- `deadlineInstant` — resolves a published local deadline in an IANA time
+  zone to one UTC instant; nonexistent (spring-forward) and ambiguous
+  (fall-back) local times are rejected. `castBeforeDeadline` is strict (`<`).
+- `evaluateOpenPublicSupport` — open-public responses are always advisory
+  (`canAdopt:false`); the support floor must be published before responses
+  open and allows one response per verified person (pseudonymous person key).
+- `modeTransition` — enumerates every document-mode mutation. The only
+  allowed path is an owner/admin freezing a collaboration draft to public
+  input with no vote open or awaiting finality.
+
+The document store now enforces the last rule: `freezeForInput` returns
+`409 VOTE_IN_PROGRESS` while a decision on the document is open or a passed
+decision is still provisional inside its challenge window.
+
+Not yet done: tie rules and open-public support floors are not yet selectable
+through the decision HTTP API or stored in decision snapshots; open-public
+electorates still have no server-side intake path. No schema change was made.

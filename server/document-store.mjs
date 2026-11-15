@@ -460,6 +460,15 @@ export function createDocumentStore({
             "SOURCE_FROZEN",
             409,
           );
+          // DCE-010: the mode cannot change while a vote on this document is
+          // open or a passed decision still awaits its challenge window.
+          const active = (
+            await db.query(
+              "SELECT 1 FROM dge_decisions.decisions WHERE tenant_id=$1 AND document_id=$2 AND (state='open' OR finality='provisional') LIMIT 1",
+              [tenantId, documentId],
+            )
+          ).rows[0];
+          requireValue(!active, "VOTE_IN_PROGRESS", 409);
           let doc;
           try {
             doc = publicInputEdition(row.current);

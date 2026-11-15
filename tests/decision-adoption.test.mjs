@@ -134,3 +134,26 @@ test("custom account policy cannot turn public-input into draft adoption",async(
   const preserved=await documents.read(owner,tenantId,advisory.id);
   assert.equal(preserved.version,2);assert.deepEqual(preserved.document,advisory);
 });
+
+test("DCE-010: the document mode cannot be frozen while a vote is open",async()=>{
+  await open();
+  await assert.rejects(documents.freezeForInput(owner,tenantId,source.id,{commandId:randomUUID(),expectedVersion:1}),
+    e=>e.code==="VOTE_IN_PROGRESS");
+  assert.equal((await documents.read(owner,tenantId,source.id)).document.mode,"collaboration");
+  clock+=3600001;await close();
+  // After the closed vote applied (or not), the freeze path is available again.
+  const head=(await documents.read(owner,tenantId,source.id)).version;
+  const frozen=await documents.freezeForInput(owner,tenantId,source.id,{commandId:randomUUID(),expectedVersion:head});
+  assert.equal(frozen.document.mode,"public-input");
+});
+
+test("DCE-010: a passed decision awaiting its challenge window also blocks the mode freeze",async()=>{
+  clock=Date.now();
+  await decisions.open(owner,tenantId,source.id,proposal.proposal.id,{hours:1,commandId:randomUUID(),challengeWindowHours:24});
+  await ballot(owner,"yes");await ballot(member,"yes");
+  clock+=3600001;
+  const {certificate}=await close();
+  assert.equal(certificate.finality,"provisional");
+  await assert.rejects(documents.freezeForInput(owner,tenantId,source.id,{commandId:randomUUID(),expectedVersion:1}),
+    e=>e.code==="VOTE_IN_PROGRESS");
+});

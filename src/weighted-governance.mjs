@@ -51,7 +51,7 @@ const approvalRule=(value)=>{
 export function normalizeWeightedPolicySettings(value,{weighting}){
   invariant(["equal","units"].includes(weighting),"Invalid weighting");
   const input=value??{};
-  only(input,["minYes","minimumDeliberationHours","quorum","approval","classRequirements"],[],"Invalid weighted policy");
+  only(input,["minYes","minimumDeliberationHours","quorum","approval","classRequirements","tieRule","castingPrincipalId","supportFloor"],[],"Invalid weighted policy");
   const minYes=Object.hasOwn(input,"minYes")?input.minYes:"1";
   units(minYes,{positive:true});
   const hours=Object.hasOwn(input,"minimumDeliberationHours")?input.minimumDeliberationHours:0;
@@ -80,12 +80,29 @@ export function normalizeWeightedPolicySettings(value,{weighting}){
     invariant(!seen.has(item.class),"Duplicate class requirement");seen.add(item.class);
     return {class:item.class,quorum:fraction(item.quorum,"Invalid class quorum"),approval:approvalRule(item.approval)};
   }).sort((a,b)=>a.class<b.class?-1:a.class>b.class?1:0);
-  return {minYes,minimumDeliberationHours:hours,quorum,approval,classRequirements};
+  const extra={};
+  // DCE-010 tie rules: "fails" keeps the status quo on an exact yes/no tie;
+  // "casting-vote" lets one named presiding principal break it after voting.
+  if(Object.hasOwn(input,"tieRule")){
+    invariant(["fails","casting-vote"].includes(input.tieRule),"Invalid tie rule");
+    extra.tieRule=input.tieRule;
+    if(input.tieRule==="casting-vote"){identifier(input.castingPrincipalId);extra.castingPrincipalId=input.castingPrincipalId;}
+    else invariant(!Object.hasOwn(input,"castingPrincipalId"),"Only a casting-vote rule names a casting principal");
+  }else invariant(!Object.hasOwn(input,"castingPrincipalId"),"Only a casting-vote rule names a casting principal");
+  // Open-public support floor: advisory only, published with the snapshot.
+  if(Object.hasOwn(input,"supportFloor")){
+    const f=input.supportFloor;
+    only(f,["minimumParticipants","supportNumerator","supportDenominator"],["minimumParticipants","supportNumerator","supportDenominator"],"Invalid support floor");
+    units(f.minimumParticipants,{positive:true});
+    const r=fraction({numerator:f.supportNumerator,denominator:f.supportDenominator},"Invalid support floor");
+    extra.supportFloor={minimumParticipants:f.minimumParticipants,supportNumerator:r.numerator,supportDenominator:r.denominator};
+  }
+  return {minYes,minimumDeliberationHours:hours,quorum,approval,classRequirements,...extra};
 }
 
 export function validateWeightedPolicy(p){
   only(p,["id","weighting","opensAt","closesAt","minYes","quorum","approval","classRequirements",
-    "challengeWindowMs","minimumDeliberationHours","proposalPublishedAt"],
+    "challengeWindowMs","minimumDeliberationHours","proposalPublishedAt","tieRule","castingPrincipalId","supportFloor"],
   ["id","weighting","opensAt","closesAt","minYes","quorum","approval","classRequirements","challengeWindowMs"],"Invalid weighted policy");
   identifier(p.id);
   for(const t of [p.opensAt,p.closesAt])invariant(Number.isSafeInteger(t)&&t>=0,"Invalid timestamp");
@@ -93,7 +110,9 @@ export function validateWeightedPolicy(p){
   invariant(Number.isSafeInteger(p.challengeWindowMs)&&p.challengeWindowMs>=0&&p.challengeWindowMs<=720*3600000,"Invalid challenge window");
   const normalized=normalizeWeightedPolicySettings({minYes:p.minYes,quorum:p.quorum,approval:p.approval,
     classRequirements:p.classRequirements,
-    ...(Object.hasOwn(p,"minimumDeliberationHours")?{minimumDeliberationHours:p.minimumDeliberationHours}:{})},{weighting:p.weighting});
+    ...(Object.hasOwn(p,"minimumDeliberationHours")?{minimumDeliberationHours:p.minimumDeliberationHours}:{}),
+    ...Object.fromEntries(["tieRule","castingPrincipalId","supportFloor"].filter(k=>Object.hasOwn(p,k)).map(k=>[k,p[k]]))},{weighting:p.weighting});
+  if(Object.hasOwn(p,"supportFloor"))invariant(canonicalize(normalized.supportFloor)===canonicalize(p.supportFloor),"Support floor must be canonical");
   invariant(canonicalize(normalized.classRequirements)===canonicalize(p.classRequirements),"Class requirements must be canonical");
   if(Object.hasOwn(p,"minimumDeliberationHours")||Object.hasOwn(p,"proposalPublishedAt")){
     invariant(Number.isSafeInteger(p.proposalPublishedAt)&&p.proposalPublishedAt>=0,"Invalid publication time");
@@ -202,7 +221,7 @@ function approvalResult(rule,totals,eligible,minYes){
  * allocation is "all" or a class->units map frozen from the grant. A
  * principal's direct ballot supersedes every proxy ballot cast for it.
  */
-export function evaluateWeightedDecision({mode,policy,electorate,ballots,now}){
+export function evaluateWeightedDecision({mode,policy,electorate,ballots,now,castingVote=null}){
   invariant(["collaboration","public-input"].includes(mode),"Invalid document mode");
   validateWeightedPolicy(policy);validateWeightedElectorate(electorate);
   invariant(Number.isSafeInteger(now)&&now>=0,"Invalid timestamp");
@@ -296,7 +315,19 @@ export function evaluateWeightedDecision({mode,policy,electorate,ballots,now}){
     ...(q.kind.startsWith("fraction-")?{numerator:q.numerator,denominator:q.denominator,
       denominatorName:byCount?"eligible-heads":"eligible-weight",denominatorValue:quorumBase.toString()}:{minimum:q.minimum}),
     met:quorumMet};
-  const approval=approvalResult(policy.approval,totals,eligible.weight,BigInt(policy.minYes));
+  let approval=approvalResult(policy.approval,totals,eligible.weight,BigInt(policy.minYes));
+  let tie=null;
+  if(policy.tieRule&&totals.yes===totals.no&&totals.yes>0n){
+    if(policy.tieRule==="fails")tie={rule:"fails",outcome:"no",reason:"tie-fails"};
+    else if(castingVote===null)tie={rule:"casting-vote",outcome:"no",reason:"casting-vote-missing"};
+    else{
+      plain(castingVote,"Invalid casting vote");
+      invariant(castingVote.principalId===policy.castingPrincipalId,"Casting vote from the wrong principal");
+      invariant(["yes","no"].includes(castingVote.choice),"A casting vote must be yes or no");
+      tie={rule:"casting-vote",outcome:castingVote.choice,reason:"casting-vote"};
+    }
+    approval={...approval,met:tie.outcome==="yes"&&totals.yes>=BigInt(policy.minYes),tieBreak:tie.reason};
+  }else invariant(castingVote===null,"A casting vote applies only to a tie");
   const classes=policy.classRequirements.map(req=>{
     const s=classStats.get(req.class)??{eligible:0n,heads:0n,participating:0n,yes:0n,no:0n,abstain:0n};
     const classQuorumMet=s.eligible>0n&&s.participating*BigInt(req.quorum.denominator)>=s.eligible*BigInt(req.quorum.numerator);
@@ -312,6 +343,14 @@ export function evaluateWeightedDecision({mode,policy,electorate,ballots,now}){
   // Overall approval never substitutes for a required class approval.
   const passed=quorumMet&&approval.met&&classes.every(c=>c.met);
   const advisory=mode==="public-input";
+  let supportFloor=null;
+  if(policy.supportFloor){
+    const f=policy.supportFloor,people=participating.heads;
+    const participationMet=people>=BigInt(f.minimumParticipants);
+    const supportMet=people>0n&&totals.yes*BigInt(f.supportDenominator)>=participating.weight*BigInt(f.supportNumerator);
+    supportFloor={...f,participants:people.toString(),support:totals.yes.toString(),oppose:totals.no.toString(),neutral:totals.abstain.toString(),
+      status:!participationMet?"insufficient-participation":supportMet?"support-floor-met":"support-floor-not-met",advisory:true};
+  }
   const status=advisory?"advisory":now<policy.opensAt?"not-open":now<policy.closesAt?"open":passed?"passed":"failed";
   return {
     schemaVersion:2,weighting,status,passed:advisory?null:passed,
@@ -322,6 +361,8 @@ export function evaluateWeightedDecision({mode,policy,electorate,ballots,now}){
     classes:advisory?[]:classes,
     proxies:{counted:proxyCounted,supersededByDirect:proxySuperseded},
     exclusions:{...electorate.exclusions},
+    ...(tie&&!advisory?{tie}:{}),
+    ...(supportFloor?{supportFloor}:{}),
   };
 }
 
@@ -338,7 +379,10 @@ export function describeWeightedPolicy(policy){
   const classes=policy.classRequirements.map(r=>"Class "+r.class+": quorum "+r.quorum.numerator+"/"+r.quorum.denominator+
     " of class "+unitsWord+"; "+(r.approval.comparison==="gt"?"more than ":"at least ")+r.approval.numerator+"/"+r.approval.denominator+
     " of class "+denominator(r.approval));
-  return {quorum,approval,minYes:policy.minYes,classes,weighting:policy.weighting,
+  const tieRule=policy.tieRule==="fails"?"An exact yes/no tie fails":policy.tieRule==="casting-vote"?"An exact yes/no tie is decided by one recorded casting vote of the named presiding member; without it the tie fails":null;
+  const f=policy.supportFloor;
+  const supportFloor=f?"Advisory support floor: at least "+f.minimumParticipants+" participants and "+f.supportNumerator+"/"+f.supportDenominator+" in support":null;
+  return {quorum,approval,minYes:policy.minYes,classes,weighting:policy.weighting,tieRule,supportFloor,
     minimumDeliberationHours:policy.minimumDeliberationHours??0,challengeWindowHours:policy.challengeWindowMs/3600000};
 }
 

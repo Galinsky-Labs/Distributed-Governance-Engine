@@ -16,6 +16,7 @@ import {DocumentError} from "./document-store.mjs";
 import {freezeRosterSnapshot,allocationFits} from "./electorate-store.mjs";
 import {sectionAccess,targetPath} from "./section-grants.mjs";
 import {appendLedgerEvent} from "./ledger.mjs";
+import {deadlineInstant} from "../src/policy-lifecycle.mjs";
 
 const uuid = value => typeof value === "string" &&
   /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(value);
@@ -27,7 +28,7 @@ const managerialRoles=["owner","admin"];
 const allRoles=["owner","admin","editor","participant","viewer"];
 const choices=["yes","no","abstain"];
 export const CHALLENGE_CATEGORIES=Object.freeze(["eligibility","ballot-irregularity","procedure","conflict-of-interest","other"]);
-const WEIGHTED_OPTIONS=["electorate","weighting","challengeWindowHours","bundle"];
+const WEIGHTED_OPTIONS=["electorate","weighting","challengeWindowHours","bundle","deadline"];
 const iso=value=>new Date(value).toISOString();
 const isWeighted=row=>row.snapshot?.schemaVersion===2;
 // Closed decisions created before finality existed carry NULL, which is final.
@@ -88,7 +89,7 @@ const publicState = (row,ballots,clock,own) => {
   };
 };
 
-function weightedOptions(proposalId,{electorate,weighting,challengeWindowHours,bundle,policySettings}){
+function weightedOptions(proposalId,{electorate,weighting,challengeWindowHours,bundle,policySettings,deadline}){
   const source=electorate??{source:"membership"};
   check(source&&typeof source==="object"&&!Array.isArray(source),"INVALID_ELECTORATE");
   let spec;
@@ -113,7 +114,15 @@ function weightedOptions(proposalId,{electorate,weighting,challengeWindowHours,b
   try{settings=normalizeWeightedPolicySettings(policySettings,{weighting:weight});}
   catch{throw new DocumentError("INVALID_VOTE_POLICY",400);}
   check(settings.classRequirements.length===0||spec.source==="roster","INVALID_VOTE_POLICY");
-  return {electorate:spec,weighting:weight,challengeWindowHours:window,bundle:list,settings};
+  // DCE-010: a published local deadline in a named time zone resolves to one
+  // exact instant; nonexistent and ambiguous local times are refused.
+  let deadlineSpec=null;
+  if(deadline!==undefined){
+    check(deadline&&typeof deadline==="object"&&!Array.isArray(deadline)&&Object.keys(deadline).sort().join(",")==="date,time,timeZone","INVALID_DEADLINE");
+    let at;try{at=deadlineInstant(deadline);}catch{throw new DocumentError("INVALID_DEADLINE",400);}
+    deadlineSpec={date:deadline.date,time:deadline.time,timeZone:deadline.timeZone,at};
+  }
+  return {electorate:spec,weighting:weight,challengeWindowHours:window,bundle:list,settings,deadline:deadlineSpec};
 }
 
 /** Scoped governance ledger: exact-version votes with frozen electorates.
@@ -311,12 +320,17 @@ export function createDecisionStore({
     const certificateDigest=await recordCertificate(db,tenantId,row,"final",certificate,at);
     return {certificate,certificateDigest};
   }
+  async function castingVoteFor(db,tenantId,decisionId){
+    const r=(await db.query("SELECT principal_id,choice FROM dge_decisions.casting_votes WHERE tenant_id=$1 AND decision_id=$2",[tenantId,decisionId])).rows[0];
+    return r?{principalId:r.principal_id,choice:r.choice}:null;
+  }
   async function weightedState(db,row,clock,actor){
     const snapshot=weightedSnapshotOf(row);
     const direct=await rowsFor(db,row.tenant_id,row.id),proxies=await proxyRowsFor(db,row.tenant_id,row.id);
     const policy=snapshot.policy,closed=row.state==="closed",finality=finalityOf(row);
+    const castingVote=closed?null:await castingVoteFor(db,row.tenant_id,row.id);
     const evaluation=closed?row.certificate.outcome:evaluateWeightedDecision({mode:snapshot.mode,policy,
-      electorate:snapshot.electorate,ballots:weightedBallots(direct,proxies,new Date(clock)),now:clock});
+      electorate:snapshot.electorate,ballots:weightedBallots(direct,proxies,new Date(clock)),now:clock,castingVote});
     const member=snapshot.electorate.members.find(m=>m.principalId===actor.accountId);
     const my=direct.find(v=>v.account_id===actor.accountId);
     const held=(await db.query(
@@ -342,7 +356,9 @@ export function createDecisionStore({
         participating:Number(evaluation.overall.participatingHeads),participatingWeight:evaluation.overall.participatingWeight,
         eligible:snapshot.electorate.members.length,
         quorumMet:closed?evaluation.overall.quorum?.met??null:null,approvalMet:closed?evaluation.overall.approval?.met??null:null,
-        classes:closed?evaluation.classes:[],executed:false,canAdopt:false},
+        classes:closed?evaluation.classes:[],executed:false,canAdopt:false,
+        tie:evaluation.tie??null,supportFloor:evaluation.supportFloor??null},
+      castingPrincipal:policy.castingPrincipalId===actor.accountId,
       evaluation:closed?evaluation:null,
       mine:{choice:my?.choice??null,version:my?.version??0,eligible:Boolean(member),classes:member?.classes??null},
       proxies:held.map(g=>{
@@ -355,9 +371,9 @@ export function createDecisionStore({
     };
   }
   async function openWeighted(db,actor,{tenantId,documentId,proposalId,hours,commandId,options}){
-    const requestDigest=digest("decision-open-command-v2",{tenantId,documentId,proposalId,hours,actorId:actor.accountId,
+    const requestDigest=digest("decision-open-command-v2",{tenantId,documentId,proposalId,...(hours===undefined?{}:{hours}),actorId:actor.accountId,
       electorate:options.electorate,weighting:options.weighting,challengeWindowHours:options.challengeWindowHours,
-      bundle:options.bundle,policySettings:options.settings});
+      bundle:options.bundle,policySettings:options.settings,...(options.deadline?{deadline:options.deadline}:{})});
     const prior=(await db.query("SELECT * FROM dge_decisions.decisions WHERE tenant_id=$1 AND command_id=$2",[tenantId,commandId])).rows[0];
     if(prior){
       check(prior.request_digest===requestDigest,"COMMAND_REUSED",409);
@@ -396,6 +412,16 @@ export function createDecisionStore({
     check(members.length>0,"EMPTY_ELECTORATE",409);
     check(members.length<=maxElectors,"ELECTORATE_LIMIT_REACHED",429);
     const settings=options.settings;
+    // DCE-010: tie rules decide adoption votes; support floors describe
+    // advisory public input. Neither may be attached to the other mode.
+    check(!settings.supportFloor||source.current.mode==="public-input","SUPPORT_FLOOR_REQUIRES_PUBLIC_INPUT",400);
+    check(!settings.tieRule||source.current.mode==="collaboration","TIE_RULE_REQUIRES_COLLABORATION",400);
+    if(settings.castingPrincipalId){
+      check(uuid(settings.castingPrincipalId),"INVALID_VOTE_POLICY");
+      const presiding=(await db.query("SELECT 1 FROM dge_identity.memberships WHERE tenant_id=$1 AND account_id=$2 AND active=true AND role IN ('owner','admin','editor','participant')",
+        [tenantId,settings.castingPrincipalId])).rows[0];
+      check(presiding,"CASTING_PRINCIPAL_NOT_A_MEMBER",400);
+    }
     const eligibleWeight=options.weighting==="equal"?BigInt(members.length):
       members.reduce((sum,m)=>sum+Object.values(m.classes).reduce((s,v)=>s+BigInt(v),0n),0n);
     check(BigInt(settings.minYes)<=eligibleWeight&&
@@ -404,8 +430,9 @@ export function createDecisionStore({
       settings.classRequirements.every(r=>members.some(m=>Object.hasOwn(m.classes,r.class))),"UNATTAINABLE_VOTE_POLICY",400);
     const publishedAt=Math.max(...proposals.map(p=>new Date(p.created_at).getTime()));
     check(Number.isSafeInteger(publishedAt)&&publishedAt>=0,"PROPOSAL_INTEGRITY_ERROR",503);
-    const opensMs=Math.max(at.getTime(),publishedAt+settings.minimumDeliberationHours*3600000),closeMs=opensMs+hours*3600000;
-    check(Number.isSafeInteger(closeMs),"INVALID_VOTE_WINDOW");
+    const opensMs=Math.max(at.getTime(),publishedAt+settings.minimumDeliberationHours*3600000);
+    const closeMs=options.deadline?options.deadline.at:opensMs+hours*3600000;
+    check(Number.isSafeInteger(closeMs)&&closeMs>=opensMs+3600000&&closeMs<=opensMs+720*3600000,"INVALID_VOTE_WINDOW");
     let snapshot;
     try{
       snapshot=createWeightedSnapshot({id:decisionId,tenantId,documentId,mode:source.current.mode,createdAt:at.getTime(),
@@ -414,7 +441,9 @@ export function createDecisionStore({
         policy:{id:"policy-"+decisionId,weighting:options.weighting,opensAt:opensMs,closesAt:closeMs,
           minYes:settings.minYes,quorum:settings.quorum,approval:settings.approval,classRequirements:settings.classRequirements,
           challengeWindowMs:options.challengeWindowHours*3600000,
-          minimumDeliberationHours:settings.minimumDeliberationHours,proposalPublishedAt:publishedAt}});
+          minimumDeliberationHours:settings.minimumDeliberationHours,proposalPublishedAt:publishedAt,
+          ...(settings.tieRule?{tieRule:settings.tieRule}:{}),...(settings.castingPrincipalId?{castingPrincipalId:settings.castingPrincipalId}:{}),
+          ...(settings.supportFloor?{supportFloor:settings.supportFloor}:{})}});
     }catch{throw new DocumentError("UNATTAINABLE_VOTE_POLICY",400);}
     await db.query(
       "INSERT INTO dge_decisions.decisions(tenant_id,id,document_id,proposal_id,base_version,snapshot,snapshot_digest,created_by,created_at,closes_at,command_id,request_digest) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
@@ -488,7 +517,7 @@ export function createDecisionStore({
     check(at.getTime()>=snapshot.policy.closesAt,"VOTE_STILL_OPEN",409);
     const direct=await rowsFor(db,tenantId,row.id),proxies=await proxyRowsFor(db,tenantId,row.id);
     const outcome=evaluateWeightedDecision({mode:snapshot.mode,policy:snapshot.policy,electorate:snapshot.electorate,
-      ballots:weightedBallots(direct,proxies,at),now:at.getTime()});
+      ballots:weightedBallots(direct,proxies,at),now:at.getTime(),castingVote:await castingVoteFor(db,tenantId,row.id)});
     const revoked=proxies.filter(p=>p.revoked_at!==null&&new Date(p.revoked_at)<=at).length;
     const source=(await db.query("SELECT version FROM dge_documents.documents WHERE tenant_id=$1 AND id=$2",[tenantId,row.document_id])).rows[0];
     check(source,"DOCUMENT_NOT_FOUND",404);
@@ -535,9 +564,9 @@ export function createDecisionStore({
   return Object.freeze({
     async open(credentials,tenantId,documentId,proposalId,{hours,commandId,policySettings,...extra}) {
       ids(tenantId,documentId,proposalId);
-      check(uuid(commandId)&&Number.isSafeInteger(hours)&&hours>=1&&hours<=720,"INVALID_VOTE_WINDOW");
+      check(uuid(commandId)&&(extra.deadline!==undefined?hours===undefined:Number.isSafeInteger(hours)&&hours>=1&&hours<=720),"INVALID_VOTE_WINDOW");
       check(Object.keys(extra).every(key=>WEIGHTED_OPTIONS.includes(key)),"INVALID_DECISION_OPTIONS");
-      const weighted=WEIGHTED_OPTIONS.some(key=>extra[key]!==undefined)||policySettings?.classRequirements!==undefined;
+      const weighted=WEIGHTED_OPTIONS.some(key=>extra[key]!==undefined)||["classRequirements","tieRule","supportFloor"].some(key=>policySettings?.[key]!==undefined);
       if(weighted){
         const options=weightedOptions(proposalId,{...extra,policySettings});
         return identity.withTenant(credentials,tenantId,{roles:managerialRoles,write:true,recent:true},(db,actor)=>
@@ -668,6 +697,36 @@ export function createDecisionStore({
         };
         await activity(db,tenantId,row,actor.accountId,commandId,requestDigest,result,"ballot",at);
         return result;
+      });
+    },
+    /**
+     * DCE-010: the presiding principal named in the frozen policy records one
+     * casting vote, only after voting ends, only on an exact yes/no tie and
+     * before closure. It is immutable once written.
+     */
+    async castingVote(credentials,tenantId,documentId,proposalId,{choice,commandId}){
+      ids(tenantId,documentId,proposalId);
+      check(uuid(commandId)&&["yes","no"].includes(choice),"INVALID_CASTING_VOTE");
+      return scoped(credentials,tenantId,allRoles,true,async(db,actor)=>{
+        const row=await decision(db,tenantId,documentId,proposalId,true);
+        check(isWeighted(row),"NO_TIE_RULE",409);
+        const snapshot=weightedSnapshotOf(row),policy=snapshot.policy,at=new Date(now());
+        check(policy.tieRule==="casting-vote","NO_TIE_RULE",409);
+        check(policy.castingPrincipalId===actor.accountId,"NOT_CASTING_PRINCIPAL",403);
+        const prior=(await db.query("SELECT principal_id,choice,command_id FROM dge_decisions.casting_votes WHERE tenant_id=$1 AND decision_id=$2",[tenantId,row.id])).rows[0];
+        if(prior){
+          check(prior.command_id===commandId&&prior.choice===choice,"CASTING_VOTE_ALREADY_RECORDED",409);
+          return {recorded:true,choice:prior.choice};
+        }
+        check(row.state==="open","VOTE_CLOSED",409);
+        check(at.getTime()>=policy.closesAt,"VOTE_STILL_OPEN",409);
+        const direct=await rowsFor(db,tenantId,row.id),proxies=await proxyRowsFor(db,tenantId,row.id);
+        const tally=evaluateWeightedDecision({mode:snapshot.mode,policy,electorate:snapshot.electorate,ballots:weightedBallots(direct,proxies,at),now:at.getTime()});
+        check(tally.tie?.reason==="casting-vote-missing","NOT_A_TIE",409);
+        await db.query("INSERT INTO dge_decisions.casting_votes(tenant_id,decision_id,principal_id,choice,command_id,recorded_at) VALUES($1,$2,$3,$4,$5,$6)",
+          [tenantId,row.id,actor.accountId,choice,commandId,at]);
+        await activity(db,tenantId,row,actor.accountId,commandId,digest("decision-casting-vote-v1",{decisionId:row.id,choice}),{choice},"casting-vote",at);
+        return {recorded:true,choice};
       });
     },
     async close(credentials,tenantId,documentId,proposalId) {

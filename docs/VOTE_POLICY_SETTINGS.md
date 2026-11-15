@@ -85,6 +85,25 @@ The document store now enforces the last rule: `freezeForInput` returns
 `409 VOTE_IN_PROGRESS` while a decision on the document is open or a passed
 decision is still provisional inside its challenge window.
 
-Not yet done: tie rules and open-public support floors are not yet selectable
-through the decision HTTP API or stored in decision snapshots; open-public
-electorates still have no server-side intake path. No schema change was made.
+### Through the decision API
+
+`POST …/decision` accepts, inside `policySettings` (frozen into the weighted
+snapshot and its policy digest):
+
+- `tieRule: "fails"` — an exact yes/no tie fails even under an at-least rule.
+- `tieRule: "casting-vote"` with `castingPrincipalId` (an active member) —
+  after voting ends and before closure, that member alone may
+  `POST …/decision/casting-vote {choice:"yes"|"no", commandId}` once, only
+  on an exact tie. Without it, the tie fails closed. Migration 030 stores it
+  append-only. Collaboration mode only.
+- `supportFloor: {minimumParticipants, supportNumerator, supportDenominator}` —
+  public-input decisions only. The certificate reports
+  `support-floor-met | support-floor-not-met | insufficient-participation`
+  and is always advisory (`canAdopt:false`).
+
+`deadline: {date, time, timeZone}` may replace `hours`: the published local
+deadline resolves to one exact closing instant (1–720 hours after opening).
+
+Not yet done: verified-person open-public intake (outside a workspace) does
+not exist; open-public participation still requires workspace membership or
+a verified-person cohort roster.

@@ -305,7 +305,8 @@
       "contributingPrs": [
         43,
         66,
-        69
+        69,
+        70
       ]
     },
     {
@@ -1016,7 +1017,8 @@
       "implementationStatus": "partial",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
-        69
+        69,
+        71
       ]
     },
     {

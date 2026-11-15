@@ -52,3 +52,41 @@ GET /healthz checks process liveness. GET /readyz checks the configured runtime 
 - Membership currently verifies authenticated accounts, **not necessarily unique natural persons**. Corporate share-weighted electorates, delegated proxies and voter identity qualifications remain separate release gates.
 
 The CI release Quill-Governance-Engine.tgz is the actual source+compiled runtime **candidate**, not a hosted service URL. Audit and pin the container base image digest before production release. Rehearse schema upgrades and backups; reverting the container alone cannot reverse database migrations.
+
+## Backups and restore drills (DCE-035)
+
+Backups are the managed PostgreSQL provider's point-in-time history (Neon
+branch restore on the free plan keeps a limited window; check the project's
+history retention before relying on it). No customer data is copied into this
+repository or into CI artifacts.
+
+Drill, without touching the production database's data:
+
+1. Capture a content-free manifest of production with a read-only role:
+   `SOURCE_DATABASE_URL=… node scripts/restore-drill.mjs manifest > source.json`.
+   It holds row counts and SHA-256 digests of row encodings for revisions,
+   ballots, decisions, certificates, signature records, ledger state, keys and
+   every anchor outbox (`server/restore-reconcile.mjs`), plus invariant counts.
+2. Create a restore branch at the same instant (Neon: create a branch from the
+   production branch with `parent_timestamp`), with its own endpoint.
+3. `RESTORED_DATABASE_URL=… node scripts/restore-drill.mjs compare source.json`.
+   Exit 0 means every table matched and every invariant holds (head equals the
+   latest version, version chain linked, ballots reference decisions, closed
+   decisions carry receipts, ledger head equals entries). Exit 2 lists only
+   table names, invariant names and counts.
+4. Point a staging service at the restored branch through
+   `MIGRATION_DATABASE_URL`; the release step re-applies checksummed
+   migrations (none should be pending) and rotates the runtime password. The
+   service must report `/readyz` 200 and `/healthz` with the exact deployed
+   commit in `release` before the drill is recorded.
+5. Delete the drill branch. Record the date, commit, both manifests' digests
+   and the outcome in the operations log.
+
+Secret rotation: set a new `RUNTIME_DATABASE_PASSWORD` and redeploy; the
+release step alters the runtime role's password before serving. Rotating
+`SESSION_KEY` signs every session out. `LOG_SIGNING_KEY` rotation needs a new
+witness/checkpoint key announcement and is not automated.
+
+Not yet done: queue failover and key-recovery drills, encrypted object storage
+and an actual recorded production restore drill. Operational acceptance is
+not claimed.

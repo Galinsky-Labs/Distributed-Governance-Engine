@@ -2,7 +2,7 @@
 
 Reusable legal-document drafting, proposal, deliberation and governance engine.
 
-**Status (2026-11): 25 of 39 roadmap units are implemented in source with tests; 14 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
+**Status (2026-11): 26 of 39 roadmap units are implemented in source with tests; 13 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
 
 Implemented in source:
 - Workspaces and public documents with version history and restore.
@@ -19,13 +19,14 @@ Implemented in source:
 Partial units:
 - Identity assurance (DCE-002).
 - Private E2EE activation and review (003).
-- Editor acceptance (006–009).
-- Realtime (015, 016).
-- Accessibility (033): automated axe audit only, with no manual screen-reader record.
+- Numbering, references and realtime editing (006–008).
+- Proposal anchors (009): relative realtime anchors and move operations are still open.
+- Claims and point ranking (015, 016): quote evidence and reputation are still open.
+- Accessibility (033): automated axe and real-Chrome checks only, with no manual screen-reader record.
 - Operations (035): restore-drill tooling exists, but no drill has been recorded.
-- Security review (036).
-- The extension SDK (038): a versioned manifest contract exists, but there is no OpenAPI document yet.
-- The production release package (039).
+- Security review (036): AI-assisted notes, a supply-chain gate and an SBOM exist; there has been no independent review.
+- The extension SDK (038): a versioned contract and a generated OpenAPI document exist, but field-level schemas and a published package do not.
+- The production release package (039): see docs/RELEASE_CANDIDATE.md.
 
 - [Architecture, product differences and editor features](docs/ARCHITECTURE.md)
 - [Development plan](docs/DEVELOPMENT_PLAN.md) and [canonical PR registry](registry/prs.json)
@@ -38,7 +39,8 @@ Partial units:
 - [Exact text proposals](docs/TEXT_PROPOSALS.md) and [structured discussion/rating](docs/STRUCTURED_DISCUSSION.md)
 - [Live deployment verification](docs/LIVE_VERIFICATION.md), [federation](docs/FEDERATION.md), [scale measurements](docs/SCALE.md)
 - Feature references: [electorates](docs/ELECTORATES.md), [editions](docs/EDITIONS.md), [signatures](docs/SIGNATURES.md), [settings](docs/SETTINGS.md), [entitlements](docs/ENTITLEMENTS.md), [payments](docs/PAYMENTS.md), [search](docs/SEARCH.md), [notifications](docs/NOTIFICATIONS.md), [localization](docs/LOCALIZATION.md), [moderation](docs/MODERATION.md), [clause permissions](docs/CLAUSE_PERMISSIONS.md), [private workspaces](docs/INTEGRATION-private.md)
-- [Extension SDK and compatibility](docs/EXTENSION_SDK.md), [policy lifecycle helpers](docs/VOTE_POLICY_SETTINGS.md)
+- [Extension SDK and compatibility](docs/EXTENSION_SDK.md), [OpenAPI](docs/sdk/openapi.json), [policy lifecycle helpers](docs/VOTE_POLICY_SETTINGS.md)
+- [AI-assisted source review notes](docs/AI_SOURCE_REVIEW.md), [release-candidate checklist](docs/RELEASE_CANDIDATE.md), [SBOM](security/sbom.cdx.json)
 - [Repository agent instructions](AGENTS.md)
 
 Requires Node 24.19.0 (tested). Install the exact lockfile before running the editor and tests.

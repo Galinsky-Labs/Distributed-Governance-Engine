@@ -300,13 +300,14 @@
         "Boundary tables for strict majority vs at-least supermajority, abstentions, empty electorate, timezone cutoffs and all mode mutation paths."
       ],
       "specification": "docs/prs/DCE-010.md",
-      "implementationStatus": "partial",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         43,
         66,
         69,
-        70
+        70,
+        74
       ]
     },
     {
@@ -1020,7 +1021,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         69,
-        71
+        71,
+        74
       ]
     },
     {

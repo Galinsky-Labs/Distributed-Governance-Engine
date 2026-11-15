@@ -38,6 +38,7 @@ import { createModerationRoutes, moderationBodyLimit } from "./moderation-http.m
 import { createPasskeySignin, passkeySigninBodyLimit } from "./passkey-signin.mjs";
 import { createAccountHandler } from "./account-http.mjs";
 import { createEngineApplication } from "./application.mjs";
+import { validateManifest, assertProfile, boundServices } from "../src/extension-sdk.mjs";
 import { createPrivateWorkspaceServices } from "./private-workspace.mjs";
 
 const EXTENSION_ID = /^[a-z][a-z0-9-]{1,40}$/;
@@ -55,6 +56,10 @@ export function validateExtension(extension) {
     if (!/^[0-9]{3}-[a-z0-9-]+\.sql$/.test(m.name ?? "") || typeof m.sql !== "string")
       throw Error("Invalid extension migration");
   if (extension.createRoutes !== undefined && typeof extension.createRoutes !== "function") throw Error("Invalid extension routes");
+  if (extension.createWorkers !== undefined && typeof extension.createWorkers !== "function") throw Error("Invalid extension workers");
+  // DCE-038: a manifest pins the contract range and bounds the services the
+  // extension receives. Extensions without one are contract 1.0.0 consumers.
+  if (extension.manifest !== undefined) validateManifest(extension.manifest);
   return extension;
 }
 
@@ -105,7 +110,10 @@ export function createPlatform({
   privateWorkspaces = false, privateLimits = {}, passkeySignin = false,
 }) {
   if (typeof privateWorkspaces !== "boolean") throw Error("Invalid private workspace setting");
-  for (const extension of extensions) validateExtension(extension);
+  for (const extension of extensions) {
+    validateExtension(extension);
+    if (extension.manifest) assertProfile(extension.manifest, product);
+  }
   const settings = createSettingsStore({ identity, transaction, product, clock });
   const entitlements = createEntitlementStore({ identity, transaction, settings, clock });
   const billing = createBillingStore({ identity, transaction, settings, entitlements, origin, clock, providers: paymentProviders.filter(Boolean) });
@@ -172,8 +180,9 @@ export function createPlatform({
     workers.push({ name: "notifications", intervalMs: 30000, tick: () => notificationWorker.tick() });
   }
   for (const extension of extensions) {
-    for (const set of extension.createRoutes?.(services) ?? []) routeSets.unshift(set);
-    for (const worker of extension.createWorkers?.(services) ?? []) workers.push(worker);
+    const granted = extension.manifest ? boundServices(services, extension.manifest) : services;
+    for (const set of extension.createRoutes?.(granted) ?? []) routeSets.unshift(set);
+    for (const worker of extension.createWorkers?.(granted) ?? []) workers.push(worker);
   }
   // Platform routes are matched before account management, in a stable order.
   const accounts = createAccountHandler({ store: identity, login: login ?? signin.login, origin, ...(budget ? { budget } : {}), extensions: routeSets.map((s) => s.routes) });

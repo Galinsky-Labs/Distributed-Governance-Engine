@@ -1,0 +1,23 @@
+{
+  "contract": "dge-ledger-events",
+  "contractVersion": "1.1.0",
+  "note": "Every kind the engine sequences into its transparency log. Payloads are digests only; no document content, ballots or identities. Adding a kind is a minor contract change; removing or renaming one is major. tests/extension-sdk.test.mjs fails if source and this file drift.",
+  "events": [
+    {"kind": "document-version", "source": "dge_documents.anchor_outbox", "scope": "public", "finalization": false, "subject": "document id"},
+    {"kind": "proposal", "source": "dge_proposals.anchor_outbox", "scope": "public", "finalization": false, "subject": "document id"},
+    {"kind": "discussion-event", "source": "dge_discussion.anchor_outbox", "scope": "public", "finalization": false, "subject": "document id"},
+    {"kind": "decision-event", "source": "dge_decisions.anchor_outbox", "scope": "public", "finalization": false, "subject": "decision id"},
+    {"kind": "decision-certificate", "source": "dge_ledger.outbox", "scope": "public", "finalization": true, "subject": "decision id"},
+    {"kind": "decision-provisional", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "decision id"},
+    {"kind": "decision-void", "source": "dge_ledger.outbox", "scope": "public", "finalization": true, "subject": "decision id"},
+    {"kind": "decision-challenge-resolution", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "decision id"},
+    {"kind": "moderation-action", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "moderated target id"},
+    {"kind": "final-edition", "source": "dge_ledger.outbox", "scope": "public", "finalization": true, "subject": "document id"},
+    {"kind": "signature-manifest", "source": "dge_ledger.outbox", "scope": "public", "finalization": true, "subject": "edition id"},
+    {"kind": "federated-authority", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "document id"},
+    {"kind": "federated-decision", "source": "dge_ledger.outbox", "scope": "public", "finalization": true, "subject": "decision id"},
+    {"kind": "federated-key-binding", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "decision id"},
+    {"kind": "federated-ballot", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "decision id"},
+    {"kind": "federated-rejection", "source": "dge_ledger.outbox", "scope": "public", "finalization": false, "subject": "decision id"}
+  ]
+}

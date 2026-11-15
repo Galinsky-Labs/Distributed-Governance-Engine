@@ -27,6 +27,8 @@ const view = (row, currentVersion) => {
     createdAt: new Date(row.created_at).toISOString(),
     stale: row.base_version !== currentVersion,
     anchorStatus: "pending",
+    revisionOf: row.revision_of ?? null,
+    revisedBy: row.revised_by ?? null,
     // A moderated proposal keeps its place and digest; only its wording is
     // replaced by a visible placeholder. Nothing is deleted.
     ...(row.moderation_hidden
@@ -37,7 +39,9 @@ const view = (row, currentVersion) => {
   };
 };
 const MODERATED_PROPOSALS =
-  "SELECT p.*,v.hidden AS moderation_hidden,v.reason_category AS moderation_reason FROM dge_proposals.proposals p LEFT JOIN dge_moderation.visibility v ON v.tenant_id=p.tenant_id AND v.target_kind='proposal' AND v.target_id=p.id";
+  "SELECT p.*,v.hidden AS moderation_hidden,v.reason_category AS moderation_reason,r1.revises AS revision_of,r2.proposal_id AS revised_by FROM dge_proposals.proposals p LEFT JOIN dge_moderation.visibility v ON v.tenant_id=p.tenant_id AND v.target_kind='proposal' AND v.target_id=p.id" +
+  " LEFT JOIN dge_proposals.revisions r1 ON r1.tenant_id=p.tenant_id AND r1.document_id=p.document_id AND r1.proposal_id=p.id" +
+  " LEFT JOIN dge_proposals.revisions r2 ON r2.tenant_id=p.tenant_id AND r2.document_id=p.document_id AND r2.revises=p.id";
 /** First public-content adapter: creation is restricted to workspace contributors. */
 export function createProposalStore({
   identity,
@@ -76,10 +80,10 @@ export function createProposalStore({
       credentials,
       tenantId,
       documentId,
-      { baseVersion, selection, replacement, rationale, commandId, disclosure },
+      { baseVersion, selection, replacement, rationale, commandId, disclosure, revises = null },
     ) {
       requireValue(
-        uuid(tenantId) && uuid(documentId) && uuid(commandId),
+        uuid(tenantId) && uuid(documentId) && uuid(commandId) && (revises === null || uuid(revises)),
         "INVALID_PROPOSAL_CONTEXT",
       );
       requireValue(
@@ -107,6 +111,7 @@ export function createProposalStore({
               replacement,
               rationale,
               disclosure,
+              ...(revises === null ? {} : { revises }),
             });
           } catch {
             throw new DocumentError("INVALID_PROPOSAL_INPUT");
@@ -139,6 +144,31 @@ export function createProposalStore({
             )
           ).rows[0];
           requireValue(base, "VERSION_NOT_FOUND", 404);
+          // DCE-009: a revision is new wording by the same author. The prior
+          // proposal stays immutable and its ballots never carry over.
+          if (revises !== null) {
+            const original = (
+              await db.query(
+                "SELECT actor_id FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
+                [tenantId, documentId, revises],
+              )
+            ).rows[0];
+            requireValue(original, "PROPOSAL_NOT_FOUND", 404);
+            requireValue(original.actor_id === actor.accountId, "ONLY_AUTHOR_MAY_REVISE", 403);
+            requireValue(
+              !(await db.query("SELECT 1 FROM dge_proposals.revisions WHERE tenant_id=$1 AND document_id=$2 AND revises=$3", [tenantId, documentId, revises])).rows.length,
+              "PROPOSAL_ALREADY_REVISED",
+              409,
+            );
+            requireValue(
+              !(await db.query(
+                "SELECT 1 FROM dge_decisions.decisions WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 AND (state='open' OR finality='provisional')",
+                [tenantId, documentId, revises],
+              )).rows.length,
+              "VOTE_IN_PROGRESS",
+              409,
+            );
+          }
           requireValue(
             legalDocumentDigest(base.document) === base.digest,
             "DOCUMENT_INTEGRITY_ERROR",
@@ -206,6 +236,11 @@ export function createProposalStore({
               requestDigest,
             ],
           );
+          if (revises !== null)
+            await db.query(
+              "INSERT INTO dge_proposals.revisions(tenant_id,document_id,proposal_id,revises,created_at) VALUES($1,$2,$3,$4,$5)",
+              [tenantId, documentId, proposal.id, revises, at],
+            );
           await db.query(
             "INSERT INTO dge_proposals.anchor_outbox(tenant_id,document_id,proposal_id,event_digest,created_at) VALUES($1,$2,$3,$4,$5)",
             [
@@ -218,6 +253,7 @@ export function createProposalStore({
                 proposalDigest: value,
                 baseVersion,
                 createdAt: at.toISOString(),
+                ...(revises === null ? {} : { revises }),
               }),
               at,
             ],
@@ -228,6 +264,8 @@ export function createProposalStore({
               digest: value,
               base_version: baseVersion,
               created_at: at,
+              revision_of: revises,
+              revised_by: null,
             },
             current.version,
           );

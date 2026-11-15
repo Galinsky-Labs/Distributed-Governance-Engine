@@ -388,6 +388,7 @@ export function createDecisionStore({
       const p=(await db.query("SELECT id,base_version,proposal,digest,created_at FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
         [tenantId,documentId,id])).rows[0];
       check(p,"PROPOSAL_NOT_FOUND",404);
+      check(!(await db.query("SELECT 1 FROM dge_proposals.revisions WHERE tenant_id=$1 AND document_id=$2 AND revises=$3",[tenantId,documentId,id])).rows.length,"PROPOSAL_SUPERSEDED",409);
       check(textProposalDigest(p.proposal)===p.digest,"PROPOSAL_INTEGRITY_ERROR",503);
       check(p.base_version===source.version,"STALE_SOURCE_VERSION",409);
       proposals.push(p);
@@ -591,6 +592,7 @@ export function createDecisionStore({
           "SELECT base_version,proposal,digest,created_at FROM dge_proposals.proposals WHERE tenant_id=$1 AND document_id=$2 AND id=$3",
           [tenantId,documentId,proposalId])).rows[0];
         check(proposal,"PROPOSAL_NOT_FOUND",404);
+        check(!(await db.query("SELECT 1 FROM dge_proposals.revisions WHERE tenant_id=$1 AND document_id=$2 AND revises=$3",[tenantId,documentId,proposalId])).rows.length,"PROPOSAL_SUPERSEDED",409);
         check(textProposalDigest(proposal.proposal)===proposal.digest,"PROPOSAL_INTEGRITY_ERROR",503);
         check(source.version===proposal.base_version,"STALE_SOURCE_VERSION",409);
         check(!await proposalsInUse(db,tenantId,documentId,[proposalId]),"DECISION_ALREADY_EXISTS",409);

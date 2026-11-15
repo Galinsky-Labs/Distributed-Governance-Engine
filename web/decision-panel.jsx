@@ -139,7 +139,7 @@ export function DecisionPanel({tenantId,documentId,proposalId,role}){
     }catch(error){setError(statusText(error));}
   }
   if(!tenantId||!proposalId)return null;
-  return <section className="decision-panel" aria-label="Proposal decision">
+  return <section className="decision-panel" aria-label="Proposal decision" data-tour="ballot">
     <div className="decision-heading"><div><p className="eyebrow">GOVERNANCE / VOTING</p><h3>Decision record</h3></div><button onClick={()=>{pending.current=null;setRevision(r=>r+1)}} disabled={loading||busy}>Refresh</button></div>
     {loading&&<p role="status">Loading authenticated decision record…</p>}
     {!!error&&<p role="alert" className="decision-error">{error}</p>}

@@ -95,7 +95,7 @@ export function AdminConsole({target,api=createAccountAPI()}){
   if(!state)return <section className="admin-console" aria-label="Settings">{error?<p role="alert">{error}</p>:<p role="status">Loading settings…</p>}</section>;
   const editable=new Set(state.editableKeys);
   const groups=[...new Set(SETTINGS_REGISTRY.map(d=>d.group))];
-  return <section className="admin-console" aria-label={SCOPE_TITLES[target.scope]}>
+  return <section className="admin-console" aria-label={SCOPE_TITLES[target.scope]} data-tour="admin">
     <header><p className="eyebrow">ADMINISTRATION</p><h2>{SCOPE_TITLES[target.scope]}{target.scope==="product"?" — "+target.product:""}</h2>
       <p className="small">Version {state.version}{state.role?" · Your role: "+state.role:""}{editable.size?"":" · Read only"}</p>
       {state.activeVote&&<p role="status">A vote is open on this document. Its frozen rules cannot change; vote-rule settings are locked here.</p>}</header>

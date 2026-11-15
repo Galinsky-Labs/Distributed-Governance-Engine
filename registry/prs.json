@@ -831,12 +831,13 @@
         "Browser flows for first-time mobile/desktop, Escape/focus return, zoom, reduced motion, missing target, persisted step and feedback-mode explanations."
       ],
       "specification": "docs/prs/DCE-031.md",
-      "implementationStatus": "partial",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         45,
         47,
-        69
+        69,
+        79
       ]
     },
     {

@@ -155,7 +155,7 @@ export function SignaturePanel({tenantId,editionId,editionKind="final",api=defau
     });
   }
   if(!tenantId||!editionId)return null;
-  return <section className="signature-panel" aria-label="Sign this edition">
+  return <section className="signature-panel" aria-label="Sign this edition" data-tour="signatures">
     <p className="eyebrow">FROZEN EDITION · SIGNATURES</p>
     {!!error&&<p role="alert">{error}</p>}
     {!!notice&&<p role="status">{notice}</p>}

@@ -7,6 +7,7 @@ import { App } from "./app.jsx";
 import { GovernanceHome } from "./governance-home.jsx";
 import { I18nProvider, browserLocale } from "./i18n-react.mjs";
 import { LanguagePicker } from "./language-picker.jsx";
+import { Walkthrough } from "./walkthrough.jsx";
 import "./console.css";
 
 const LOCALE_KEY = "quill.locale";
@@ -53,6 +54,7 @@ function ConsoleNavigation({ pages, current, product, locale, onLocale }) {
 export function ConsolePage({ page, pages, product }) {
   const Component = page.Component;
   const [locale, setLocale] = React.useState(() => browserLocale(storedLocale()));
+  const [tour, setTour] = React.useState(false);
   const changeLocale = (next) => { setLocale(next); try { localStorage.setItem(LOCALE_KEY, next); } catch {} };
   React.useEffect(() => { document.title = page.title + " — " + (product === "charter" ? "CharterQuill" : "CivicQuill"); }, [page, product]);
   return (
@@ -61,9 +63,11 @@ export function ConsolePage({ page, pages, product }) {
       <ConsoleNavigation pages={pages} current={page.path} product={product} locale={locale} onLocale={changeLocale} />
       <main className="console-body" id="main">
         <h1 className="console-title">{page.title}</h1>
+        <button type="button" className="console-tour" onClick={() => setTour(true)}>Take a tour</button>
         {page.description && <p className="console-description">{page.description}</p>}
         <Component product={product} />
       </main>
+      {tour && <Walkthrough id={"page:" + page.path} onClose={() => setTour(false)} />}
     </div>
     </I18nProvider>
   );

@@ -29,3 +29,16 @@ The author explicitly publishes the proposed wording and rationale. Public respo
 Use Find next or highlight body text, then Suggest replacement. Pending draft saves must complete first so the proposal names the correct saved version. The panel shows before/after, rationale and disclosure before publishing. A lost response retains the same command for safe retry. Source edits, permission errors and rejected selections preserve the user's draft fields. The proposal draft is in memory; closing/reloading can discard unsent text. Published suggestions reopen from the public directory. The tour adds balloons for real saved-document, suggestion and history controls when present.
 
 Tests cover Unicode, text marks, reference boundaries, ambiguous/stale/deleted targets, exact quotes/context, insert/delete, wrong tenant/role/removal, unchanged public-input source, replay, quotas, immutable row permissions, hidden author IDs and malformed input. Real Chrome exercises source selection, suggestion publication, unchanged fixed text and anonymous suggestion discovery. PostgreSQL CI adds duplicate-command and membership-removal races using separate connections. Desktop/mobile screenshots are inspected. Remaining DCE-009 scope and production acceptance stay pending; no unit-completion or independent-review claim is made.
+
+## Proposal revisions (DCE-009 increment)
+
+`POST …/proposals` accepts an optional `revises` (the prior proposal ID). Only
+the prior proposal's author may revise it, once (history is linear), and never
+while it is under an open vote or a provisional decision
+(`409 VOTE_IN_PROGRESS`). The prior wording stays immutable. Public reads show
+`revisionOf` and `revisedBy`. A superseded proposal cannot be put to a vote
+(`409 PROPOSAL_SUPERSEDED`), and ballots never carry over: the new wording
+needs its own decision. Migration 031 adds the append-only revision links.
+
+Still not done: positions that track concurrent realtime edits (relative
+anchors) and move operations.

@@ -21,8 +21,9 @@ export function createProposalRoutes({ proposals }) {
             "rationale",
             "commandId",
             "disclosure",
+            "revises",
           ],
-          undefined,
+          ["baseVersion", "selection", "replacement", "rationale", "commandId", "disclosure"],
           PROPOSAL_BODY_LIMIT,
         );
         return await proposals.create(

@@ -970,7 +970,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         53,
-        69
+        69,
+        77
       ]
     },
     {
@@ -1049,7 +1050,8 @@
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         51,
-        69
+        69,
+        77
       ]
     }
   ],

@@ -212,8 +212,12 @@ export function appendTable(rows=2,columns=2) {return (state,dispatch)=>{
  if(!Number.isInteger(rows)||!Number.isInteger(columns)||rows<1||rows>20||columns<1||columns>10)return false;
  if(dispatch){const children=Array.from({length:rows},()=>editorSchema.nodes.table_row.createChecked({id:newId()},Array.from({length:columns},()=>editorSchema.nodes.table_cell.createChecked({id:newId()},editorSchema.nodes.paragraph.create({id:newId()})))));const table=editorSchema.nodes.table.createChecked({id:newId()},children);const position=state.doc.content.size,tr=state.tr.insert(position,table);tr.setSelection(TextSelection.near(tr.doc.resolve(position+3),1));dispatch(tr.scrollIntoView());}return true;
 };}
-function cleanPastedHTML(html,domDocument) {
- const container=domDocument.createElement('div');container.innerHTML=html;
+export function cleanPastedHTML(html,domDocument) {
+ // DCE-036: parse pasted markup in an inert document. A div owned by the live
+ // document starts fetching <img src> during innerHTML parsing, so inline
+ // handlers such as onerror could run before sanitization.
+ const inert=domDocument.implementation.createHTMLDocument('');
+ const container=inert.createElement('div');container.innerHTML=html;
  for(const node of container.querySelectorAll('script,style,iframe,object,embed,svg,math,template,link,meta'))node.remove();
  return container;
 }

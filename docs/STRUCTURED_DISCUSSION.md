@@ -36,3 +36,16 @@ Migration 006 adds scoped immutable points, public score/order projections, priv
 Focused tests cover typed graph bounds, same-proposal parents, evidence validation, author privacy, self-votes, up/down/withdraw conservation, replay, stale vote versions, live pagination, removal/roles, budget rollback and request protections. Real Chrome covers two OIDC users, support/opposition, a typed counterclaim, all rating changes, self-vote controls, anonymous read-only discovery and unchanged public-input text. Desktop/mobile layouts are inspected. A delayed-read browser regression also verifies that background document/suggestion loading cannot disable active draft fields or drop typed characters; background loading and publication now have separate UI state. Networked PostgreSQL CI races duplicate and conflicting votes on separate connections and verifies counters against stored votes.
 
 These are partial DCE-015/016 contributions. Open-public contribution policy, editable point history, duplicate merging, reputation, moderation/appeals, abuse/personhood controls, decision ballots/adoption, private content and production acceptance remain incomplete. All chain work is pending; no blockchain receipt, full unit acceptance or independent security review is implied.
+
+## Confidence ranking and anti-ring bound (DCE-016 increment)
+
+- `sort=confidence` orders points by the lower bound of the 95% Wilson score
+  interval for the share of up ratings (stable tie-break: point ID). Each item
+  carries `confidence` (0–1) alongside its `up`/`down`/`net` counts, and every
+  list response includes a `ranking` sentence that states the sort and that
+  ratings never change any decision ballot or weight.
+- One account may hold at most 20 active ratings (`maxVotesPerAuthor`) on a
+  single author's points within one proposal (`429 AUTHOR_RATING_LIMIT_REACHED`).
+  Changing or withdrawing an existing rating is never blocked.
+- Not done: reputation events and rollback, organized-ring detection beyond
+  the per-author bound, editable point revisions and duplicate merging.

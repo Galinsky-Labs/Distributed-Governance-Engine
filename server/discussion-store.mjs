@@ -37,6 +37,13 @@ const pointView = (row) => {
       : {}),
   };
 };
+/** DCE-016: every ranking states what it sorts by; scores never affect decision ballots. */
+export const RANKING_EXPLANATIONS = Object.freeze({
+  top: "Net score (up minus down ratings), then point ID. Ratings never change any decision ballot or weight.",
+  new: "Newest first, then point ID, so new and minority points are discoverable. Ratings never change any decision ballot or weight.",
+  confidence: "Lower bound of the 95% Wilson interval for the share of up ratings, then point ID: a few ratings rank below many consistent ones. Ratings never change any decision ballot or weight.",
+});
+
 export function createDiscussionStore({
   identity,
   transaction,
@@ -46,8 +53,10 @@ export function createDiscussionStore({
   maxVotes = 100000,
   maxVoteChanges = 100,
   maxStoredBytes = 30000000,
+  maxVotesPerAuthor = 20,
 }) {
   for (const n of [
+    maxVotesPerAuthor,
     maxPoints,
     maxAuthorPoints,
     maxVotes,
@@ -362,6 +371,20 @@ export function createDiscussionStore({
           429,
         );
         check(old.version > 0 || value !== 0, "NO_ACTIVE_POINT_VOTE", 409);
+        // DCE-016 anti-ring bound: one account's active ratings on any single
+        // author's points in a proposal are capped, so a small ring cannot
+        // amplify one member's arguments without limit. Withdrawals always work.
+        if (old.value === 0 && value !== 0) {
+          const given = (
+            await db.query(
+              `SELECT count(*)::int AS n FROM dge_discussion.votes v JOIN dge_discussion.points p
+                ON p.tenant_id=v.tenant_id AND p.document_id=v.document_id AND p.proposal_id=v.proposal_id AND p.id=v.point_id
+               WHERE v.tenant_id=$1 AND v.document_id=$2 AND v.proposal_id=$3 AND v.actor_id=$4 AND v.value<>0 AND p.actor_id=$5`,
+              [tenantId, documentId, proposalId, actor.accountId, point.actor_id],
+            )
+          ).rows[0].n;
+          check(given < maxVotesPerAuthor, "AUTHOR_RATING_LIMIT_REACHED", 429);
+        }
         const score = (
           await db.query(
             "SELECT up_count,down_count FROM dge_discussion.scores WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 AND point_id=$4 FOR UPDATE",
@@ -499,7 +522,7 @@ export function createDiscussionStore({
           uuid(proposalId) &&
           (parentId === null || uuid(parentId)) &&
           ["all", "support", "oppose", "clarify"].includes(position) &&
-          ["top", "new"].includes(sort) &&
+          ["top", "new", "confidence"].includes(sort) &&
           Number.isSafeInteger(limit) &&
           limit >= 1 &&
           limit <= 100,
@@ -522,6 +545,7 @@ export function createDiscussionStore({
               /^[1-9][0-9]{0,18}$/.test(cursor.epoch) &&
               Number.isSafeInteger(cursor.net) &&
               Math.abs(cursor.net) <= 1000000000 &&
+              (sort !== "confidence" || cursor.net >= 0) &&
               new Date(cursor.createdAt).toISOString() === cursor.createdAt &&
               cursor.sort === sort &&
               cursor.position === position &&
@@ -543,11 +567,15 @@ export function createDiscussionStore({
       (SELECT jsonb_agg(page ORDER BY page.rank_net DESC,page.rank_time DESC,page.id ASC) FROM (
        SELECT p.id,p.data AS point,p.digest,p.depth,p.created_at AS "createdAt",s.up_count AS up,s.down_count AS down,s.net,
         mv.hidden AS moderation_hidden,mv.reason_category AS moderation_reason,
-        CASE WHEN $6='top' THEN s.net ELSE 0 END AS rank_net,CASE WHEN $6='new' THEN p.created_at ELSE 'epoch'::timestamptz END AS rank_time
+        CASE WHEN $6='top' THEN s.net WHEN $6='confidence' THEN r.wilson ELSE 0 END AS rank_net,CASE WHEN $6='new' THEN p.created_at ELSE 'epoch'::timestamptz END AS rank_time,r.wilson
        FROM dge_discussion.points p JOIN dge_discussion.scores s ON s.tenant_id=p.tenant_id AND s.document_id=p.document_id AND s.proposal_id=p.proposal_id AND s.point_id=p.id
        LEFT JOIN dge_moderation.visibility mv ON mv.tenant_id=p.tenant_id AND mv.target_kind='point' AND mv.target_id=p.id
+       CROSS JOIN LATERAL (SELECT CASE WHEN s.up_count+s.down_count=0 THEN 0 ELSE floor(1000000000*(
+         (s.up_count::numeric/(s.up_count+s.down_count) + 1.9208/(s.up_count+s.down_count)
+          - 1.96*sqrt(((s.up_count::numeric*s.down_count)/(s.up_count+s.down_count) + 0.9604)/((s.up_count+s.down_count)::numeric*(s.up_count+s.down_count))))
+         /(1+3.8416/(s.up_count+s.down_count))))::bigint END AS wilson) r
        WHERE p.document_id=$1 AND p.proposal_id=$2 AND p.parent_id IS NOT DISTINCT FROM $3::uuid AND ($4='all' OR p.position=$4)
-        AND ($5::uuid IS NULL OR ($6='top' AND (s.net<$7 OR (s.net=$7 AND p.id>$5::uuid))) OR ($6='new' AND (p.created_at<$8::timestamptz OR (p.created_at=$8::timestamptz AND p.id>$5::uuid))))
+        AND ($5::uuid IS NULL OR ($6='top' AND (s.net<$7 OR (s.net=$7 AND p.id>$5::uuid))) OR ($6='confidence' AND (r.wilson<$7 OR (r.wilson=$7 AND p.id>$5::uuid))) OR ($6='new' AND (p.created_at<$8::timestamptz OR (p.created_at=$8::timestamptz AND p.id>$5::uuid))))
        ORDER BY rank_net DESC,rank_time DESC,p.id ASC LIMIT $9) page) AS items
       FROM dge_proposals.proposals source LEFT JOIN dge_discussion.activity a ON a.tenant_id=source.tenant_id AND a.document_id=source.document_id AND a.proposal_id=source.id
       WHERE source.document_id=$1 AND source.id=$2`,
@@ -571,16 +599,17 @@ export function createDiscussionStore({
           page = rows.slice(0, limit),
           last = page.at(-1);
         return {
-          items: page.map(pointView),
+          items: page.map((item) => ({ ...pointView(item), ...(sort === "confidence" ? { confidence: Number(item.wilson) / 1e9 } : {}) })),
           rankingEpoch: row.epoch,
           sort,
+          ranking: RANKING_EXPLANATIONS[sort],
           nextCursor:
             rows.length > limit
               ? Buffer.from(
                   JSON.stringify({
                     epoch: row.epoch,
                     id: last.id,
-                    net: last.net,
+                    net: sort === "confidence" ? Number(last.wilson) : last.net,
                     createdAt: new Date(last.createdAt).toISOString(),
                     sort,
                     position,

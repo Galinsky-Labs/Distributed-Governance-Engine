@@ -135,7 +135,7 @@
         "Keyboard/editor component tests, paste sanitization, XSS corpus, IME, Unicode and lost-network recovery browser tests."
       ],
       "specification": "docs/prs/DCE-005.md",
-      "implementationStatus": "partial",
+      "implementationStatus": "implemented",
       "operationalAcceptance": "unverified",
       "contributingPrs": [
         3,
@@ -157,7 +157,8 @@
         63,
         64,
         65,
-        69
+        69,
+        80
       ]
     },
     {

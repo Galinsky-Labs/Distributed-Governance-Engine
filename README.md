@@ -19,7 +19,7 @@ Implemented in source:
 Partial units:
 - Identity assurance (DCE-002).
 - Private E2EE activation and review (003).
-- Editor acceptance (005–009).
+- Editor acceptance (006–009).
 - Realtime (015, 016).
 - Accessibility (033): automated axe audit only, with no manual screen-reader record.
 - Operations (035): restore-drill tooling exists, but no drill has been recorded.

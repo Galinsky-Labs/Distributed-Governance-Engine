@@ -44,6 +44,16 @@ transparency log, with scope, finalization and subject. The SDK test fails if
 engine source and this file drift. Adding a kind is a minor change; removing
 or renaming one is a major change.
 
+## HTTP contract and OpenAPI
+
+`src/http-contract.mjs` (`@distributed-governance/engine/http-contract`)
+lists every engine route with its method, authentication class and tag.
+`npm run build:openapi` generates `docs/sdk/openapi.json` (OpenAPI 3.1) from
+it. `tests/http-contract.test.mjs` sends every documented method and path to
+the real platform handler and fails if one is not served, and fails if the
+committed OpenAPI file differs from the generated one. Extension routes
+(federation, CivicQuill, CharterQuill) are documented by their owners.
+
 ## Rolling compatibility policy
 
 1. Minor contract bumps only add capabilities, event kinds or optional fields.
@@ -54,8 +64,8 @@ or renaming one is a major change.
 
 ## Not yet done
 
-- No generated OpenAPI document for the HTTP routes; routes are still described
-  per feature in `docs/*.md`.
+- Request and response *schemas* in the OpenAPI document are generic objects;
+  field-level schemas are still described per feature in `docs/*.md`.
 - The engine is consumed as an integrity-pinned Git tarball, not a published
   registry package; supply-chain provenance is the commit pin plus the npm
   lockfile integrity hash.

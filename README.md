@@ -2,13 +2,13 @@
 
 Reusable legal-document drafting, proposal, deliberation and governance engine.
 
-**Status (2026-11): 23 of 39 roadmap units are implemented in source with tests; 16 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
+**Status (2026-11): 24 of 39 roadmap units are implemented in source with tests; 15 are partial (see `registry/prs.json`). No unit has operational acceptance, and there has been no independent security review or owner acceptance.** The engine serves CivicQuill (https://civicquill.onrender.com) and CharterQuill (https://charterquill.onrender.com). Both are hosted on Render's free plan with Neon PostgreSQL and use passkey sign-in. `/healthz` reports the exact deployed commit and `/readyz` checks the database.
 
 Implemented in source:
 - Workspaces and public documents with version history and restore.
 - Exact-text proposals and structured discussion.
 - Frozen and weighted electorates with proxies and class approvals.
-- Challenge windows and finality, with adoption into a new public draft.
+- Challenge windows and finality, with adoption into a new public draft; tie rules with casting votes, local-time deadlines and advisory support floors (010).
 - Moderation, editions, import and export.
 - Support, approval and execution signatures with Merkle manifests.
 - A transparency log with OpenTimestamps anchoring.
@@ -20,7 +20,6 @@ Partial units:
 - Identity assurance (DCE-002).
 - Private E2EE activation and review (003).
 - Editor acceptance (005–009).
-- Policy modes (010): tie rules, time-zone cutoffs and support floors exist as helpers but are not yet selectable through the API.
 - Realtime (015, 016).
 - Walkthrough (031).
 - Accessibility (033): automated axe audit only, with no manual screen-reader record.

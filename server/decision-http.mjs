@@ -1,6 +1,6 @@
 import {boundedJson,HttpError} from "./account-http.mjs";
 import {DocumentError} from "./document-store.mjs";
-const pathPattern=/^\/api\/workspaces\/([a-f0-9-]{36})\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/decision(?:\/(ballots|close|finalize|challenges)(?:\/([a-f0-9-]{36})\/(resolve))?)?$/;
+const pathPattern=/^\/api\/workspaces\/([a-f0-9-]{36})\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/decision(?:\/(ballots|close|finalize|challenges|casting-vote)(?:\/([a-f0-9-]{36})\/(resolve))?)?$/;
 export const decisionBodyLimit=path=>pathPattern.test(path)?16384:8192;
 export function createDecisionRoutes({decisions}){
   return async({request,url,credentials,write,method})=>{
@@ -24,8 +24,8 @@ export function createDecisionRoutes({decisions}){
         method(["GET","POST"]);
         if(request.method==="GET")return await decisions.read(credentials,tenantId,documentId,proposalId);
         write();
-        const body=await boundedJson(request,["hours","commandId","policySettings","electorate","weighting","challengeWindowHours","bundle"],
-          ["hours","commandId"],16384);
+        const body=await boundedJson(request,["hours","commandId","policySettings","electorate","weighting","challengeWindowHours","bundle","deadline"],
+          ["commandId"],16384);
         return await decisions.open(credentials,tenantId,documentId,proposalId,body);
       }
       if(operation==="ballots"){
@@ -33,6 +33,12 @@ export function createDecisionRoutes({decisions}){
         write();
         const body=await boundedJson(request,["choice","expectedVersion","commandId","onBehalfOf"],["choice","expectedVersion","commandId"]);
         return await decisions.cast(credentials,tenantId,documentId,proposalId,body);
+      }
+      if(operation==="casting-vote"){
+        method(["POST"]);
+        write();
+        const body=await boundedJson(request,["choice","commandId"],["choice","commandId"]);
+        return await decisions.castingVote(credentials,tenantId,documentId,proposalId,body);
       }
       if(operation==="close"){
         method(["POST"]);

@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs registry/pr-contract.test.mjs",
     "test:fuzz": "node scripts/fuzz.mjs",
-    "check": "node scripts/validate-pr-registry.mjs && node scripts/validate-security.mjs && npm test && npm run test:fuzz",
+    "check": "node scripts/validate-pr-registry.mjs && node scripts/validate-security.mjs && node scripts/supply-chain.mjs check && npm test && npm run test:fuzz",
     "demo": "node demo/server.mjs",
     "build": "node scripts/build-editor.mjs",
     "preview": "node scripts/serve-editor.mjs",
@@ -20,6 +20,7 @@
     "migrate": "node scripts/migrate-identity.mjs",
     "restore:drill": "node scripts/restore-drill.mjs",
     "build:openapi": "node scripts/build-openapi.mjs",
+    "sbom": "node scripts/supply-chain.mjs sbom",
     "build:offline": "node scripts/build-offline.mjs",
     "build:mls": "node scripts/build-mls.mjs",
     "test:mls": "cargo +1.94.0 test --locked --manifest-path crypto/mls-endpoint/Cargo.toml && node --test tests/mls-endpoint.integration.mjs",
@@ -90,7 +91,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",
-    "axe-core": "^4.11.0",
+    "axe-core": "4.11.0",
     "esbuild": "0.28.2",
     "jsdom": "30.1.3",
     "puppeteer-core": "25.14.0"

@@ -2355,7 +2355,7 @@
         "tags": [
           "discussion"
         ],
-        "summary": "Public discussion",
+        "summary": "Public discussion (sort=top|new|confidence)",
         "operationId": "get_api_public_documents_documentId_proposals_proposalId_points",
         "security": [],
         "x-dge-auth": "public",
@@ -2377,6 +2377,149 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/public/documents/{documentId}/proposals/{proposalId}/points/{pointId}/history": {
+      "get": {
+        "tags": [
+          "discussion"
+        ],
+        "summary": "Point revision and merge history",
+        "operationId": "get_api_public_documents_documentId_proposals_proposalId_points_pointId_history",
+        "security": [],
+        "x-dge-auth": "public",
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "proposalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/workspaces/{tenantId}/documents/{documentId}/proposals/{proposalId}/point-merges/{pointId}": {
+      "post": {
+        "tags": [
+          "discussion"
+        ],
+        "summary": "Merge a duplicate point (owner/admin)",
+        "operationId": "post_api_workspaces_tenantId_documents_documentId_proposals_proposalId_point_merges_pointId",
+        "security": [
+          {
+            "session": [],
+            "csrf": []
+          }
+        ],
+        "x-dge-auth": "write",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "proposalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success"

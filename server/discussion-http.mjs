@@ -1,12 +1,20 @@
 import { boundedJson, HttpError } from "./account-http.mjs";
 import { DocumentError } from "./document-store.mjs";
 const workspaceRoute =
-  /^\/api\/workspaces\/([a-f0-9-]{36})\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/(points|my-point-votes|point-votes)(?:\/([a-f0-9-]{36}))?$/;
+  /^\/api\/workspaces\/([a-f0-9-]{36})\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/(points|my-point-votes|point-votes|point-merges)(?:\/([a-f0-9-]{36}))?$/;
 export const discussionBodyLimit = (path) =>
   path.endsWith("/points") && workspaceRoute.test(path) ? 32768 : 8192;
 export function createDiscussionRoutes({ discussion }) {
   return async ({ request, url, credentials, write, method }) => {
     try {
+      const historyRoute = url.pathname.match(
+        /^\/api\/public\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/points\/([a-f0-9-]{36})\/history$/,
+      );
+      if (historyRoute) {
+        method(["GET"]);
+        if (url.search) throw new HttpError(400, "INVALID_QUERY");
+        return await discussion.history(historyRoute[1], historyRoute[2], historyRoute[3]);
+      }
       const publicRoute = url.pathname.match(
         /^\/api\/public\/documents\/([a-f0-9-]{36})\/proposals\/([a-f0-9-]{36})\/points$/,
       );
@@ -42,6 +50,7 @@ export function createDiscussionRoutes({ discussion }) {
             "evidence",
             "commandId",
             "disclosure",
+            "revises",
           ],
           ["position", "text", "commandId", "disclosure"],
           32768,
@@ -70,6 +79,12 @@ export function createDiscussionRoutes({ discussion }) {
           pointId,
           body,
         );
+      }
+      if (kind === "point-merges" && pointId) {
+        method(["POST"]);
+        write();
+        const body = await boundedJson(request, ["duplicateOf", "commandId"]);
+        return await discussion.mergeDuplicate(credentials, tenantId, documentId, proposalId, pointId, body);
       }
       if (kind === "my-point-votes" && !pointId) {
         method(["GET"]);

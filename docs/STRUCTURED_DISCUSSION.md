@@ -49,3 +49,12 @@ These are partial DCE-015/016 contributions. Open-public contribution policy, ed
   Changing or withdrawing an existing rating is never blocked.
 - Not done: reputation events and rollback, organized-ring detection beyond
   the per-author bound, editable point revisions and duplicate merging.
+
+## Point revisions and duplicate merges (DCE-015 increment)
+
+- **Revisions:** a point's author revises it by posting a new point with `revises: <pointId>`. The new point must keep the same stance, parent and relation. Each point can be revised once, so history is linear.
+- **Duplicate merges:** an owner or admin merges a duplicate into another point of the same stance with `POST …/point-merges/{pointId} {duplicateOf, commandId}`. Merges are idempotent and never point at an already-superseded point.
+- **Listings and history:** superseded points drop out of rankings. Public history is available at `GET /api/public/documents/{doc}/proposals/{proposal}/points/{point}/history`, and it keeps every version's wording and counts.
+- **Ratings:** ratings stay with the wording they were cast on and never transfer. A superseded point accepts no new ratings, but withdrawing an existing rating still works.
+- **Storage:** migration 032 adds the append-only `point_links` table.
+- **Not done:** document-quote evidence integrity.

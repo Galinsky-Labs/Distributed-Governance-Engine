@@ -65,7 +65,9 @@ export const ENGINE_ROUTES = Object.freeze([
     ["POST", P + "/points", "write", "discussion", "Add a pro/con point or reply"],
   ["GET", P + "/my-point-votes", "session", "discussion", "My point ratings"],
   ["PUT", P + "/point-votes/{pointId}", "write", "discussion", "Rate a point"],
-  ["GET", PD + "/proposals/{proposalId}/points", "public", "discussion", "Public discussion"],
+  ["GET", PD + "/proposals/{proposalId}/points", "public", "discussion", "Public discussion (sort=top|new|confidence)"],
+  ["GET", PD + "/proposals/{proposalId}/points/{pointId}/history", "public", "discussion", "Point revision and merge history"],
+  ["POST", P + "/point-merges/{pointId}", "write", "discussion", "Merge a duplicate point (owner/admin)"],
   // Decisions
   ["GET", P + "/decision", "session", "decisions", "Decision state"],
   ["POST", P + "/decision", "write", "decisions", "Open a frozen decision (policySettings may set tieRule, castingPrincipalId, supportFloor)"],

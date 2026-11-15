@@ -163,7 +163,77 @@ export function createDiscussionStore({
       ],
     );
   }
+  async function linkOf(db, tenantId, documentId, proposalId, pointId) {
+    return (
+      await db.query(
+        "SELECT kind,target_id FROM dge_discussion.point_links WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 AND point_id=$4",
+        [tenantId, documentId, proposalId, pointId],
+      )
+    ).rows[0] ?? null;
+  }
   return Object.freeze({
+    /** Owner/admin merges a duplicate into the point that carries the thesis. */
+    async mergeDuplicate(credentials, tenantId, documentId, proposalId, pointId, { duplicateOf, commandId }) {
+      check(uuid(pointId) && uuid(duplicateOf) && uuid(commandId) && pointId !== duplicateOf, "INVALID_POINT_MERGE");
+      check(uuid(tenantId), "INVALID_WORKSPACE");
+      return identity.withTenant(credentials, tenantId, { write: true, roles: ["owner", "admin"] }, async (db, actor) => {
+        await proposal(db, tenantId, documentId, proposalId);
+        const rows = (
+          await db.query(
+            "SELECT id,position,parent_id FROM dge_discussion.points WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 AND id=ANY($4::uuid[])",
+            [tenantId, documentId, proposalId, [pointId, duplicateOf]],
+          )
+        ).rows;
+        check(rows.length === 2, "POINT_NOT_FOUND", 404);
+        const [a, b] = [rows.find((r) => r.id === pointId), rows.find((r) => r.id === duplicateOf)];
+        check(a.position === b.position, "DUPLICATE_MUST_SHARE_STANCE", 409);
+        await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", ["point-link:" + tenantId + ":" + pointId]);
+        const existing = await linkOf(db, tenantId, documentId, proposalId, pointId);
+        if (existing) {
+          check(existing.kind === "duplicate" && existing.target_id === duplicateOf, "POINT_ALREADY_SUPERSEDED", 409);
+          return { pointId, mergedInto: duplicateOf };
+        }
+        check(!(await linkOf(db, tenantId, documentId, proposalId, duplicateOf)), "MERGE_TARGET_SUPERSEDED", 409);
+        const at = now();
+        await db.query(
+          "INSERT INTO dge_discussion.point_links(tenant_id,document_id,proposal_id,point_id,kind,target_id,actor_id,created_at) VALUES($1,$2,$3,$4,'duplicate',$5,$6,$7)",
+          [tenantId, documentId, proposalId, pointId, duplicateOf, actor.accountId, at],
+        );
+        await advance(db, tenantId, documentId, proposalId, true);
+        await outbox(db, { tenantId, documentId, proposalId, kind: "point-merged", value: { pointId, duplicateOf }, at });
+        return { pointId, mergedInto: duplicateOf };
+      });
+    },
+    /** Public history of one point: every earlier wording and where it went. */
+    async history(documentId, proposalId, pointId) {
+      check(uuid(documentId) && uuid(proposalId) && uuid(pointId), "INVALID_POINT_PAGE");
+      return transaction(async (db) => {
+        await db.query("SELECT set_config('dge.public_document_id',$1,true)", [documentId]);
+        const links = (
+          await db.query(
+            "SELECT point_id,kind,target_id,created_at FROM dge_discussion.point_links WHERE document_id=$1 AND proposal_id=$2",
+            [documentId, proposalId],
+          )
+        ).rows;
+        const forward = new Map(links.map((l) => [l.point_id, l])), backward = new Map(links.filter((l) => l.kind === "revision").map((l) => [l.target_id, l]));
+        let first = pointId, guard = 0;
+        while (backward.has(first) && guard++ < 1000) first = backward.get(first).point_id;
+        const chain = [];
+        for (let id = first, n = 0; id && n < 1000; n++) {
+          const row = (
+            await db.query(
+              "SELECT p.data,p.digest,p.depth,p.created_at,s.up_count AS up,s.down_count AS down,s.net FROM dge_discussion.points p JOIN dge_discussion.scores s ON s.tenant_id=p.tenant_id AND s.document_id=p.document_id AND s.proposal_id=p.proposal_id AND s.point_id=p.id WHERE p.document_id=$1 AND p.proposal_id=$2 AND p.id=$3",
+              [documentId, proposalId, id],
+            )
+          ).rows[0];
+          check(row, "POINT_NOT_FOUND", 404);
+          const link = forward.get(id);
+          chain.push({ ...pointView(row), supersededBy: link ? { kind: link.kind, pointId: link.target_id, at: new Date(link.created_at).toISOString() } : null });
+          id = link?.kind === "revision" ? link.target_id : null;
+        }
+        return { items: chain, note: "Ratings stay with the wording they were cast on; they never transfer to a revision or merge target." };
+      });
+    },
     async create(
       credentials,
       tenantId,
@@ -177,10 +247,11 @@ export function createDiscussionStore({
         evidence = [],
         commandId,
         disclosure,
+        revises = null,
       },
     ) {
       check(
-        uuid(commandId) && (parentId === null || uuid(parentId)),
+        uuid(commandId) && (parentId === null || uuid(parentId)) && (revises === null || uuid(revises)),
         "INVALID_POINT_CONTEXT",
       );
       check(disclosure === "publish-point-v1", "PUBLIC_DISCLOSURE_REQUIRED");
@@ -202,6 +273,7 @@ export function createDiscussionStore({
           text,
           evidence,
           disclosure,
+          ...(revises === null ? {} : { revises }),
         });
         const previous = (
           await db.query(
@@ -216,6 +288,21 @@ export function createDiscussionStore({
             409,
           );
           return pointView(previous);
+        }
+        // DCE-015: a revision keeps the original's stance and place in the
+        // graph; only its author may publish it, once, as a new point.
+        if (revises !== null) {
+          const original = (
+            await db.query(
+              "SELECT actor_id,position,parent_id,data FROM dge_discussion.points WHERE tenant_id=$1 AND document_id=$2 AND proposal_id=$3 AND id=$4",
+              [tenantId, documentId, proposalId, revises],
+            )
+          ).rows[0];
+          check(original, "POINT_NOT_FOUND", 404);
+          check(original.actor_id === actor.accountId, "ONLY_AUTHOR_MAY_REVISE", 403);
+          check(original.position === position && original.parent_id === parentId && (original.data.relation ?? null) === relation, "REVISION_MUST_KEEP_STANCE", 409);
+          await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", ["point-link:" + tenantId + ":" + revises]);
+          check(!(await linkOf(db, tenantId, documentId, proposalId, revises)), "POINT_ALREADY_SUPERSEDED", 409);
         }
         let depth = 0;
         if (parentId) {
@@ -281,6 +368,11 @@ export function createDiscussionStore({
           "INSERT INTO dge_discussion.scores(tenant_id,document_id,proposal_id,point_id,up_count,down_count) VALUES($1,$2,$3,$4,0,0)",
           [tenantId, documentId, proposalId, data.id],
         );
+        if (revises !== null)
+          await db.query(
+            "INSERT INTO dge_discussion.point_links(tenant_id,document_id,proposal_id,point_id,kind,target_id,actor_id,created_at) VALUES($1,$2,$3,$4,'revision',$5,$6,$7)",
+            [tenantId, documentId, proposalId, revises, data.id, actor.accountId, at],
+          );
         await advance(db, tenantId, documentId, proposalId, true);
         await outbox(db, {
           tenantId,
@@ -352,6 +444,9 @@ export function createDiscussionStore({
           )
         ).rows[0];
         check(point, "POINT_NOT_FOUND", 404);
+        const superseded = await linkOf(db, tenantId, documentId, proposalId, pointId);
+        // New ratings go to the current wording; withdrawing an old rating still works.
+        check(!superseded || value === 0, "POINT_SUPERSEDED", 409);
         check(
           point.actor_id !== actor.accountId,
           "SELF_POINT_VOTE_FORBIDDEN",
@@ -574,7 +669,8 @@ export function createDiscussionStore({
          (s.up_count::numeric/(s.up_count+s.down_count) + 1.9208/(s.up_count+s.down_count)
           - 1.96*sqrt(((s.up_count::numeric*s.down_count)/(s.up_count+s.down_count) + 0.9604)/((s.up_count+s.down_count)::numeric*(s.up_count+s.down_count))))
          /(1+3.8416/(s.up_count+s.down_count))))::bigint END AS wilson) r
-       WHERE p.document_id=$1 AND p.proposal_id=$2 AND p.parent_id IS NOT DISTINCT FROM $3::uuid AND ($4='all' OR p.position=$4)
+       WHERE p.document_id=$1 AND p.proposal_id=$2 AND p.parent_id IS NOT DISTINCT FROM $3::uuid
+        AND NOT EXISTS (SELECT 1 FROM dge_discussion.point_links l WHERE l.tenant_id=p.tenant_id AND l.document_id=p.document_id AND l.proposal_id=p.proposal_id AND l.point_id=p.id) AND ($4='all' OR p.position=$4)
         AND ($5::uuid IS NULL OR ($6='top' AND (s.net<$7 OR (s.net=$7 AND p.id>$5::uuid))) OR ($6='confidence' AND (r.wilson<$7 OR (r.wilson=$7 AND p.id>$5::uuid))) OR ($6='new' AND (p.created_at<$8::timestamptz OR (p.created_at=$8::timestamptz AND p.id>$5::uuid))))
        ORDER BY rank_net DESC,rank_time DESC,p.id ASC LIMIT $9) page) AS items
       FROM dge_proposals.proposals source LEFT JOIN dge_discussion.activity a ON a.tenant_id=source.tenant_id AND a.document_id=source.document_id AND a.proposal_id=source.id

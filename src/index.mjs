@@ -14,3 +14,4 @@ export * from './legal-proposals.mjs';
 export * from './discussion.mjs';
 
 export * from './private-collaboration-crypto.mjs';
+export * from './policy-lifecycle.mjs';

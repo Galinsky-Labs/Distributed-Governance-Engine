@@ -55,6 +55,7 @@
     "./platform": "./server/platform.mjs",
     "./ledger": "./server/ledger.mjs",
     "./transparency": "./src/transparency.mjs",
+    "./policy-lifecycle": "./src/policy-lifecycle.mjs",
     "./verification": "./src/verification-package.mjs",
     "./opentimestamps": "./src/opentimestamps.mjs",
     "./web/*": "./web/*",
